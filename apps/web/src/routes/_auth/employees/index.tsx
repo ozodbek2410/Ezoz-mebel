@@ -257,7 +257,7 @@ export function EmployeesPage() {
   function openEdit(user: {
     id: number; fullName: string; phone: string | null; role: string;
     baseSalaryUzs: unknown; bonusPerJob: unknown;
-    customPermissions: string | null;
+    customPermissions?: string | null;
   }) {
     setSelectedId(user.id);
     setEditForm({
