@@ -1,0 +1,581 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== AUTH & USERS ====================
+
+enum UserRole {
+  BOSS
+  CASHIER_SALES
+  CASHIER_SERVICE
+  MASTER
+}
+
+model User {
+  id                Int      @id @default(autoincrement())
+  username          String   @unique
+  passwordHash      String
+  fullName          String
+  phone             String?
+  role              UserRole
+  customPermissions String?  // JSON array of permission strings, null = role defaults
+  baseSalaryUzs     Decimal  @db.Decimal(18, 2) @default(0)
+  bonusPerJob       Decimal  @db.Decimal(18, 2) @default(0)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  sales            Sale[]
+  expenses         Expense[]
+  shifts           Shift[]
+  cashRegisterOps  CashRegisterOp[]
+  workshopTasks    WorkshopTask[]
+  advances         Advance[]
+  jobRecords       JobRecord[]
+  salaryPayments   SalaryPayment[]
+}
+
+// ==================== SHIFT ====================
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+}
+
+model Shift {
+  id                Int         @id @default(autoincrement())
+  userId            Int
+  user              User        @relation(fields: [userId], references: [id])
+  openedAt          DateTime    @default(now())
+  closedAt          DateTime?
+  exchangeRate      Decimal     @db.Decimal(18, 2)
+  openingBalanceUzs Decimal     @db.Decimal(18, 2) @default(0)
+  openingBalanceUsd Decimal     @db.Decimal(18, 2) @default(0)
+  closingBalanceUzs Decimal?    @db.Decimal(18, 2)
+  closingBalanceUsd Decimal?    @db.Decimal(18, 2)
+  status            ShiftStatus @default(OPEN)
+  notes             String?
+}
+
+// ==================== CURRENCY ====================
+
+model ExchangeRate {
+  id      Int      @id @default(autoincrement())
+  rate    Decimal  @db.Decimal(18, 2)
+  date    DateTime @default(now()) @db.Date @unique
+  setById Int
+}
+
+// ==================== CUSTOMERS ====================
+
+enum CustomerCategory {
+  REGULAR
+  MASTER
+}
+
+model Customer {
+  id              Int              @id @default(autoincrement())
+  fullName        String
+  phone           String?
+  phone2          String?
+  birthday        DateTime?        @db.Date
+  address         String?
+  category        CustomerCategory @default(REGULAR)
+  trustLimit      Decimal          @db.Decimal(18, 2) @default(0)
+  initialDebtUzs  Decimal          @db.Decimal(18, 2) @default(0)
+  initialDebtUsd  Decimal          @db.Decimal(18, 2) @default(0)
+  bonusBalance    Decimal          @db.Decimal(18, 2) @default(0)
+  notes           String?
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  sales    Sale[]
+  payments Payment[]
+}
+
+// ==================== PRODUCTS ====================
+
+model Category {
+  id        Int        @id @default(autoincrement())
+  name      String
+  parentId  Int?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  products  Product[]
+  sortOrder Int        @default(0)
+}
+
+enum ProductUnit {
+  DONA
+  M2
+  METR
+  LIST
+  KG
+}
+
+model Product {
+  id                   Int         @id @default(autoincrement())
+  code                 String      @unique
+  name                 String
+  sku                  String?
+  categoryId           Int
+  category             Category    @relation(fields: [categoryId], references: [id])
+  unit                 ProductUnit @default(DONA)
+  sellPriceUzs         Decimal     @db.Decimal(18, 2)
+  sellPriceUsd         Decimal     @db.Decimal(18, 2)
+  minPriceUzs          Decimal     @db.Decimal(18, 2)
+  minPriceUsd          Decimal     @db.Decimal(18, 2)
+  costPriceUzs         Decimal     @db.Decimal(18, 2)
+  costPriceUsd         Decimal     @db.Decimal(18, 2)
+  vatPercent           Decimal     @db.Decimal(5, 2) @default(12)
+  ikpuCode             String?
+  packageCode          String?
+  minStockAlert        Decimal     @db.Decimal(18, 3) @default(0)
+  description          String?
+  isLocked             Boolean     @default(false)
+  isMarketplaceVisible Boolean     @default(false)
+  showPrice            Boolean     @default(true)
+  isActive             Boolean     @default(true)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  stockItems           StockItem[]
+  saleItems            SaleItem[]
+  purchaseItems        PurchaseItem[]
+  images               ProductImage[]
+  marketplaceOrderItems MarketplaceOrderItem[]
+}
+
+model ProductImage {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  filePath  String
+  sortOrder Int     @default(0)
+}
+
+// ==================== SERVICE TYPES ====================
+
+model ServiceType {
+  id         Int      @id @default(autoincrement())
+  name       String
+  priceUzs   Decimal  @db.Decimal(18, 2) @default(0)
+  priceUsd   Decimal  @db.Decimal(18, 2) @default(0)
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ==================== WAREHOUSE ====================
+
+model Warehouse {
+  id         Int         @id @default(autoincrement())
+  name       String
+  isActive   Boolean     @default(true)
+  stockItems StockItem[]
+  sales      Sale[]
+}
+
+model StockItem {
+  id          Int       @id @default(autoincrement())
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id])
+  warehouseId Int
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  quantity    Decimal   @db.Decimal(18, 3) @default(0)
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([productId, warehouseId])
+}
+
+// ==================== PURCHASE (KIRIM) ====================
+
+model Supplier {
+  id        Int        @id @default(autoincrement())
+  name      String
+  phone     String?
+  notes     String?
+  isActive  Boolean    @default(true)
+  purchases Purchase[]
+}
+
+enum DocumentStatus {
+  NEW
+  IN_PROGRESS
+  PAYMENT_PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model Purchase {
+  id           Int            @id @default(autoincrement())
+  documentNo   String         @unique @default(cuid())
+  supplierId   Int?
+  supplier     Supplier?      @relation(fields: [supplierId], references: [id])
+  warehouseId  Int
+  totalUzs     Decimal        @db.Decimal(18, 2) @default(0)
+  totalUsd     Decimal        @db.Decimal(18, 2) @default(0)
+  exchangeRate Decimal        @db.Decimal(18, 2)
+  status       DocumentStatus @default(NEW)
+  notes        String?
+  createdAt    DateTime       @default(now())
+  items        PurchaseItem[]
+}
+
+model PurchaseItem {
+  id         Int      @id @default(autoincrement())
+  purchaseId Int
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Decimal  @db.Decimal(18, 3)
+  priceUzs   Decimal  @db.Decimal(18, 2)
+  priceUsd   Decimal  @db.Decimal(18, 2)
+}
+
+// ==================== TRANSFER ====================
+
+model Transfer {
+  id              Int      @id @default(autoincrement())
+  documentNo      String   @unique @default(cuid())
+  fromWarehouseId Int
+  toWarehouseId   Int
+  productId       Int
+  quantity        Decimal  @db.Decimal(18, 3)
+  notes           String?
+  createdAt       DateTime @default(now())
+}
+
+// ==================== INVENTORY ====================
+
+enum InventoryStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model InventoryCheck {
+  id          Int                  @id @default(autoincrement())
+  documentNo  String               @unique @default(cuid())
+  warehouseId Int
+  status      InventoryStatus      @default(IN_PROGRESS)
+  notes       String?
+  createdAt   DateTime             @default(now())
+  completedAt DateTime?
+  items       InventoryCheckItem[]
+}
+
+model InventoryCheckItem {
+  id               Int            @id @default(autoincrement())
+  inventoryCheckId Int
+  inventoryCheck   InventoryCheck @relation(fields: [inventoryCheckId], references: [id], onDelete: Cascade)
+  productId        Int
+  expectedQty      Decimal        @db.Decimal(18, 3)
+  actualQty        Decimal        @db.Decimal(18, 3)
+  difference       Decimal        @db.Decimal(18, 3)
+}
+
+// ==================== REVALUATION ====================
+
+model Revaluation {
+  id          Int      @id @default(autoincrement())
+  documentNo  String   @unique @default(cuid())
+  productId   Int
+  oldPriceUzs Decimal  @db.Decimal(18, 2)
+  newPriceUzs Decimal  @db.Decimal(18, 2)
+  oldPriceUsd Decimal  @db.Decimal(18, 2)
+  newPriceUsd Decimal  @db.Decimal(18, 2)
+  reason      String?
+  createdAt   DateTime @default(now())
+  createdById Int
+}
+
+// ==================== SALES ====================
+
+enum SaleType {
+  PRODUCT
+  SERVICE
+}
+
+enum SaleStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+  RETURNED
+}
+
+enum WorkshopStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Sale {
+  id             Int             @id @default(autoincrement())
+  documentNo     String          @unique @default(cuid())
+  customerId     Int?
+  customer       Customer?       @relation(fields: [customerId], references: [id])
+  cashierId      Int
+  cashier        User            @relation(fields: [cashierId], references: [id])
+  saleType       SaleType
+  totalUzs       Decimal         @db.Decimal(18, 2) @default(0)
+  totalUsd       Decimal         @db.Decimal(18, 2) @default(0)
+  discountUzs    Decimal         @db.Decimal(18, 2) @default(0)
+  discountUsd    Decimal         @db.Decimal(18, 2) @default(0)
+  exchangeRate   Decimal         @db.Decimal(18, 2)
+  status         SaleStatus      @default(OPEN)
+  goesToWorkshop Boolean         @default(false)
+  workshopStatus WorkshopStatus?
+  warehouseId    Int?
+  warehouse      Warehouse?      @relation(fields: [warehouseId], references: [id])
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  items          SaleItem[]
+  payments       Payment[]
+  receipt        Receipt?
+  workshopTasks  WorkshopTask[]
+}
+
+model SaleItem {
+  id          Int      @id @default(autoincrement())
+  saleId      Int
+  sale        Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId   Int?
+  product     Product? @relation(fields: [productId], references: [id])
+  serviceName String?
+  quantity    Decimal  @db.Decimal(18, 3)
+  priceUzs    Decimal  @db.Decimal(18, 2)
+  priceUsd    Decimal  @db.Decimal(18, 2)
+  totalUzs    Decimal  @db.Decimal(18, 2)
+  totalUsd    Decimal  @db.Decimal(18, 2)
+}
+
+// ==================== WORKSHOP ====================
+
+enum WorkshopTaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model WorkshopTask {
+  id            Int                @id @default(autoincrement())
+  saleId        Int
+  sale          Sale               @relation(fields: [saleId], references: [id])
+  description   String
+  assignedToId  Int?
+  assignedTo    User?              @relation(fields: [assignedToId], references: [id])
+  status        WorkshopTaskStatus @default(PENDING)
+  startedAt     DateTime?
+  completedAt   DateTime?
+  notes         String?
+  photos        WorkshopPhoto[]
+}
+
+model WorkshopPhoto {
+  id             Int          @id @default(autoincrement())
+  workshopTaskId Int
+  workshopTask   WorkshopTask @relation(fields: [workshopTaskId], references: [id], onDelete: Cascade)
+  filePath       String
+  description    String?
+  uploadedAt     DateTime     @default(now())
+}
+
+// ==================== PAYMENTS ====================
+
+enum PaymentType {
+  CASH_UZS
+  CASH_USD
+  CARD
+  TRANSFER
+  DEBT
+}
+
+enum CashRegisterType {
+  SALES
+  SERVICE
+}
+
+model Payment {
+  id           Int              @id @default(autoincrement())
+  saleId       Int?
+  sale         Sale?            @relation(fields: [saleId], references: [id])
+  customerId   Int?
+  customer     Customer?        @relation(fields: [customerId], references: [id])
+  amountUzs    Decimal          @db.Decimal(18, 2)
+  amountUsd    Decimal          @db.Decimal(18, 2)
+  paymentType  PaymentType
+  cashRegister CashRegisterType
+  source       String           @default("NEW_SALE")
+  notes        String?
+  createdAt    DateTime         @default(now())
+}
+
+enum CashOpType {
+  SALE_INCOME
+  DEBT_PAYMENT
+  EXPENSE
+  SALARY_PAYMENT
+  ADVANCE_PAYMENT
+  WITHDRAWAL
+  DEPOSIT
+}
+
+model CashRegisterOp {
+  id              Int              @id @default(autoincrement())
+  registerType    CashRegisterType
+  operationType   CashOpType
+  amountUzs       Decimal          @db.Decimal(18, 2)
+  amountUsd       Decimal          @db.Decimal(18, 2)
+  balanceAfterUzs Decimal          @db.Decimal(18, 2)
+  balanceAfterUsd Decimal          @db.Decimal(18, 2)
+  description     String?
+  userId          Int
+  user            User             @relation(fields: [userId], references: [id])
+  createdAt       DateTime         @default(now())
+}
+
+// ==================== RECEIPTS ====================
+
+model Receipt {
+  id           Int      @id @default(autoincrement())
+  saleId       Int      @unique
+  sale         Sale     @relation(fields: [saleId], references: [id])
+  receiptNo    String   @unique @default(cuid())
+  printerSize  String   @default("80mm")
+  printedAt    DateTime @default(now())
+  reprintCount Int      @default(0)
+}
+
+// ==================== EXPENSES ====================
+
+model ExpenseCategory {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  isActive Boolean   @default(true)
+  expenses Expense[]
+}
+
+model Expense {
+  id           Int              @id @default(autoincrement())
+  categoryId   Int
+  category     ExpenseCategory  @relation(fields: [categoryId], references: [id])
+  amountUzs    Decimal          @db.Decimal(18, 2)
+  amountUsd    Decimal          @db.Decimal(18, 2) @default(0)
+  description  String
+  cashRegister CashRegisterType
+  paymentType  PaymentType      @default(CASH_UZS)
+  userId       Int
+  user         User             @relation(fields: [userId], references: [id])
+  createdAt    DateTime         @default(now())
+}
+
+// ==================== EMPLOYEE DATA (on User) ====================
+
+model Advance {
+  id           Int              @id @default(autoincrement())
+  userId       Int
+  user         User             @relation(fields: [userId], references: [id])
+  amountUzs    Decimal          @db.Decimal(18, 2)
+  cashRegister CashRegisterType
+  notes        String?
+  givenAt      DateTime         @default(now())
+}
+
+model JobRecord {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  description String
+  bonusUzs    Decimal  @db.Decimal(18, 2)
+  date        DateTime @default(now())
+}
+
+model SalaryPayment {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
+  month        Int
+  year         Int
+  baseSalary   Decimal  @db.Decimal(18, 2)
+  totalBonus   Decimal  @db.Decimal(18, 2)
+  totalAdvance Decimal  @db.Decimal(18, 2)
+  netPayment   Decimal  @db.Decimal(18, 2)
+  paidAt       DateTime @default(now())
+
+  @@unique([userId, month, year])
+}
+
+// ==================== SETTINGS ====================
+
+model Setting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}
+
+model Note {
+  id          Int      @id @default(autoincrement())
+  content     String
+  createdById Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TableConfig {
+  id           Int    @id @default(autoincrement())
+  userId       Int
+  tableName    String
+  columnConfig String
+
+  @@unique([userId, tableName])
+}
+
+model CompanyInfo {
+  id        Int    @id @default(autoincrement())
+  key       String @unique
+  value     String
+}
+
+// ==================== MARKETPLACE ORDERS ====================
+
+enum MarketplaceOrderStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model MarketplaceOrder {
+  id            Int                      @id @default(autoincrement())
+  customerName  String
+  customerPhone String
+  address       String?
+  notes         String?
+  status        MarketplaceOrderStatus   @default(PENDING)
+  totalUzs      Decimal                  @db.Decimal(18, 2) @default(0)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  items         MarketplaceOrderItem[]
+}
+
+model MarketplaceOrderItem {
+  id          Int              @id @default(autoincrement())
+  orderId     Int
+  order       MarketplaceOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   Int
+  product     Product          @relation(fields: [productId], references: [id])
+  productName String
+  quantity    Int              @default(1)
+  priceUzs    Decimal          @db.Decimal(18, 2)
+  totalUzs    Decimal          @db.Decimal(18, 2)
+}
