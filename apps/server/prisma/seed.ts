@@ -68,8 +68,8 @@ async function seedProductBatch(products: RawProduct[], categoryId: number, ware
     const costPriceUzs = toUzs(costPriceUsd);
     const sellPriceUzs = raw.sellUzs;
     const sellPriceUsd = toUsd(sellPriceUzs);
-    const minPriceUzs = Math.round(sellPriceUzs * 0.85);
-    const minPriceUsd = Math.round(sellPriceUsd * 0.85 * 100) / 100;
+    const minPriceUzs = costPriceUzs;
+    const minPriceUsd = costPriceUsd;
 
     try {
       const product = await prisma.product.create({

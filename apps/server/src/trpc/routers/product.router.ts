@@ -12,9 +12,12 @@ export const productRouter = router({
       categoryId: z.number().optional(),
       warehouseId: z.number().optional(),
       search: z.string().optional(),
+      cursor: z.number().optional(),
+      limit: z.number().min(1).max(100).default(50),
     }).optional())
     .query(async ({ ctx, input }) => {
-      return ctx.db.product.findMany({
+      const limit = input?.limit ?? 50;
+      const items = await ctx.db.product.findMany({
         where: {
           isActive: true,
           ...(input?.categoryId ? { categoryId: input.categoryId } : {}),
@@ -33,8 +36,18 @@ export const productRouter = router({
             ? { where: { warehouseId: input.warehouseId } }
             : true,
         },
-        orderBy: { name: "asc" },
+        orderBy: { id: "asc" },
+        take: limit + 1,
+        ...(input?.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
       });
+
+      let nextCursor: number | undefined;
+      if (items.length > limit) {
+        const nextItem = items.pop();
+        nextCursor = nextItem?.id;
+      }
+
+      return { items, nextCursor };
     }),
 
   getById: protectedProcedure

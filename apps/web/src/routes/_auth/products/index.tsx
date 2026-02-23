@@ -168,6 +168,8 @@ export function ProductsPage() {
   const [sortKey, setSortKey] = useState<"name" | "code" | "category" | "sellPrice" | "minPrice" | "costPrice" | "stock">("code");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showCategories, setShowCategories] = useState(false);
+  const [cursor, setCursor] = useState<number | undefined>(undefined);
+  const [cursorHistory, setCursorHistory] = useState<(number | undefined)[]>([]);
 
   function toggleSort(key: typeof sortKey) {
     if (sortKey === key) {
@@ -178,6 +180,12 @@ export function ProductsPage() {
     }
   }
 
+  // Reset pagination when filter changes
+  useEffect(() => {
+    setCursor(undefined);
+    setCursorHistory([]);
+  }, [selectedCategory, search]);
+
   // Queries
   const categoriesQuery = useQuery({
     queryKey: ["category", "tree"],
@@ -185,11 +193,12 @@ export function ProductsPage() {
   });
 
   const productsQuery = useQuery({
-    queryKey: ["product", "list", selectedCategory, search],
+    queryKey: ["product", "list", selectedCategory, search, cursor],
     queryFn: () =>
       trpc.product.list.query({
         categoryId: selectedCategory ?? undefined,
         search: search || undefined,
+        cursor,
       }),
   });
 
@@ -436,7 +445,9 @@ export function ProductsPage() {
   }
 
   const categoryOptions = categoriesQuery.data ? flattenCategories(categoriesQuery.data as CategoryNode[]) : [];
-  const rawProducts = productsQuery.data ?? [];
+  const rawProducts = productsQuery.data?.items ?? [];
+  const nextCursor = productsQuery.data?.nextCursor;
+  const currentPage = cursorHistory.length + 1;
 
   type ProductItem = typeof rawProducts[number];
 
@@ -482,7 +493,7 @@ export function ProductsPage() {
     <>
       <PageHeader
         title="Mahsulotlar"
-        subtitle={`${products.length} ta mahsulot`}
+        subtitle={`Sahifa ${currentPage} (${products.length} ta)`}
         actions={
           isBoss() && (
             <div className="flex items-center gap-2">
@@ -521,7 +532,7 @@ export function ProductsPage() {
               <div className="card-header">
                 <h3 className="text-sm font-semibold text-gray-700">Guruhlar</h3>
               </div>
-              <div className="p-2 max-h-[calc(100vh-220px)] overflow-y-auto">
+              <div className="p-2 overflow-y-auto">
                 {categoriesQuery.isLoading ? (
                   <div className="p-4 text-center text-gray-400 text-sm">Yuklanmoqda...</div>
                 ) : (
@@ -602,14 +613,14 @@ export function ProductsPage() {
             <Table>
               <TableHead>
                 <tr>
-                  <th className="w-12 hidden sm:table-cell"></th>
-                  <th className="whitespace-nowrap">
+                  <th className="w-12"></th>
+                  <th className="whitespace-nowrap max-w-[200px]">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("code")}>
                       Mahsulot
                       {sortKey === "code" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
-                  <th className="w-28 whitespace-nowrap">
+                  <th className="whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("category")}>
                       <FolderOpen className="w-3.5 h-3.5" />
                       Guruh
@@ -661,7 +672,7 @@ export function ProductsPage() {
                         active={selectedProductId === product.id}
                         onClick={() => setSelectedProductId(selectedProductId === product.id ? null : product.id)}
                       >
-                        <td className="!p-1.5 hidden sm:table-cell">
+                        <td className="!p-1.5">
                           <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
                             {thumbnail ? (
                               <img src={thumbnail} alt="" className="w-full h-full object-cover" />
@@ -670,9 +681,9 @@ export function ProductsPage() {
                             )}
                           </div>
                         </td>
-                        <td>
+                        <td className="max-w-[200px]">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-medium text-gray-900 whitespace-nowrap">{product.name}</span>
+                            <span className="font-medium text-gray-900 truncate">{product.name}</span>
                             {product.isLocked && <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
@@ -680,7 +691,7 @@ export function ProductsPage() {
                             <span>{unitOptions.find((u) => u.value === product.unit)?.label ?? product.unit}</span>
                           </div>
                         </td>
-                        <td>
+                        <td className="whitespace-nowrap">
                           <Badge variant="neutral">{product.category.name}</Badge>
                         </td>
                         <td>
@@ -742,6 +753,39 @@ export function ProductsPage() {
               </TableBody>
             </Table>
             </div>
+
+            {/* Pagination */}
+            {(cursorHistory.length > 0 || nextCursor) && (
+              <div className="flex items-center justify-between mt-3 px-1">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={cursorHistory.length === 0}
+                  onClick={() => {
+                    const prev = [...cursorHistory];
+                    const prevCursor = prev.pop();
+                    setCursorHistory(prev);
+                    setCursor(prevCursor);
+                  }}
+                >
+                  Oldingi
+                </Button>
+                <span className="text-sm text-gray-500">Sahifa {currentPage}</span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={!nextCursor}
+                  onClick={() => {
+                    if (nextCursor) {
+                      setCursorHistory((h) => [...h, cursor]);
+                      setCursor(nextCursor);
+                    }
+                  }}
+                >
+                  Keyingi
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </div>
