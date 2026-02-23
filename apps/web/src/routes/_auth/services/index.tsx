@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, Wrench } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
-  Button, Modal, Input, CurrencyInput,
+  Button, Modal, Input, CurrencyPairInput,
   Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading,
 } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
@@ -118,14 +118,15 @@ export function ServicesPage() {
       />
 
       <div className="page-body">
+        <div className="overflow-x-auto">
         <Table>
           <TableHead>
             <tr>
               <th className="w-12">#</th>
               <th>Nomi</th>
               <th>Narx (UZS)</th>
-              <th>Narx (USD)</th>
-              <th className="w-16">Tartib</th>
+              <th className="hidden sm:table-cell">Narx (USD)</th>
+              <th className="w-16 hidden sm:table-cell">Tartib</th>
               {boss && <th className="w-28">Amallar</th>}
             </tr>
           </TableHead>
@@ -145,8 +146,8 @@ export function ServicesPage() {
                     </div>
                   </td>
                   <td className="currency-uzs">{formatUzs(Number(service.priceUzs))}</td>
-                  <td className="currency-usd">{formatUsd(Number(service.priceUsd))}</td>
-                  <td className="text-gray-400 text-sm">{service.sortOrder}</td>
+                  <td className="currency-usd hidden sm:table-cell">{formatUsd(Number(service.priceUsd))}</td>
+                  <td className="text-gray-400 text-sm hidden sm:table-cell">{service.sortOrder}</td>
                   {boss && (
                     <td>
                       <div className="flex items-center gap-1">
@@ -174,6 +175,7 @@ export function ServicesPage() {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <Modal
@@ -199,20 +201,13 @@ export function ServicesPage() {
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="Masalan: Kesish"
           />
-          <div className="grid grid-cols-2 gap-4">
-            <CurrencyInput
-              label="Narx (UZS)"
-              currency="UZS"
-              value={form.priceUzs}
-              onValueChange={(v) => setForm((f) => ({ ...f, priceUzs: v }))}
-            />
-            <CurrencyInput
-              label="Narx (USD)"
-              currency="USD"
-              value={form.priceUsd}
-              onValueChange={(v) => setForm((f) => ({ ...f, priceUsd: v }))}
-            />
-          </div>
+          <CurrencyPairInput
+            label="Narx"
+            valueUzs={form.priceUzs}
+            valueUsd={form.priceUsd}
+            onChangeUzs={(v) => setForm((f) => ({ ...f, priceUzs: v }))}
+            onChangeUsd={(v) => setForm((f) => ({ ...f, priceUsd: v }))}
+          />
           <Input
             label="Tartib raqami"
             type="number"

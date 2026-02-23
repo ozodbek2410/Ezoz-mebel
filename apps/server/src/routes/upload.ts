@@ -1,12 +1,16 @@
 import { type FastifyInstance } from "fastify";
 import { randomUUID } from "crypto";
 import { createWriteStream } from "fs";
-import { mkdir } from "fs/promises";
-import { unlink } from "fs/promises";
+import { mkdir, unlink } from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { pipeline } from "stream/promises";
+import sharp from "sharp";
 import { env } from "../config/env";
+
+const MAX_WIDTH = 1200;
+const MAX_HEIGHT = 1200;
+const WEBP_QUALITY = 80;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -36,14 +40,19 @@ export async function uploadRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: "Faqat rasm fayllari (jpg, png, webp, gif) qabul qilinadi" });
     }
 
-    const ext = path.extname(data.filename) || ".jpg";
-    const fileName = `${randomUUID()}${ext}`;
+    const fileName = `${randomUUID()}.webp`;
     const uploadDir = path.resolve(env.UPLOAD_DIR, "products");
 
     await mkdir(uploadDir, { recursive: true });
 
     const filePath = path.join(uploadDir, fileName);
-    await pipeline(data.file, createWriteStream(filePath));
+
+    // Sharp: resize + convert to webp
+    const transformer = sharp()
+      .resize(MAX_WIDTH, MAX_HEIGHT, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: WEBP_QUALITY });
+
+    await pipeline(data.file, transformer, createWriteStream(filePath));
 
     return { filePath: `/uploads/products/${fileName}` };
   });
@@ -81,7 +90,13 @@ export async function uploadRoutes(fastify: FastifyInstance) {
     await mkdir(publicDir, { recursive: true });
 
     const filePath = path.join(publicDir, targetName);
-    await pipeline(data.file, createWriteStream(filePath));
+
+    // Sharp: resize + convert to webp
+    const transformer = sharp()
+      .resize(1920, 1080, { fit: "inside", withoutEnlargement: true })
+      .webp({ quality: 85 });
+
+    await pipeline(data.file, transformer, createWriteStream(filePath));
 
     return { success: true, fileName: targetName };
   });

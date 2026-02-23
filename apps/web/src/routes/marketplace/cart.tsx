@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { ShoppingBag, Trash2, Plus, Minus, Package, Check, ArrowLeft } from "lucide-react";
+import { PhoneInput } from "@/components/ui";
 import { formatUzs } from "@ezoz/shared";
 import { useMarketplaceStore } from "@/store/marketplace.store";
 import { trpc } from "@/lib/trpc";
@@ -112,16 +113,12 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
                     className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Telefon raqam *</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+998 90 123 45 67"
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
-                  />
-                </div>
+                <PhoneInput
+                  label="Telefon raqam *"
+                  value={phone}
+                  onChange={setPhone}
+                  className="!bg-gray-50 !border-gray-200 !rounded-xl"
+                />
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1 block">Manzil</label>
                   <input

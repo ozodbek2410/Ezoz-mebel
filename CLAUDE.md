@@ -2,7 +2,7 @@
 
 ## Loyiha haqida
 MDF listlar savdosi, xizmatlar, kassa, moliya va ishchilar boshqaruv tizimi.
-Web App + PWA. Lokal tarmoqda (LAN) ishlaydi.
+Web App + PWA. Lokal tarmoqda (LAN) va internet orqali ishlaydi.
 Til: O'zbek (UI), Ingliz (kod, comments, git).
 
 ## Tech Stack
@@ -21,7 +21,7 @@ apps/web/           - @ezoz/web (React + Vite + TailwindCSS + PWA)
 ## Buyruqlar
 ```bash
 npm run dev:server   # Backend dev server (port 3000)
-npm run dev:web      # Frontend dev server (port 5173, proxy -> 3000)
+npm run dev:web      # Frontend dev server (port 5173, proxy -> VPS yoki localhost)
 npm run db:migrate   # Prisma migration
 npm run db:seed      # Seed data (default users, warehouses, categories)
 npm run db:studio    # Prisma Studio (DB GUI)
@@ -65,6 +65,25 @@ npm run build        # Production build
 - Permission middleware: `protectedProcedure`, `bossProcedure`, `cashierSalesProcedure`, `cashierServiceProcedure`, `masterProcedure`
 - Barcha pul operatsiyalari `Decimal(18,2)` da saqlansin
 
+### Xodim = Foydalanuvchi (Employee + User birlashtirilgan)
+- `Employee` model YO'Q — `User` modelida: `baseSalaryUzs`, `bonusPerJob`, `phone`
+- `Advance`, `JobRecord`, `SalaryPayment` — hammasi `userId` orqali `User` ga bog'langan
+- Yangi xodim = yangi foydalanuvchi (`auth.createUser` orqali)
+- `employee.router.ts` — `ctx.db.user` ishlatadi (employee emas)
+- Frontend: Xodimlar sahifasi = foydalanuvchilar ro'yxati (bitta jadval)
+
+### Telefon raqam input
+- `PhoneInput` komponenti (`components/ui/PhoneInput.tsx`) — barcha telefon inputlar uchun
+- Format: `+998 (XX) XXX XX-XX` — avtomatik formatlanadi
+- `+998` prefiksi doim ko'rinadi, o'chirib bo'lmaydi
+- Saqlangan qiymat: `+998XXXXXXXXX` (raw, DB ga shu ketadi)
+- Backspace/Delete formatlash belgilarini o'tkazib yuboradi
+
+### Rasm yuklash
+- `sharp` kutubxonasi orqali kompressiya qilinadi (`apps/server/src/routes/upload.ts`)
+- Mahsulot rasmlari: max 1200x1200, WebP 80%
+- Banner rasmlari: max 1920x1080, WebP 85%
+
 ### Real-time
 - Socket.io rooms: `room:sales`, `room:service`, `room:workshop`, `room:boss`, `room:stock`
 - Event nomlanishi: `module:action` (masalan: `sale:created`, `stock:updated`)
@@ -72,9 +91,15 @@ npm run build        # Production build
 
 ### Valyuta
 - Barcha narxlar UZS + USD da saqlanadi (ikki ustun)
-- Kurs har kuni login paytida kiritiladi
+- Kurs **avtomatik** CBU.uz (Markaziy Bank) API'dan olinadi — har safar `loadRate()` chaqirilganda
+- CBU ishlamasa, DB'dagi oxirgi saqlangan kurs fallback sifatida ishlatiladi
+- `currency.setRate` mutation mavjud (qo'lda override qilish uchun, lekin asosiy manba CBU)
+- Kurs `ExchangeRate` jadvalida kunlik saqlanadi (`date` unique)
+- Kurs o'zgarganda Socket.io orqali barcha clientlarga broadcast qilinadi (`currency:rateChanged`)
+- Dashboard'da "Bugungi kurs: 1$ = XX,XXX so'm" ko'rsatiladi
 - UZS rangi: `text-red-600` (qizil), USD rangi: `text-blue-600` (ko'k)
 - `convertToUzs()`, `convertToUsd()` — `@ezoz/shared/utils/currency`
+- Store: `currency.store.ts` (Zustand) — `rate`, `loadRate()`, `setRate()`
 
 ## Foydalanuvchi Rollari va Ruxsatlar
 - **BOSS** — to'liq ruxsat (barcha modullar)
@@ -83,8 +108,54 @@ npm run build        # Production build
 - **MASTER** — faqat workshop vazifalari (o'zi), rasm yuklash
 
 ## DB Connection
-- `DATABASE_URL=postgresql://postgres:2410@localhost:5432/ezoz_mebel`
+- **Local:** `DATABASE_URL=postgresql://postgres:2410@localhost:5432/ezoz_mebel`
+- **VPS:** `DATABASE_URL=postgresql://ezoz:ezoz2410@localhost:5432/ezoz_mebel`
 - Schema: `apps/server/prisma/schema.prisma`
+
+## Deployment (VPS)
+- **VPS:** `ssh root@167.86.95.237`
+- **Domain:** https://mebel.biznesjon.uz (SSL — Let's Encrypt)
+- **Loyiha joyi:** `/var/www/ezoz-mebel`
+- **Port:** 3005 (3001 boshqa loyiha band!)
+- **Process manager:** PM2 (`ecosystem.config.cjs`, tsx interpreter)
+- **Web server:** Nginx (reverse proxy + SPA fallback + static)
+- **Upload papka:** `/var/www/ezoz-mebel/uploads`
+
+### Deploy qilish tartibi
+```bash
+# 1. Lokal: GitHub ga push
+git add . && git commit -m "feat: ..." && git push
+
+# 2. VPS ga kirish
+ssh root@167.86.95.237
+
+# 3. Pull va build
+cd /var/www/ezoz-mebel
+git pull
+npm install
+npx prisma generate
+npx prisma migrate deploy   # Agar yangi migration bo'lsa
+npm run build               # Frontend build
+
+# 4. Server restart
+pm2 restart ezoz-mebel
+```
+
+### Nginx config
+- Fayl: `/etc/nginx/sites-available/ezoz-mebel`
+- SPA fallback: `try_files $uri $uri/ /index.html`
+- Proxy: `/trpc`, `/api`, `/uploads`, `/socket.io` → `localhost:3005`
+
+### PM2 config (`ecosystem.config.cjs`)
+- `tsx` interpreter (ESM module — `moduleResolution: "bundler"` tufayli `node dist/` ishlamaydi)
+- `cwd: /var/www/ezoz-mebel/apps/server`
+- `script: src/index.ts`
+
+## Vite Proxy (Dev)
+- Fayl: `apps/web/vite.config.ts` → `server.proxy`
+- **VPS bilan test:** target = `https://mebel.biznesjon.uz` (hozirgi holat)
+- **Lokal backend bilan:** target = `http://localhost:3000`
+- Proxy yo'llari: `/trpc`, `/api`, `/uploads`, `/socket.io`
 
 ## Fayl Nomlash Konventsiyasi
 - Komponentlar: `PascalCase.tsx` (masalan: `CustomerList.tsx`, `SaleForm.tsx`)
@@ -112,7 +183,14 @@ npm run build        # Production build
 - Emoji ISHLATMA (agar so'ralmasa)
 - Ortiqcha tushuntirma berma — qisqa va aniq
 
+## Default Login (Seed)
+- **Boss:** `boshliq` / `1234`
+- **Kassir (savdo):** `kassir_savdo` / `1234`
+- **Kassir (xizmat):** `kassir_xizmat` / `1234`
+- **Usta:** `usta1` / `1234`
+
 ## Git
+- Repo: https://github.com/ozodbek2410/Ezoz-mebel
 - Commit message: ingliz tilida, qisqa va aniq
 - Conventional commits: `feat:`, `fix:`, `refactor:`, `chore:`
 - Commit qilishdan oldin so'ra

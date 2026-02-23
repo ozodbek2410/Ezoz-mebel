@@ -78,19 +78,24 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/trpc": {
-        target: "http://localhost:3000",
+        target: "https://mebel.biznesjon.uz",
         changeOrigin: true,
+        secure: true,
       },
       "/api": {
-        target: "http://localhost:3000",
+        target: "https://mebel.biznesjon.uz",
         changeOrigin: true,
+        secure: true,
       },
       "/uploads": {
-        target: "http://localhost:3000",
+        target: "https://mebel.biznesjon.uz",
         changeOrigin: true,
+        secure: true,
       },
       "/socket.io": {
-        target: "http://localhost:3000",
+        target: "https://mebel.biznesjon.uz",
+        changeOrigin: true,
+        secure: true,
         ws: true,
       },
     },

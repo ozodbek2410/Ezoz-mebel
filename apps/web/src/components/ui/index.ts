@@ -14,3 +14,4 @@ export { ConfirmDialog } from "./ConfirmDialog";
 export { Pagination } from "./Pagination";
 export { ColumnToggle } from "./ColumnToggle";
 export { SlideOver } from "./SlideOver";
+export { PhoneInput } from "./PhoneInput";

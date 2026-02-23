@@ -371,7 +371,7 @@ function BannersTab() {
       {/* Product selection modal */}
       {selectingProduct && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setSelectingProduct(null); setProductSearch(""); }}>
-          <div className="bg-white rounded-xl shadow-2xl w-[500px] max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-2xl w-full sm:w-[500px] max-h-[80vh] mx-4 flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 py-3 border-b flex items-center justify-between shrink-0">
               <h3 className="font-semibold text-gray-900 text-sm">Mahsulot tanlash — Banner {BANNER_FILES.indexOf(selectingProduct) + 1}</h3>
               <button onClick={() => { setSelectingProduct(null); setProductSearch(""); }} className="text-gray-400 hover:text-gray-600">

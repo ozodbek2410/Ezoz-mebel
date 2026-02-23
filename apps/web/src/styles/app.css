@@ -275,23 +275,32 @@
 /* ===== LAYOUT ===== */
 
 @utility main-content {
-  @apply ml-64 min-h-screen flex-1 min-w-0;
+  @apply min-h-screen flex-1 min-w-0 ml-0 lg:ml-64;
+  transition: margin-left 0.3s ease;
+}
+
+@utility main-content-collapsed {
+  @apply min-h-screen flex-1 min-w-0 ml-0 lg:ml-16;
+  transition: margin-left 0.3s ease;
 }
 
 @utility page-header {
-  @apply bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10;
+  @apply bg-white border-b border-gray-200 px-4 py-3 lg:px-6 lg:py-4 flex items-center justify-between sticky top-0 z-10;
 }
 
 @utility page-body {
-  @apply p-6;
+  @apply p-3 sm:p-4 lg:p-6;
 }
 
 /* ===== COMPONENTS (complex selectors) ===== */
 
 @layer components {
   /* === Tables === */
+  .table-responsive {
+    @apply w-full overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0;
+  }
   .data-table {
-    @apply w-full text-sm;
+    @apply w-full text-sm min-w-[600px] sm:min-w-0;
   }
   .data-table thead {
     @apply bg-gray-50 border-b border-gray-200;
@@ -315,6 +324,31 @@
   /* === Sidebar === */
   .sidebar {
     @apply fixed left-0 top-0 bottom-0 w-64 bg-sidebar text-sidebar-text flex flex-col z-30 overflow-hidden;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease, width 0.3s ease;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  @media (min-width: 1024px) {
+    .sidebar {
+      transform: translateX(0);
+    }
+    .sidebar.collapsed {
+      @apply w-16;
+    }
+  }
+  .sidebar-overlay {
+    @apply fixed inset-0 bg-black/50 z-20;
+    display: none;
+  }
+  .sidebar-overlay.open {
+    display: block;
+  }
+  @media (min-width: 1024px) {
+    .sidebar-overlay {
+      display: none !important;
+    }
   }
   .sidebar-logo {
     @apply px-5 py-5 flex items-center gap-3;
@@ -340,7 +374,7 @@
     background: rgba(255, 255, 255, 0.25);
   }
   .sidebar-link {
-    @apply flex items-center gap-3 py-2 rounded-lg text-[13px] font-medium text-sidebar-text transition-all duration-150;
+    @apply flex items-center gap-3 py-2.5 rounded-lg text-[13px] font-medium text-gray-400 transition-all duration-150;
     padding-left: 2.25rem;
     padding-right: 0.75rem;
   }
@@ -353,13 +387,16 @@
     padding-left: calc(2.25rem - 3px);
   }
   .sidebar-section-header {
-    @apply mt-5 mb-1 px-3 py-1.5 w-full flex items-center gap-2 cursor-pointer select-none;
+    @apply mt-5 mb-1 px-3 py-2 w-full flex items-center gap-2.5 cursor-pointer select-none rounded-lg transition-colors;
+  }
+  .sidebar-section-header:hover {
+    @apply bg-sidebar-hover;
   }
   .sidebar-section-header span {
-    @apply text-[10px] font-bold uppercase tracking-[0.1em] text-gray-500 transition-colors;
+    @apply text-[11px] font-bold uppercase tracking-[0.1em] text-gray-300 transition-colors;
   }
   .sidebar-section-header:hover span {
-    @apply text-gray-400;
+    @apply text-white;
   }
   .sidebar-divider {
     height: 1px;
@@ -377,17 +414,26 @@
     background-color: rgba(0, 0, 0, 0.5);
   }
   .modal {
-    @apply bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-y-auto;
-    max-height: 90vh;
+    @apply bg-white shadow-2xl w-full overflow-y-auto rounded-none sm:rounded-2xl sm:max-w-lg;
+    max-height: 100vh;
+  }
+  @media (min-width: 640px) {
+    .modal {
+      max-height: 90vh;
+    }
+  }
+  .modal-overlay {
+    @apply fixed inset-0 z-40 flex items-end sm:items-center justify-center sm:p-4;
+    background-color: rgba(0, 0, 0, 0.5);
   }
   .modal-header {
-    @apply px-6 py-4 border-b border-gray-100 flex items-center justify-between;
+    @apply px-4 py-3 sm:px-6 sm:py-4 border-b border-gray-100 flex items-center justify-between;
   }
   .modal-body {
-    @apply px-6 py-5;
+    @apply px-4 py-4 sm:px-6 sm:py-5;
   }
   .modal-footer {
-    @apply px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 rounded-b-2xl;
+    @apply px-4 py-3 sm:px-6 sm:py-4 border-t border-gray-100 flex items-center justify-end gap-3 sm:rounded-b-2xl;
     background-color: rgba(249, 250, 251, 0.5);
   }
 
@@ -403,7 +449,7 @@
     pointer-events: auto;
   }
   .slide-over-panel {
-    @apply fixed top-0 right-0 h-full w-full bg-white shadow-2xl flex flex-col;
+    @apply fixed top-0 right-0 h-full w-full sm:w-[480px] bg-white shadow-2xl flex flex-col;
     transform: translateX(100%);
     transition: transform 0.3s ease;
   }

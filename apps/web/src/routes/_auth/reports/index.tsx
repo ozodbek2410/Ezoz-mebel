@@ -86,7 +86,7 @@ export function ReportsPage() {
 
         {/* Date filters */}
         {activeTab !== "inventory" && activeTab !== "charts" && (
-          <div className="flex items-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 mb-6">
             <Input label="Dan" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
             <Input label="Gacha" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             {activeTab === "cashier" && (
@@ -134,7 +134,7 @@ export function ReportsPage() {
                 variant={cashierReport.data.netUzs >= 0 ? "success" : "danger"} />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="card card-body">
                 <h4 className="text-sm font-medium text-gray-500 mb-3">Tushumlar tafsiloti</h4>
                 <div className="space-y-2">
@@ -170,7 +170,7 @@ export function ReportsPage() {
                 variant={bossReport.data.netProfitUzs >= 0 ? "success" : "danger"} />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="card card-body">
                 <h4 className="text-sm font-medium text-gray-500 mb-3">Savdo kassa</h4>
                 <div className="space-y-2">
@@ -212,11 +212,11 @@ export function ReportsPage() {
                   <thead>
                     <tr>
                       <th>Mahsulot</th>
-                      <th>Guruh</th>
-                      <th>Ombor</th>
+                      <th className="hidden sm:table-cell">Guruh</th>
+                      <th className="hidden md:table-cell">Ombor</th>
                       <th>Qoldiq</th>
-                      <th>Sotish narxi</th>
-                      <th>Tan narxi</th>
+                      <th className="hidden sm:table-cell">Sotish narxi</th>
+                      <th className="hidden md:table-cell">Tan narxi</th>
                       <th>Jami qiymat</th>
                     </tr>
                   </thead>
@@ -224,11 +224,11 @@ export function ReportsPage() {
                     {inventoryReport.data.items.map((item, idx) => (
                       <tr key={idx}>
                         <td className="font-medium">{item.productName}</td>
-                        <td><Badge variant="neutral">{item.category}</Badge></td>
-                        <td className="text-sm text-gray-500">{item.warehouse}</td>
+                        <td className="hidden sm:table-cell"><Badge variant="neutral">{item.category}</Badge></td>
+                        <td className="text-sm text-gray-500 hidden md:table-cell">{item.warehouse}</td>
                         <td>{item.quantity}</td>
-                        <td className="currency-uzs text-sm">{formatUzs(item.priceUzs)}</td>
-                        <td className="text-sm text-gray-500">{formatUzs(item.costUzs)}</td>
+                        <td className="currency-uzs text-sm hidden sm:table-cell">{formatUzs(item.priceUzs)}</td>
+                        <td className="text-sm text-gray-500 hidden md:table-cell">{formatUzs(item.costUzs)}</td>
                         <td className="currency-uzs font-medium">{formatUzs(item.totalPriceUzs)}</td>
                       </tr>
                     ))}
@@ -285,13 +285,13 @@ function ChartsTab({
   return (
     <div className="space-y-6">
       {/* Period selector */}
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 overflow-x-auto">
           {[7, 14, 30, 60].map((d) => (
             <button
               key={d}
               onClick={() => setChartDays(d)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
                 chartDays === d ? "bg-brand-600 text-white" : "bg-white border text-gray-600 hover:bg-gray-50"
               }`}
             >
@@ -299,7 +299,7 @@ function ChartsTab({
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2 sm:ml-auto">
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </div>
@@ -445,7 +445,7 @@ function StatCard({
         <span className="stat-card-label">{label}</span>
         {icon}
       </div>
-      <p className={`stat-card-value ${variant === "success" ? "text-green-600" : variant === "danger" ? "text-red-600" : ""}`}>
+      <p className={`stat-card-value truncate ${variant === "success" ? "text-green-600" : variant === "danger" ? "text-red-600" : ""}`}>
         {value}
       </p>
       {sub && <p className="stat-card-sub">{sub}</p>}

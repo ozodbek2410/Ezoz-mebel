@@ -5,11 +5,13 @@ import { Toaster } from "react-hot-toast";
 import { BirthdayAlert } from "@/components/shared/BirthdayAlert";
 import { useBirthdayAlert } from "@/hooks/useBirthdayAlert";
 import { useCurrencyStore } from "@/store/currency.store";
+import { useUIStore } from "@/store/ui.store";
 import { connectSocket } from "@/lib/socket";
 import { useSocketEvent } from "@/hooks/useSocket";
 
 export function AppLayout() {
   const { show, customers, dismiss } = useBirthdayAlert();
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
 
   // Load currency rate on startup
   useEffect(() => {
@@ -26,7 +28,7 @@ export function AppLayout() {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <main className="main-content">
+      <main className={sidebarCollapsed ? "main-content-collapsed" : "main-content"}>
         <Outlet />
       </main>
       {show && <BirthdayAlert customers={customers} onDismiss={dismiss} />}

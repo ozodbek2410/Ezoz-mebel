@@ -74,13 +74,14 @@ export function ReceiptsPage() {
           />
         </div>
 
+        <div className="overflow-x-auto">
         <Table>
           <TableHead>
             <tr>
               <th>Hujjat</th>
-              <th>Sana</th>
-              <th>Mijoz</th>
-              <th>Turi</th>
+              <th className="hidden sm:table-cell">Sana</th>
+              <th className="hidden md:table-cell">Mijoz</th>
+              <th className="hidden sm:table-cell">Turi</th>
               <th>Summa</th>
               <th className="w-20">Chop etish</th>
             </tr>
@@ -94,11 +95,11 @@ export function ReceiptsPage() {
               filtered.map((sale) => (
                 <TableRow key={sale.id}>
                   <td className="font-mono text-xs">{sale.documentNo}</td>
-                  <td className="text-sm text-gray-500">
+                  <td className="text-sm text-gray-500 hidden sm:table-cell">
                     {new Date(sale.createdAt).toLocaleDateString("uz")}
                   </td>
-                  <td>{sale.customer?.fullName || "-"}</td>
-                  <td>
+                  <td className="hidden md:table-cell">{sale.customer?.fullName || "-"}</td>
+                  <td className="hidden sm:table-cell">
                     <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
                       {sale.saleType === "PRODUCT" ? "Savdo" : "Xizmat"}
                     </Badge>
@@ -119,6 +120,7 @@ export function ReceiptsPage() {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Receipt Preview Modal */}

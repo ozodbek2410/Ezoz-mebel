@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Edit2, Trash2, User } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button, SearchInput, Modal, Input, Select, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, Pagination, Badge, CurrencyInput, CurrencyPairInput, Tabs, SlideOver } from "@/components/ui";
+import { Button, SearchInput, Modal, Input, Select, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, Pagination, Badge, CurrencyPairInput, Tabs, SlideOver, PhoneInput } from "@/components/ui";
 import { CurrencyDisplay, EmptyState } from "@/components/shared";
 import { formatUzs, formatUsd } from "@ezoz/shared";
 import toast from "react-hot-toast";
@@ -15,7 +15,6 @@ interface CustomerFormData {
   birthday: string;
   address: string;
   category: "REGULAR" | "MASTER";
-  trustLimit: string;
   initialDebtUzs: string;
   initialDebtUsd: string;
   notes: string;
@@ -28,7 +27,6 @@ const defaultForm: CustomerFormData = {
   birthday: "",
   address: "",
   category: "REGULAR",
-  trustLimit: "0",
   initialDebtUzs: "0",
   initialDebtUsd: "0",
   notes: "",
@@ -79,7 +77,6 @@ export function CustomersPage() {
         birthday: data.birthday || undefined,
         address: data.address || undefined,
         category: data.category,
-        trustLimit: Number(data.trustLimit),
         initialDebtUzs: Number(data.initialDebtUzs),
         initialDebtUsd: Number(data.initialDebtUsd),
         notes: data.notes || undefined,
@@ -102,7 +99,6 @@ export function CustomersPage() {
         birthday: data.birthday || undefined,
         address: data.address || undefined,
         category: data.category,
-        trustLimit: Number(data.trustLimit),
         notes: data.notes || undefined,
       }),
     onSuccess: () => {
@@ -138,7 +134,6 @@ export function CustomersPage() {
       birthday: customer.birthday ? new Date(customer.birthday).toISOString().split("T")[0]! : "",
       address: customer.address || "",
       category: customer.category as "REGULAR" | "MASTER",
-      trustLimit: String(customer.trustLimit),
       initialDebtUzs: String(customer.initialDebtUzs),
       initialDebtUsd: String(customer.initialDebtUsd),
       notes: customer.notes || "",
@@ -183,7 +178,6 @@ export function CustomersPage() {
         birthday: detail.birthday ? new Date(detail.birthday).toISOString().split("T")[0]! : "",
         address: detail.address || "",
         category: detail.category as "REGULAR" | "MASTER",
-        trustLimit: String(detail.trustLimit),
         initialDebtUzs: String(detail.initialDebtUzs),
         initialDebtUsd: String(detail.initialDebtUsd),
         notes: detail.notes || "",
@@ -224,13 +218,13 @@ export function CustomersPage() {
               />
             </div>
 
+            <div className="overflow-x-auto">
             <Table>
               <TableHead>
                 <tr>
                   <th>Ism</th>
-                  <th>Telefon</th>
-                  <th>Kategoriya</th>
-                  <th>Ishonch limiti</th>
+                  <th className="hidden sm:table-cell">Telefon</th>
+                  <th className="hidden md:table-cell">Kategoriya</th>
                   <th className="w-20">Amallar</th>
                 </tr>
               </TableHead>
@@ -249,13 +243,12 @@ export function CustomersPage() {
                       <td>
                         <span className="font-medium text-gray-900">{c.fullName}</span>
                       </td>
-                      <td className="text-gray-500">{c.phone || "-"}</td>
-                      <td>
+                      <td className="text-gray-500 hidden sm:table-cell">{c.phone || "-"}</td>
+                      <td className="hidden md:table-cell">
                         <Badge variant={c.category === "MASTER" ? "info" : "neutral"}>
                           {c.category === "MASTER" ? "Usta" : "Oddiy"}
                         </Badge>
                       </td>
-                      <td className="text-sm text-gray-500">{formatUzs(Number(c.trustLimit))}</td>
                       <td>
                         <div className="flex items-center gap-1">
                           <button
@@ -282,6 +275,7 @@ export function CustomersPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
 
             {totalPages > 1 && (
               <div className="mt-4 flex justify-center">
@@ -319,20 +313,19 @@ export function CustomersPage() {
             onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
             placeholder="Ism Familiya"
           />
-          <div className="grid grid-cols-2 gap-4">
-            <Input
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <PhoneInput
               label="Telefon"
               value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-              placeholder="+998 90 123 45 67"
+              onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
             />
-            <Input
+            <PhoneInput
               label="Telefon 2 (ixtiyoriy)"
               value={form.phone2}
-              onChange={(e) => setForm((f) => ({ ...f, phone2: e.target.value }))}
+              onChange={(v) => setForm((f) => ({ ...f, phone2: v }))}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Tug'ilgan sana"
               type="date"
@@ -353,12 +346,6 @@ export function CustomersPage() {
             label="Manzil"
             value={form.address}
             onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-          />
-          <CurrencyInput
-            label="Ishonch limiti"
-            currency="UZS"
-            value={form.trustLimit}
-            onValueChange={(v) => setForm((f) => ({ ...f, trustLimit: v }))}
           />
           {!editing && (
             <div className="border-t pt-4">
@@ -434,19 +421,19 @@ export function CustomersPage() {
                     value={slideForm.fullName}
                     onChange={(e) => setSlideForm((f) => ({ ...f, fullName: e.target.value }))}
                   />
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <PhoneInput
                       label="Telefon"
                       value={slideForm.phone}
-                      onChange={(e) => setSlideForm((f) => ({ ...f, phone: e.target.value }))}
+                      onChange={(v) => setSlideForm((f) => ({ ...f, phone: v }))}
                     />
-                    <Input
+                    <PhoneInput
                       label="Telefon 2"
                       value={slideForm.phone2}
-                      onChange={(e) => setSlideForm((f) => ({ ...f, phone2: e.target.value }))}
+                      onChange={(v) => setSlideForm((f) => ({ ...f, phone2: v }))}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input
                       label="Tug'ilgan sana"
                       type="date"
@@ -467,12 +454,6 @@ export function CustomersPage() {
                     label="Manzil"
                     value={slideForm.address}
                     onChange={(e) => setSlideForm((f) => ({ ...f, address: e.target.value }))}
-                  />
-                  <CurrencyInput
-                    label="Ishonch limiti"
-                    currency="UZS"
-                    value={slideForm.trustLimit}
-                    onValueChange={(v) => setSlideForm((f) => ({ ...f, trustLimit: v }))}
                   />
                   <Input
                     label="Izoh"

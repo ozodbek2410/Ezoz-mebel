@@ -97,14 +97,15 @@ export function ExpensesPage() {
       />
 
       <div className="page-body">
+        <div className="overflow-x-auto">
         <Table>
           <TableHead>
             <tr>
-              <th>Sana</th>
+              <th className="hidden sm:table-cell">Sana</th>
               <th>Kategoriya</th>
               <th>Tavsif</th>
-              <th>Kassa</th>
-              <th>To'lov turi</th>
+              <th className="hidden md:table-cell">Kassa</th>
+              <th className="hidden sm:table-cell">To'lov turi</th>
               <th>Summa</th>
             </tr>
           </TableHead>
@@ -116,19 +117,19 @@ export function ExpensesPage() {
             ) : (
               expenses.map((exp) => (
                 <TableRow key={exp.id}>
-                  <td className="text-sm text-gray-500">
+                  <td className="text-sm text-gray-500 hidden sm:table-cell">
                     {new Date(exp.createdAt).toLocaleDateString("uz")}
                   </td>
                   <td>
                     <Badge variant="neutral">{exp.category.name}</Badge>
                   </td>
                   <td className="text-gray-700">{exp.description}</td>
-                  <td>
+                  <td className="hidden md:table-cell">
                     <Badge variant={exp.cashRegister === "SALES" ? "info" : "warning"}>
                       {exp.cashRegister === "SALES" ? "Savdo" : "Xizmat"}
                     </Badge>
                   </td>
-                  <td className="text-sm text-gray-500">{exp.paymentType}</td>
+                  <td className="text-sm text-gray-500 hidden sm:table-cell">{exp.paymentType}</td>
                   <td>
                     <CurrencyDisplay amountUzs={exp.amountUzs} amountUsd={exp.amountUsd} />
                   </td>
@@ -137,6 +138,7 @@ export function ExpensesPage() {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* New expense modal */}
@@ -183,7 +185,7 @@ export function ExpensesPage() {
             onChangeUzs={(v) => setForm((f) => ({ ...f, amountUzs: v }))}
             onChangeUsd={(v) => setForm((f) => ({ ...f, amountUsd: v }))}
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="Kassa"
               options={[

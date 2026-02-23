@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, Link } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { usePWA } from "@/hooks/usePWA";
+import { useUIStore } from "@/store/ui.store";
 import { UserRoleLabels, type Permission } from "@ezoz/shared";
 import type { UserRole } from "@ezoz/shared";
 import { useMutation } from "@tanstack/react-query";
@@ -25,11 +26,14 @@ import {
   Clock,
   Download,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Edit2,
   X,
   Save,
   Lock,
   Scissors,
+  Menu,
 } from "lucide-react";
 
 interface NavItem {
@@ -86,48 +90,31 @@ const navSections: NavSection[] = [
   },
 ];
 
-const STORAGE_KEY = "ezoz-sidebar-sections";
-
-function getDefaultOpen(): Record<string, boolean> {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch { /* ignore */ }
-  return {};
-}
-
+// ===== Collapsible Section (Accordion) =====
 function CollapsibleSection({
   section,
   visibleItems,
   pathname,
   sectionIndex,
+  isOpen,
+  onToggle,
+  collapsed,
 }: {
   section: NavSection;
   visibleItems: NavItem[];
   pathname: string;
   sectionIndex: number;
+  isOpen: boolean;
+  onToggle: () => void;
+  collapsed: boolean;
 }) {
   const isItemActive = (item: NavItem): boolean => {
     const cleanPath = pathname.replace(/\/+$/, "");
     const cleanHref = item.href.replace(/\/+$/, "");
-    if (cleanPath === cleanHref) return true;
-    // If a more specific sibling matches via exact or startsWith, this item is NOT active
-    const moreSpecificSibling = visibleItems.some((s) => {
-      if (s.href === item.href) return false;
-      const siblingHref = s.href.replace(/\/+$/, "");
-      if (siblingHref.length <= cleanHref.length) return false;
-      return cleanPath === siblingHref || cleanPath.startsWith(siblingHref + "/");
-    });
-    if (moreSpecificSibling) return false;
-    return cleanPath.startsWith(cleanHref + "/");
+    return cleanPath === cleanHref;
   };
 
   const hasActiveItem = visibleItems.some(isItemActive);
-
-  const [open, setOpen] = useState(() => {
-    const saved = getDefaultOpen();
-    return saved[section.title] ?? true;
-  });
 
   const contentRef = useRef<HTMLDivElement>(null);
   const [contentHeight, setContentHeight] = useState<number>(0);
@@ -138,42 +125,53 @@ function CollapsibleSection({
     }
   }, [visibleItems.length]);
 
-  useEffect(() => {
-    if (hasActiveItem && !open) {
-      setOpen(true);
-    }
-  }, [hasActiveItem]);
-
-  function toggle() {
-    const next = !open;
-    setOpen(next);
-    try {
-      const saved = getDefaultOpen();
-      saved[section.title] = next;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-    } catch { /* ignore */ }
+  // Collapsed mode: show only section icon
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center gap-0.5 py-0.5">
+        {sectionIndex > 0 && <div className="w-6 h-px bg-white/10 my-1" />}
+        {visibleItems.map((item) => {
+          const isActive = isItemActive(item);
+          return (
+            <Link
+              key={item.href}
+              to={item.href}
+              activeOptions={{ exact: true }}
+              className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+                isActive
+                  ? "bg-sidebar-active text-white shadow-sm shadow-brand-500/20"
+                  : "text-gray-400 hover:bg-sidebar-hover hover:text-white"
+              }`}
+              title={item.label}
+            >
+              <item.icon size={18} strokeWidth={1.8} />
+            </Link>
+          );
+        })}
+      </div>
+    );
   }
 
   return (
     <div>
       {sectionIndex > 0 && <div className="sidebar-divider" />}
 
-      <button onClick={toggle} className="sidebar-section-header">
-        <section.icon size={14} className={hasActiveItem ? "text-brand-400" : "text-gray-500"} />
+      <button onClick={onToggle} className="sidebar-section-header">
+        <section.icon size={16} className={hasActiveItem ? "text-brand-400" : "text-gray-300"} />
         <span className={`flex-1 text-left ${hasActiveItem ? "!text-brand-400" : ""}`}>
           {section.title}
         </span>
         <ChevronDown
-          size={12}
-          className={`text-gray-600 transition-transform duration-200 ${
-            open ? "rotate-0" : "-rotate-90"
+          size={14}
+          className={`text-gray-400 transition-transform duration-200 ${
+            isOpen ? "rotate-0" : "-rotate-90"
           }`}
         />
       </button>
 
       <div
         className="overflow-hidden transition-all duration-200 ease-in-out"
-        style={{ maxHeight: open ? `${contentHeight}px` : "0px" }}
+        style={{ maxHeight: isOpen ? `${contentHeight}px` : "0px" }}
       >
         <div ref={contentRef}>
           {visibleItems.map((item) => {
@@ -182,6 +180,7 @@ function CollapsibleSection({
               <Link
                 key={item.href}
                 to={item.href}
+                activeOptions={{ exact: true }}
                 className={`sidebar-link ${isActive ? "active" : ""}`}
               >
                 <item.icon size={18} strokeWidth={1.8} />
@@ -236,7 +235,7 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-[400px] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-2xl w-full sm:w-[400px] max-h-[90vh] mx-4 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <h3 className="font-semibold text-gray-900">Profilni tahrirlash</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
@@ -306,88 +305,174 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+// ===== Mobile Hamburger Button =====
+export function MobileMenuButton() {
+  const { toggleMobileSidebar } = useUIStore();
+  return (
+    <button
+      onClick={toggleMobileSidebar}
+      className="lg:hidden p-2 -ml-2 mr-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+    >
+      <Menu size={22} />
+    </button>
+  );
+}
+
 // ===== Main Sidebar =====
 export function Sidebar() {
   const { user, logout, can } = useAuth();
   const { canInstall, install } = usePWA();
   const location = useLocation();
   const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const { mobileSidebarOpen, closeMobileSidebar, sidebarCollapsed, toggleSidebarCollapsed } = useUIStore();
+
+  // Accordion: only one section open at a time, default all closed
+  const [openSection, setOpenSection] = useState<string | null>(null);
+
+  // Auto-open section that contains active route
+  useEffect(() => {
+    const cleanPath = location.pathname.replace(/\/+$/, "");
+    for (const section of navSections) {
+      const hasActive = section.items.some((item) => {
+        const cleanHref = item.href.replace(/\/+$/, "");
+        return cleanPath === cleanHref;
+      });
+      if (hasActive) {
+        setOpenSection(section.title);
+        break;
+      }
+    }
+  }, [location.pathname]);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    closeMobileSidebar();
+  }, [location.pathname, closeMobileSidebar]);
+
+  const handleSectionToggle = useCallback((title: string) => {
+    setOpenSection((prev) => (prev === title ? null : title));
+  }, []);
 
   if (!user) return null;
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-logo">
-        <div className="w-9 h-9 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">
-          EZ
+    <>
+      {/* Mobile overlay */}
+      <div
+        className={`sidebar-overlay ${mobileSidebarOpen ? "open" : ""}`}
+        onClick={closeMobileSidebar}
+      />
+
+      <aside className={`sidebar ${mobileSidebarOpen ? "open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`}>
+        {/* Logo */}
+        <div className={`sidebar-logo ${sidebarCollapsed ? "justify-center px-2" : ""}`}>
+          <div className="w-9 h-9 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">
+            EZ
+          </div>
+          {!sidebarCollapsed && (
+            <>
+              <div className="flex-1">
+                <div className="sidebar-logo-text">EZOZ MEBEL</div>
+                <div className="text-[11px] text-gray-500">Savdo Boshqaruv</div>
+              </div>
+              <button
+                onClick={toggleSidebarCollapsed}
+                className="hidden lg:flex text-gray-500 hover:text-white p-1 transition-colors"
+                title="Yig'ish"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <button
+                onClick={closeMobileSidebar}
+                className="lg:hidden text-gray-400 hover:text-white p-1"
+              >
+                <X size={20} />
+              </button>
+            </>
+          )}
+          {sidebarCollapsed && (
+            <button
+              onClick={toggleSidebarCollapsed}
+              className="hidden lg:flex absolute right-1 top-5 text-gray-500 hover:text-white p-1 transition-colors"
+              title="Kengaytirish"
+            >
+              <ChevronRight size={16} />
+            </button>
+          )}
         </div>
-        <div>
-          <div className="sidebar-logo-text">EZOZ MEBEL</div>
-          <div className="text-[11px] text-gray-500">Savdo Boshqaruv</div>
-        </div>
-      </div>
 
-      <nav className="sidebar-nav">
-        {navSections.reduce<{ elements: React.ReactNode[]; visibleIndex: number }>(
-          (acc, section) => {
-            const visibleItems = section.items.filter(
-              (item) => !item.permission || can(item.permission),
-            );
-            if (visibleItems.length === 0) return acc;
+        {/* Nav */}
+        <nav className={`sidebar-nav ${sidebarCollapsed ? "px-1" : ""}`}>
+          {navSections.reduce<{ elements: React.ReactNode[]; visibleIndex: number }>(
+            (acc, section) => {
+              const visibleItems = section.items.filter(
+                (item) => !item.permission || can(item.permission),
+              );
+              if (visibleItems.length === 0) return acc;
 
-            acc.elements.push(
-              <CollapsibleSection
-                key={section.title}
-                section={section}
-                visibleItems={visibleItems}
-                pathname={location.pathname}
-                sectionIndex={acc.visibleIndex}
-              />,
-            );
-            acc.visibleIndex++;
-            return acc;
-          },
-          { elements: [], visibleIndex: 0 },
-        ).elements}
-      </nav>
+              acc.elements.push(
+                <CollapsibleSection
+                  key={section.title}
+                  section={section}
+                  visibleItems={visibleItems}
+                  pathname={location.pathname}
+                  sectionIndex={acc.visibleIndex}
+                  isOpen={openSection === section.title}
+                  onToggle={() => handleSectionToggle(section.title)}
+                  collapsed={sidebarCollapsed}
+                />,
+              );
+              acc.visibleIndex++;
+              return acc;
+            },
+            { elements: [], visibleIndex: 0 },
+          ).elements}
+        </nav>
 
-      {canInstall && (
-        <div className="px-3 pb-2">
+        {/* PWA Install */}
+        {canInstall && !sidebarCollapsed && (
+          <div className="px-3 pb-2">
+            <button
+              onClick={install}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-lg transition-colors"
+            >
+              <Download size={14} />
+              Ilovani o'rnatish
+            </button>
+          </div>
+        )}
+
+        {/* User section */}
+        <div className={`sidebar-user ${sidebarCollapsed ? "flex-col gap-2 px-2" : ""}`}>
+          <div className="w-8 h-8 bg-brand-700 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+            {user.fullName.charAt(0).toUpperCase()}
+          </div>
+          {!sidebarCollapsed && (
+            <>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-white truncate">{user.fullName}</div>
+                <div className="text-[11px] text-gray-500">{UserRoleLabels[user.role as UserRole]}</div>
+              </div>
+              <button
+                onClick={() => setEditProfileOpen(true)}
+                className="text-gray-500 hover:text-brand-400 transition-colors p-1"
+                title="Tahrirlash"
+              >
+                <Edit2 size={14} />
+              </button>
+            </>
+          )}
           <button
-            onClick={install}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-lg transition-colors"
+            onClick={logout}
+            className="text-gray-500 hover:text-red-400 transition-colors p-1"
+            title="Chiqish"
           >
-            <Download size={14} />
-            Ilovani o'rnatish
+            <LogOut size={16} />
           </button>
         </div>
-      )}
 
-      <div className="sidebar-user">
-        <div className="w-8 h-8 bg-brand-700 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
-          {user.fullName.charAt(0).toUpperCase()}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-white truncate">{user.fullName}</div>
-          <div className="text-[11px] text-gray-500">{UserRoleLabels[user.role as UserRole]}</div>
-        </div>
-        <button
-          onClick={() => setEditProfileOpen(true)}
-          className="text-gray-500 hover:text-brand-400 transition-colors p-1"
-          title="Tahrirlash"
-        >
-          <Edit2 size={14} />
-        </button>
-        <button
-          onClick={logout}
-          className="text-gray-500 hover:text-red-400 transition-colors p-1"
-          title="Chiqish"
-        >
-          <LogOut size={16} />
-        </button>
-      </div>
-
-      {editProfileOpen && <EditProfileModal onClose={() => setEditProfileOpen(false)} />}
-    </aside>
+        {editProfileOpen && <EditProfileModal onClose={() => setEditProfileOpen(false)} />}
+      </aside>
+    </>
   );
 }

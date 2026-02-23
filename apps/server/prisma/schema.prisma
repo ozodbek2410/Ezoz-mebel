@@ -86,7 +86,6 @@ model Customer {
   birthday        DateTime?        @db.Date
   address         String?
   category        CustomerCategory @default(REGULAR)
-  trustLimit      Decimal          @db.Decimal(18, 2) @default(0)
   initialDebtUzs  Decimal          @db.Decimal(18, 2) @default(0)
   initialDebtUsd  Decimal          @db.Decimal(18, 2) @default(0)
   bonusBalance    Decimal          @db.Decimal(18, 2) @default(0)

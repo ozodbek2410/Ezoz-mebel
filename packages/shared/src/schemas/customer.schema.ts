@@ -7,7 +7,6 @@ export const createCustomerSchema = z.object({
   birthday: z.string().optional(),
   address: z.string().optional(),
   category: z.enum(["REGULAR", "MASTER"]).default("REGULAR"),
-  trustLimit: z.number().nonnegative().default(0),
   initialDebtUzs: z.number().nonnegative().default(0),
   initialDebtUsd: z.number().nonnegative().default(0),
   notes: z.string().optional(),

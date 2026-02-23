@@ -53,7 +53,6 @@ export const customerRouter = router({
           birthday: input.birthday ? new Date(input.birthday) : null,
           address: input.address,
           category: input.category,
-          trustLimit: input.trustLimit,
           initialDebtUzs: input.initialDebtUzs,
           initialDebtUsd: input.initialDebtUsd,
           notes: input.notes,

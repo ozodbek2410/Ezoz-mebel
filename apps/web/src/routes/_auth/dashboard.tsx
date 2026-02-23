@@ -108,7 +108,7 @@ function StatCard({ label, value, sub, icon: Icon, color }: StatCardProps) {
           <Icon size={18} />
         </div>
       </div>
-      <div className="stat-card-value">{value}</div>
+      <div className="stat-card-value truncate">{value}</div>
       <div className="stat-card-sub">{sub}</div>
     </div>
   );

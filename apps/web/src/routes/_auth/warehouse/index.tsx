@@ -30,10 +30,12 @@ import {
   TableLoading,
   Badge,
   Tabs,
+  PhoneInput,
 } from "@/components/ui";
 import { CurrencyDisplay } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
-import { formatUzs } from "@ezoz/shared";
+import { formatUzs, convertToUzs, convertToUsd } from "@ezoz/shared";
+import { useCurrencyStore } from "@/store/currency.store";
 import toast from "react-hot-toast";
 
 export function WarehousePage() {
@@ -118,8 +120,8 @@ function StockTab() {
 
   return (
     <>
-      <div className="flex items-center gap-4 mb-4">
-        <div className="w-48">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
+        <div className="w-full sm:w-48">
           <Select
             options={[{ value: "", label: "Barcha omborlar" }, ...warehouseOptions]}
             value={selectedWarehouse}
@@ -134,21 +136,23 @@ function StockTab() {
             onClear={() => setSearch("")}
           />
         </div>
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            checked={lowStockOnly}
-            onChange={(e) => setLowStockOnly(e.target.checked)}
-            className="rounded border-gray-300"
-          />
-          Faqat kam qoldiq
-        </label>
-        {lowStockCount > 0 && (
-          <Badge variant="warning">
-            <AlertTriangle className="w-3 h-3 mr-1" />
-            {lowStockCount} ta kam
-          </Badge>
-        )}
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
+            <input
+              type="checkbox"
+              checked={lowStockOnly}
+              onChange={(e) => setLowStockOnly(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Kam qoldiq
+          </label>
+          {lowStockCount > 0 && (
+            <Badge variant="warning">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              {lowStockCount}
+            </Badge>
+          )}
+        </div>
       </div>
 
       <Table>
@@ -211,6 +215,7 @@ const emptyItem: PurchaseItemRow = { productId: "", quantity: "", priceUzs: "", 
 function PurchaseTab() {
   const queryClient = useQueryClient();
   const { isBoss } = useAuth();
+  const rate = useCurrencyStore((s) => s.rate);
   const [mode, setMode] = useState<"list" | "create" | "detail">("list");
   const [detailId, setDetailId] = useState<number | null>(null);
   const [supplierId, setSupplierId] = useState("");
@@ -302,7 +307,18 @@ function PurchaseTab() {
   }
 
   function updateItem(idx: number, field: keyof PurchaseItemRow, value: string) {
-    setItems((prev) => prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item)));
+    setItems((prev) => prev.map((item, i) => {
+      if (i !== idx) return item;
+      const updated = { ...item, [field]: value };
+      if (rate && value && Number(value) > 0) {
+        if (field === "priceUzs") {
+          updated.priceUsd = String(convertToUsd(Number(value), rate));
+        } else if (field === "priceUsd") {
+          updated.priceUzs = String(convertToUzs(Number(value), rate));
+        }
+      }
+      return updated;
+    }));
   }
 
   function addItemRow() {
@@ -534,8 +550,8 @@ function PurchaseTab() {
           <div className="space-y-4">
             <Input label="Ism / Kompaniya" value={newSupplier.name}
               onChange={(e) => setNewSupplier((f) => ({ ...f, name: e.target.value }))} />
-            <Input label="Telefon" value={newSupplier.phone}
-              onChange={(e) => setNewSupplier((f) => ({ ...f, phone: e.target.value }))} />
+            <PhoneInput label="Telefon" value={newSupplier.phone}
+              onChange={(v) => setNewSupplier((f) => ({ ...f, phone: v }))} />
             <Input label="Izoh" value={newSupplier.notes}
               onChange={(e) => setNewSupplier((f) => ({ ...f, notes: e.target.value }))} />
             <Button loading={createSupplierMutation.isPending} onClick={() => {

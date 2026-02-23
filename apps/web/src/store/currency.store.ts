@@ -16,16 +16,16 @@ export const useCurrencyStore = create<CurrencyState>()((set, get) => ({
     if (get().isLoading) return;
     set({ isLoading: true });
     try {
-      // First try DB (today's manually set rate)
-      const dbRate = await trpc.currency.getToday.query();
-      if (dbRate) {
-        set({ rate: dbRate, isLoading: false });
-        return;
-      }
-      // Fallback to CBU API
+      // Always fetch from CBU (Central Bank) API
       const cbuRate = await trpc.currency.fetchCbuRate.query();
       if (cbuRate) {
         set({ rate: cbuRate, isLoading: false });
+        return;
+      }
+      // Fallback to DB if CBU is unavailable
+      const dbRate = await trpc.currency.getToday.query();
+      if (dbRate) {
+        set({ rate: dbRate, isLoading: false });
         return;
       }
       set({ isLoading: false });

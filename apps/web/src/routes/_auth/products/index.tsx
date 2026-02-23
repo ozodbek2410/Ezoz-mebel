@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse } from "lucide-react";
+import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button, SearchInput, Modal, Input, CurrencyPairInput, Select, Badge, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, SlideOver } from "@/components/ui";
@@ -167,6 +167,7 @@ export function ProductsPage() {
   const [catForm, setCatForm] = useState({ name: "", parentId: "" });
   const [sortKey, setSortKey] = useState<"name" | "code" | "category" | "sellPrice" | "minPrice" | "costPrice" | "stock">("code");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [showCategories, setShowCategories] = useState(false);
 
   function toggleSort(key: typeof sortKey) {
     if (sortKey === key) {
@@ -514,8 +515,8 @@ export function ProductsPage() {
 
       <div className="page-body">
         <div className="flex gap-6">
-          {/* Category tree sidebar */}
-          <div className="w-64 shrink-0">
+          {/* Category tree sidebar — hidden on mobile, shown on lg+ */}
+          <div className="hidden lg:block w-64 shrink-0">
             <div className="card">
               <div className="card-header">
                 <h3 className="text-sm font-semibold text-gray-700">Guruhlar</h3>
@@ -545,53 +546,95 @@ export function ProductsPage() {
             </div>
           </div>
 
+          {/* Mobile category panel */}
+          {showCategories && (
+            <div className="lg:hidden fixed inset-0 z-30 bg-black/50" onClick={() => setShowCategories(false)}>
+              <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="px-4 py-3 border-b flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-700">Guruhlar</h3>
+                  <button onClick={() => setShowCategories(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="p-2">
+                  <CategoryTree
+                    categories={(categoriesQuery.data ?? []) as CategoryNode[]}
+                    selectedId={selectedCategory}
+                    onSelect={(id) => { setSelectedCategory(id); setShowCategories(false); }}
+                    onEdit={(cat) => {
+                      setEditingCategory(cat);
+                      setCatForm({ name: cat.name, parentId: "" });
+                      setCategoryModalOpen(true);
+                      setShowCategories(false);
+                    }}
+                    onDelete={(id) => {
+                      if (confirm("Bu guruhni o'chirmoqchimisiz?")) {
+                        deleteCategory.mutate(id);
+                      }
+                    }}
+                    isBoss={isBoss()}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Products table */}
           <div className="flex-1 min-w-0">
-            <div className="mb-4">
-              <SearchInput
-                placeholder="Mahsulot qidirish (nom, kod, SKU)..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onClear={() => setSearch("")}
-              />
+            <div className="mb-4 flex items-center gap-2">
+              <button
+                onClick={() => setShowCategories(true)}
+                className="lg:hidden shrink-0 p-2.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+              >
+                <Filter className="w-4 h-4" />
+              </button>
+              <div className="flex-1">
+                <SearchInput
+                  placeholder="Mahsulot qidirish (nom, kod, SKU)..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onClear={() => setSearch("")}
+                />
+              </div>
             </div>
 
+            <div className="overflow-x-auto">
             <Table>
               <TableHead>
                 <tr>
-                  <th className="w-12"></th>
-                  <th>
+                  <th className="w-12 hidden sm:table-cell"></th>
+                  <th className="whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("code")}>
                       Mahsulot
                       {sortKey === "code" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
-                  <th className="w-28">
+                  <th className="w-28 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("category")}>
                       <FolderOpen className="w-3.5 h-3.5" />
                       Guruh
                       {sortKey === "category" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
-                  <th className="w-32">
+                  <th className="w-32 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("sellPrice")}>
                       Sotish
                       {sortKey === "sellPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
-                  <th className="w-32">
+                  <th className="w-32 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("minPrice")}>
                       Min
                       {sortKey === "minPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
-                  <th className="w-32">
+                  <th className="w-32 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("costPrice")}>
                       Tan
                       {sortKey === "costPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
-                  <th className="w-20">
+                  <th className="w-20 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("stock")}>
                       Qoldiq
                       {sortKey === "stock" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
@@ -618,7 +661,7 @@ export function ProductsPage() {
                         active={selectedProductId === product.id}
                         onClick={() => setSelectedProductId(selectedProductId === product.id ? null : product.id)}
                       >
-                        <td className="!p-1.5">
+                        <td className="!p-1.5 hidden sm:table-cell">
                           <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
                             {thumbnail ? (
                               <img src={thumbnail} alt="" className="w-full h-full object-cover" />
@@ -628,9 +671,9 @@ export function ProductsPage() {
                           </div>
                         </td>
                         <td>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-gray-900">{product.name}</span>
-                            {product.isLocked && <Lock className="w-3.5 h-3.5 text-amber-500" />}
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-medium text-gray-900 whitespace-nowrap">{product.name}</span>
+                            {product.isLocked && <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
                           </div>
                           <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
                             <span className="font-mono">{product.code}</span>
@@ -653,16 +696,44 @@ export function ProductsPage() {
                           <span className={stockClass}>{stock}</span>
                         </td>
                         <td className="!p-1">
-                          <button
-                            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                            title="QR yorliq chop etish"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handlePrintLabel(product);
-                            }}
-                          >
-                            <QrCode className="w-4 h-4 text-gray-400" />
-                          </button>
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              className="p-2 sm:p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                              title="QR yorliq chop etish"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePrintLabel(product);
+                              }}
+                            >
+                              <QrCode className="w-5 h-5 sm:w-4 sm:h-4 text-gray-400" />
+                            </button>
+                            {isBoss() && (
+                              <>
+                                <button
+                                  className="p-2 sm:p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Tahrirlash"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedProductId(product.id);
+                                  }}
+                                >
+                                  <Edit2 className="w-5 h-5 sm:w-4 sm:h-4 text-gray-400" />
+                                </button>
+                                <button
+                                  className="p-2 sm:p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="O'chirish"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (confirm(`"${product.name}" mahsulotini o'chirmoqchimisiz?`)) {
+                                      deleteProduct.mutate(product.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 text-gray-400" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       </TableRow>
                     );
@@ -670,6 +741,7 @@ export function ProductsPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
         </div>
       </div>
@@ -704,7 +776,7 @@ export function ProductsPage() {
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="MDF list 18mm Shimo svetliy"
           />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="Guruh"
               options={categoryOptions}
@@ -851,7 +923,7 @@ export function ProductsPage() {
               onChange={(e) => setSlideForm((f) => ({ ...f, name: e.target.value }))}
               disabled={!isBoss()}
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select
                 label="Guruh"
                 options={categoryOptions}
@@ -909,7 +981,7 @@ export function ProductsPage() {
             {/* Product images */}
             <div className="border-t pt-4">
               <h4 className="text-sm font-medium text-gray-700 mb-2">Rasmlar</h4>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {productDetailQuery.data.images.map((img) => (
                   <div key={img.id} className="relative group rounded-lg overflow-hidden aspect-square bg-gray-100">
                     <img

@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import {
   Button, Modal, Input, CurrencyInput, Select,
   Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading,
-  Badge,
+  Badge, PhoneInput,
 } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -300,17 +300,18 @@ export function EmployeesPage() {
       />
 
       <div className="page-body">
-        <div className="flex gap-6">
+        <div className="flex flex-col lg:flex-row gap-6">
           {/* ===== TABLE ===== */}
-          <div className={`${selectedId ? "w-1/2" : "w-full"} transition-all`}>
+          <div className={`${selectedId ? "w-full lg:w-1/2" : "w-full"} transition-all`}>
+            <div className="overflow-x-auto">
             <Table>
               <TableHead>
                 <tr>
                   <th>Ism</th>
                   <th>Lavozim</th>
-                  <th>Telefon</th>
-                  <th>Oylik (baza)</th>
-                  <th>Bonus/ish</th>
+                  <th className="hidden sm:table-cell">Telefon</th>
+                  <th className="hidden sm:table-cell">Oylik (baza)</th>
+                  <th className="hidden md:table-cell">Bonus/ish</th>
                   {isBoss() && <th className="w-24">Amallar</th>}
                 </tr>
               </TableHead>
@@ -340,9 +341,9 @@ export function EmployeesPage() {
                           {UserRoleLabels[emp.role as UserRole] || emp.role}
                         </Badge>
                       </td>
-                      <td className="text-sm text-gray-500">{emp.phone || "-"}</td>
-                      <td className="currency-uzs text-sm">{formatUzs(Number(emp.baseSalaryUzs))}</td>
-                      <td className="text-sm text-gray-500">{formatUzs(Number(emp.bonusPerJob))}</td>
+                      <td className="text-sm text-gray-500 hidden sm:table-cell">{emp.phone || "-"}</td>
+                      <td className="currency-uzs text-sm hidden sm:table-cell">{formatUzs(Number(emp.baseSalaryUzs))}</td>
+                      <td className="text-sm text-gray-500 hidden md:table-cell">{formatUzs(Number(emp.bonusPerJob))}</td>
                       {isBoss() && (
                         <td>
                           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -382,11 +383,12 @@ export function EmployeesPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
 
           {/* ===== DETAIL PANEL ===== */}
           {selectedId && detail && (
-            <div className="w-1/2">
+            <div className="w-full lg:w-1/2">
               <div className="card sticky top-20">
                 <div className="card-header">
                   <div>
@@ -561,13 +563,13 @@ export function EmployeesPage() {
         </>}
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Foydalanuvchi nomi *" value={createForm.username}
               onChange={(e) => setCreateForm((f) => ({ ...f, username: e.target.value }))} placeholder="kassir3" />
             <Input label="To'liq ism *" value={createForm.fullName}
               onChange={(e) => setCreateForm((f) => ({ ...f, fullName: e.target.value }))} placeholder="Aliyev Ali" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="Parol *" type="password" value={createForm.password}
               onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))} />
             <Select label="Lavozim" options={roleOptions} value={createForm.role}
@@ -577,9 +579,9 @@ export function EmployeesPage() {
                 setCreatePermissions(getRoleDefaults(role));
               }} />
           </div>
-          <div className="grid grid-cols-3 gap-4">
-            <Input label="Telefon" value={createForm.phone}
-              onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+998..." />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <PhoneInput label="Telefon" value={createForm.phone}
+              onChange={(v) => setCreateForm((f) => ({ ...f, phone: v }))} />
             <CurrencyInput label="Baza oylik" currency="UZS" value={createForm.baseSalaryUzs}
               onValueChange={(v) => setCreateForm((f) => ({ ...f, baseSalaryUzs: v }))} />
             <CurrencyInput label="Bonus/ish" currency="UZS" value={createForm.bonusPerJob}
@@ -607,7 +609,7 @@ export function EmployeesPage() {
         </>}
       >
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="To'liq ism" value={editForm.fullName}
               onChange={(e) => setEditForm((f) => ({ ...f, fullName: e.target.value }))} />
             <Select label="Lavozim" options={roleOptions} value={editForm.role}
@@ -617,9 +619,9 @@ export function EmployeesPage() {
                 setEditPermissions(getRoleDefaults(role));
               }} />
           </div>
-          <div className="grid grid-cols-3 gap-4">
-            <Input label="Telefon" value={editForm.phone}
-              onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <PhoneInput label="Telefon" value={editForm.phone}
+              onChange={(v) => setEditForm((f) => ({ ...f, phone: v }))} />
             <CurrencyInput label="Baza oylik" currency="UZS" value={editForm.baseSalaryUzs}
               onValueChange={(v) => setEditForm((f) => ({ ...f, baseSalaryUzs: v }))} />
             <CurrencyInput label="Bonus/ish" currency="UZS" value={editForm.bonusPerJob}
