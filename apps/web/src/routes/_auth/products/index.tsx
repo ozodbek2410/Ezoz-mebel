@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter } from "lucide-react";
+import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronLeft, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button, SearchInput, Modal, Input, CurrencyPairInput, Select, Badge, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, SlideOver } from "@/components/ui";
@@ -173,6 +173,11 @@ export function ProductsPage() {
   const [showCategories, setShowCategories] = useState(false);
   const [cursor, setCursor] = useState<number | undefined>(undefined);
   const [cursorHistory, setCursorHistory] = useState<(number | undefined)[]>([]);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  function scrollToTable() {
+    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   function toggleSort(key: typeof sortKey) {
     if (sortKey === key) {
@@ -453,6 +458,70 @@ export function ProductsPage() {
   const nextCursor = productsQuery.data?.nextCursor;
   const currentPage = cursorHistory.length + 1;
 
+  function goToPage(n: number) {
+    if (n === currentPage) return;
+    if (n === 1) { setCursorHistory([]); setCursor(undefined); }
+    else { setCursor(cursorHistory[n - 1]); setCursorHistory(cursorHistory.slice(0, n - 1)); }
+    scrollToTable();
+  }
+  function goNext() {
+    if (nextCursor === undefined) return;
+    setCursorHistory((h) => [...h, cursor]);
+    setCursor(nextCursor);
+    scrollToTable();
+  }
+  function goPrev() {
+    const prev = [...cursorHistory];
+    const prevCursor = prev.pop();
+    setCursorHistory(prev);
+    setCursor(prevCursor);
+    scrollToTable();
+  }
+
+  // Pagination bar — shows visited page numbers + next indicator
+  const totalKnownPages = nextCursor !== undefined ? currentPage + 1 : currentPage;
+  function PaginationBar() {
+    if (currentPage === 1 && !nextCursor) return null;
+    return (
+      <div className="flex items-center gap-1">
+        <button
+          disabled={currentPage === 1}
+          onClick={goPrev}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          {t("Oldingi")}
+        </button>
+        <div className="flex items-center gap-0.5 mx-1">
+          {Array.from({ length: totalKnownPages }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              onClick={() => p <= currentPage ? goToPage(p) : undefined}
+              disabled={p === totalKnownPages && !!nextCursor && p > currentPage}
+              className={`w-8 h-8 rounded-lg text-sm font-semibold transition-colors ${
+                p === currentPage
+                  ? "bg-brand-600 text-white shadow-sm"
+                  : p < currentPage
+                  ? "text-gray-700 border border-gray-200 hover:bg-gray-50"
+                  : "text-gray-400 border border-dashed border-gray-300 cursor-not-allowed"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        <button
+          disabled={!nextCursor}
+          onClick={goNext}
+          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          {t("Keyingi")}
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
   type ProductItem = typeof rawProducts[number];
 
   function getStockTotal(product: ProductItem): number {
@@ -497,7 +566,7 @@ export function ProductsPage() {
     <>
       <PageHeader
         title={t("Mahsulotlar")}
-        subtitle={`${t("Sahifa")} ${currentPage} (${products.length} ${t("ta")})`}
+        subtitle={undefined}
         actions={
           isBoss() && (
             <div className="flex items-center gap-2">
@@ -595,7 +664,14 @@ export function ProductsPage() {
           )}
 
           {/* Products table */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0" ref={tableRef}>
+            {/* Top pagination */}
+            <div className="mb-3 flex items-center justify-between">
+              <PaginationBar />
+              {currentPage > 1 || nextCursor ? (
+                <span className="text-xs text-gray-400">{products.length} {t("ta")}</span>
+              ) : null}
+            </div>
             <div className="mb-4 flex items-center gap-2">
               <button
                 onClick={() => setShowCategories(true)}
@@ -758,38 +834,10 @@ export function ProductsPage() {
             </Table>
             </div>
 
-            {/* Pagination */}
-            {(cursorHistory.length > 0 || nextCursor) && (
-              <div className="flex items-center justify-between mt-3 px-1">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={cursorHistory.length === 0}
-                  onClick={() => {
-                    const prev = [...cursorHistory];
-                    const prevCursor = prev.pop();
-                    setCursorHistory(prev);
-                    setCursor(prevCursor);
-                  }}
-                >
-                  {t("Oldingi")}
-                </Button>
-                <span className="text-sm text-gray-500">{t("Sahifa")} {currentPage}</span>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={!nextCursor}
-                  onClick={() => {
-                    if (nextCursor) {
-                      setCursorHistory((h) => [...h, cursor]);
-                      setCursor(nextCursor);
-                    }
-                  }}
-                >
-                  {t("Keyingi")}
-                </Button>
-              </div>
-            )}
+            {/* Bottom pagination */}
+            <div className="mt-3 flex justify-center">
+              <PaginationBar />
+            </div>
           </div>
         </div>
       </div>
