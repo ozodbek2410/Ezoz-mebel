@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui";
 import { CurrencyDisplay, StatusBadge } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
+import { useSocket, useSocketEvent } from "@/hooks/useSocket";
 import { useT, getT } from "@/hooks/useT";
 import { formatUzs, formatUsd } from "@ezoz/shared";
 import toast from "react-hot-toast";
@@ -41,6 +42,11 @@ function SalesPageInner() {
 
   const isServiceMode = location.pathname.startsWith("/sales/service");
   const saleType = isServiceMode ? "SERVICE" : "PRODUCT";
+
+  useSocket(useMemo(() => ["room:stock", "room:sales"], []));
+  useSocketEvent("stock:updated", useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["product"] });
+  }, [queryClient]));
 
   const [activeTab, setActiveTab] = useState("pos");
   const [cart, setCart] = useState<CartItem[]>([]);
