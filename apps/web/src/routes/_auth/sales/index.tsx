@@ -729,7 +729,7 @@ function SalesPageInner() {
                   <TableRow key={sale.id}>
                     <td className="font-mono text-xs">{sale.documentNo}</td>
                     <td className="text-sm text-gray-500 hidden sm:table-cell">{new Date(sale.createdAt).toLocaleString("uz")}</td>
-                    <td className="hidden md:table-cell">{sale.customer?.fullName || "-"}</td>
+                    <td className="hidden md:table-cell">{sale.customer?.fullName || t("Oddiy mijoz")}</td>
                     <td className="hidden sm:table-cell">
                       <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
                         {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}

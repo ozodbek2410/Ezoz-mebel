@@ -159,7 +159,7 @@ function RecentSalesCard({ sales }: { sales: RecentSale[] }) {
                     </Badge>
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {sale.customerName ?? t("Nomsiz")} &middot; {sale.cashierName}
+                    {sale.customerName ?? t("Oddiy mijoz")} &middot; {sale.cashierName}
                   </p>
                 </div>
                 <div className="text-right">
