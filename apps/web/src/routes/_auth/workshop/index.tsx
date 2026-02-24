@@ -84,6 +84,15 @@ export function WorkshopPage() {
     }
   }
 
+  // Clean up old-format descriptions like "Sotuv #cuid - kesish/xizmat"
+  function getTaskServiceName(task: { description: string; sale: { items: Array<{ serviceName: string | null }> } | null }) {
+    if (task.description.startsWith("Sotuv #")) {
+      const serviceItem = task.sale?.items.find((i) => i.serviceName !== null);
+      return serviceItem?.serviceName ?? "Xizmat/kesish";
+    }
+    return task.description;
+  }
+
   return (
     <>
       <PageHeader
@@ -138,7 +147,10 @@ export function WorkshopPage() {
                         {task.sale?.customer?.fullName ?? "Oddiy mijoz"}
                       </span>
                     </div>
-                    <StatusBadge status={task.status} />
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 font-mono">#{task.saleId}</span>
+                      <StatusBadge status={task.status} />
+                    </div>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-400">
                     <span className="flex items-center gap-1">
@@ -181,7 +193,7 @@ export function WorkshopPage() {
                   {/* This task's service */}
                   <div className="flex items-center gap-2 bg-amber-50 rounded-lg px-3 py-2">
                     <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <span className="text-sm font-medium text-amber-900">{task.description}</span>
+                    <span className="text-sm font-medium text-amber-900">{getTaskServiceName(task)}</span>
                   </div>
 
                   {/* Time info */}
