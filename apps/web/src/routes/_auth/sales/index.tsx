@@ -67,7 +67,6 @@ function SalesPageInner() {
   const [paymentForm, setPaymentForm] = useState({
     cashUzs: "0",
     cardUzs: "0",
-    transferUzs: "0",
   });
 
   // Warehouse auto-detect
@@ -128,7 +127,7 @@ function SalesPageInner() {
     setPaymentSaleId(null);
     setPaymentSaleTotal(cartTotal.uzs);
     setPaymentCustomerId(selectedCustomer?.id);
-    setPaymentForm({ cashUzs: String(cartTotal.uzs), cardUzs: "0", transferUzs: "0" });
+    setPaymentForm({ cashUzs: String(cartTotal.uzs), cardUzs: "0" });
     setPaymentOpen(true);
   }
 
@@ -170,15 +169,11 @@ function SalesPageInner() {
       const customerId = paymentCustomerId;
       const cash = Number(paymentForm.cashUzs);
       const card = Number(paymentForm.cardUzs);
-      const transfer = Number(paymentForm.transferUzs);
       if (cash > 0) {
         await trpc.payment.create.mutate({ saleId, customerId, amountUzs: cash, amountUsd: 0, paymentType: "CASH_UZS", source: "NEW_SALE" });
       }
       if (card > 0) {
         await trpc.payment.create.mutate({ saleId, customerId, amountUzs: card, amountUsd: 0, paymentType: "CARD", source: "NEW_SALE" });
-      }
-      if (transfer > 0) {
-        await trpc.payment.create.mutate({ saleId, customerId, amountUzs: transfer, amountUsd: 0, paymentType: "TRANSFER", source: "NEW_SALE" });
       }
       // Complete sale
       await trpc.sale.complete.mutate({ id: saleId });
@@ -772,7 +767,7 @@ function SalesPageInner() {
                                 setPaymentSaleId(sale.id);
                                 setPaymentSaleTotal(Number(sale.totalUzs));
                                 setPaymentCustomerId(sale.customerId ?? undefined);
-                                setPaymentForm({ cashUzs: String(sale.totalUzs), cardUzs: "0", transferUzs: "0" });
+                                setPaymentForm({ cashUzs: String(sale.totalUzs), cardUzs: "0" });
                                 setPaymentOpen(true);
                               }}
                             >
@@ -812,8 +807,7 @@ function SalesPageInner() {
               onClick={() => {
                 const cash = Number(paymentForm.cashUzs);
                 const card = Number(paymentForm.cardUzs);
-                const transfer = Number(paymentForm.transferUzs);
-                const debtUzs = Math.max(0, paymentSaleTotal - cash - card - transfer);
+                const debtUzs = Math.max(0, paymentSaleTotal - cash - card);
                 if (debtUzs > 0 && !paymentCustomerId) {
                   toast.error(getT()("Mijoz tanlanmagan — summa to'liq bo'lishi kerak"));
                   return;
@@ -829,8 +823,7 @@ function SalesPageInner() {
         {(() => {
           const cash = Number(paymentForm.cashUzs);
           const card = Number(paymentForm.cardUzs);
-          const transfer = Number(paymentForm.transferUzs);
-          const debtUzs = Math.max(0, paymentSaleTotal - cash - card - transfer);
+          const debtUzs = Math.max(0, paymentSaleTotal - cash - card);
           return (
             <div className="space-y-3">
               <div className="bg-gray-50 rounded-lg px-4 py-3 flex justify-between items-center">
@@ -838,7 +831,7 @@ function SalesPageInner() {
                 <span className="font-bold text-base">{formatUzs(paymentSaleTotal)}</span>
               </div>
               <Input
-                label={t("Naqd (UZS)")}
+                label={t("Naqd")}
                 type="number"
                 min="0"
                 value={paymentForm.cashUzs}
@@ -853,23 +846,17 @@ function SalesPageInner() {
                 onChange={(e) => setPaymentForm((f) => ({ ...f, cardUzs: e.target.value }))}
                 rightIcon={<span className="text-xs">so'm</span>}
               />
-              <Input
-                label={t("O'tkazma")}
-                type="number"
-                min="0"
-                value={paymentForm.transferUzs}
-                onChange={(e) => setPaymentForm((f) => ({ ...f, transferUzs: e.target.value }))}
-                rightIcon={<span className="text-xs">so'm</span>}
-              />
-              {debtUzs > 0 && (
-                <div className={`flex justify-between items-center px-4 py-3 rounded-lg border ${paymentCustomerId ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"}`}>
-                  <span className={`text-sm font-medium ${paymentCustomerId ? "text-amber-700" : "text-red-700"}`}>
-                    {t("Qarzga")}
-                    {!paymentCustomerId && <span className="ml-2 text-xs font-normal">{t("(mijoz tanlanmagan!)")}</span>}
-                  </span>
-                  <span className={`font-bold ${paymentCustomerId ? "text-amber-600" : "text-red-600"}`}>{formatUzs(debtUzs)}</span>
+              {paymentCustomerId ? (
+                <div className={`flex justify-between items-center px-4 py-3 rounded-lg border ${debtUzs > 0 ? "bg-amber-50 border-amber-200" : "bg-green-50 border-green-200"}`}>
+                  <span className={`text-sm font-medium ${debtUzs > 0 ? "text-amber-700" : "text-green-700"}`}>{t("Qarzga")}</span>
+                  <span className={`font-bold ${debtUzs > 0 ? "text-amber-600" : "text-green-600"}`}>{formatUzs(debtUzs)}</span>
                 </div>
-              )}
+              ) : debtUzs > 0 ? (
+                <div className="flex justify-between items-center px-4 py-3 rounded-lg border bg-red-50 border-red-200">
+                  <span className="text-sm font-medium text-red-700">{t("Yetmayapti")}</span>
+                  <span className="font-bold text-red-600">{formatUzs(debtUzs)}</span>
+                </div>
+              ) : null}
             </div>
           );
         })()}
