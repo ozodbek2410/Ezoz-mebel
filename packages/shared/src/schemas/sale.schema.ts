@@ -38,6 +38,7 @@ export const createSaleSchema = z.object({
     quantity: z.number().positive("Miqdor musbat bo'lishi kerak"),
     priceUzs: z.number().nonnegative(),
     priceUsd: z.number().nonnegative(),
+    masterId: z.number().optional(),
   })).min(1, "Kamida 1 ta mahsulot qo'shing"),
 });
 

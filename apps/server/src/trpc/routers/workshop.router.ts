@@ -7,8 +7,15 @@ export const workshopRouter = router({
       status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]).optional(),
     }).optional())
     .query(async ({ ctx, input }) => {
+      const where: Record<string, unknown> = {};
+      if (input?.status) where["status"] = input.status;
+      // Masters only see their own tasks
+      if (ctx.user.role === "MASTER") {
+        where["assignedToId"] = ctx.user.userId;
+      }
+
       return ctx.db.workshopTask.findMany({
-        where: input?.status ? { status: input.status } : {},
+        where,
         include: {
           assignedTo: { select: { id: true, fullName: true, role: true } },
           sale: {
@@ -40,11 +47,34 @@ export const workshopRouter = router({
         },
       });
 
-      if (input.status === "COMPLETED") {
-        await ctx.db.sale.update({
-          where: { id: task.saleId },
-          data: { workshopStatus: "COMPLETED" },
+      if (input.status === "IN_PROGRESS") {
+        // Update sale workshopStatus to IN_PROGRESS if it's still PENDING
+        await ctx.db.sale.updateMany({
+          where: { id: task.saleId, workshopStatus: "PENDING" },
+          data: { workshopStatus: "IN_PROGRESS" },
         });
+      }
+
+      if (input.status === "COMPLETED") {
+        // Check if ALL tasks for this sale are completed
+        const allTasks = await ctx.db.workshopTask.findMany({
+          where: { saleId: task.saleId },
+          select: { id: true, status: true },
+        });
+        const allDone = allTasks.every((t) =>
+          t.id === task.id ? true : t.status === "COMPLETED",
+        );
+
+        if (allDone) {
+          await ctx.db.sale.update({
+            where: { id: task.saleId },
+            data: { workshopStatus: "COMPLETED" },
+          });
+          ctx.io?.to("room:service").to("room:boss").emit("workshop:allCompleted", {
+            saleId: task.saleId,
+          });
+        }
+
         ctx.io?.to("room:service").to("room:boss").emit("workshop:taskCompleted", {
           taskId: task.id,
           masterId: ctx.user.userId.toString(),

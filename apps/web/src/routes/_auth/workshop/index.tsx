@@ -178,29 +178,11 @@ export function WorkshopPage() {
                     )}
                   </div>
 
-                  {/* Sale items */}
-                  {task.sale && task.sale.items.length > 0 && (
-                    <div className="space-y-1">
-                      {task.sale.items.map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            {item.serviceName ? (
-                              <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            ) : (
-                              <Package className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                            )}
-                            <span className="text-sm text-gray-700 truncate">
-                              {item.serviceName ?? `Mahsulot #${item.productId}`}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <span className="text-xs text-gray-400">x{String(item.quantity)}</span>
-                            <span className="text-xs currency-uzs">{formatUzs(Number(item.totalUzs))}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {/* This task's service */}
+                  <div className="flex items-center gap-2 bg-amber-50 rounded-lg px-3 py-2">
+                    <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <span className="text-sm font-medium text-amber-900">{task.description}</span>
+                  </div>
 
                   {/* Time info */}
                   {task.startedAt && (

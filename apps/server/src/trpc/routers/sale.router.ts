@@ -67,18 +67,25 @@ export const saleRouter = router({
         include: { items: true },
       });
 
-      // Create workshop task if "Sexga o'tadi"
+      // Create one workshop task per service item
       if (input.goesToWorkshop) {
-        await ctx.db.workshopTask.create({
-          data: {
-            saleId: sale.id,
-            description: `Sotuv #${sale.documentNo} - kesish/xizmat`,
-            assignedToId: input.assignedToId ?? null,
-          },
-        });
+        for (let i = 0; i < input.items.length; i++) {
+          const inputItem = input.items[i];
+          const createdItem = sale.items[i];
+          if (inputItem && createdItem && inputItem.serviceName) {
+            await ctx.db.workshopTask.create({
+              data: {
+                saleId: sale.id,
+                saleItemId: createdItem.id,
+                description: inputItem.serviceName,
+                assignedToId: inputItem.masterId ?? null,
+              },
+            });
+          }
+        }
         ctx.io?.to("room:workshop").emit("workshop:newTask", {
-          taskId: sale.id,
-          description: `Yangi vazifa: Sotuv #${sale.documentNo}`,
+          saleId: sale.id,
+          documentNo: sale.documentNo,
         });
       }
 

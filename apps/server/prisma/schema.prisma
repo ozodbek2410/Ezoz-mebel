@@ -345,17 +345,18 @@ model Sale {
 }
 
 model SaleItem {
-  id          Int      @id @default(autoincrement())
-  saleId      Int
-  sale        Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  productId   Int?
-  product     Product? @relation(fields: [productId], references: [id])
-  serviceName String?
-  quantity    Decimal  @db.Decimal(18, 3)
-  priceUzs    Decimal  @db.Decimal(18, 2)
-  priceUsd    Decimal  @db.Decimal(18, 2)
-  totalUzs    Decimal  @db.Decimal(18, 2)
-  totalUsd    Decimal  @db.Decimal(18, 2)
+  id           Int           @id @default(autoincrement())
+  saleId       Int
+  sale         Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId    Int?
+  product      Product?      @relation(fields: [productId], references: [id])
+  serviceName  String?
+  quantity     Decimal       @db.Decimal(18, 3)
+  priceUzs     Decimal       @db.Decimal(18, 2)
+  priceUsd     Decimal       @db.Decimal(18, 2)
+  totalUzs     Decimal       @db.Decimal(18, 2)
+  totalUsd     Decimal       @db.Decimal(18, 2)
+  workshopTask WorkshopTask?
 }
 
 // ==================== WORKSHOP ====================
@@ -370,6 +371,8 @@ model WorkshopTask {
   id            Int                @id @default(autoincrement())
   saleId        Int
   sale          Sale               @relation(fields: [saleId], references: [id])
+  saleItemId    Int?               @unique
+  saleItem      SaleItem?          @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
   description   String
   assignedToId  Int?
   assignedTo    User?              @relation(fields: [assignedToId], references: [id])

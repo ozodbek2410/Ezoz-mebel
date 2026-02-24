@@ -111,7 +111,6 @@ function SalesPageInner() {
   });
 
   const hasWorkshopItems = cart.some((item) => item.serviceName && item.masterId);
-  const firstMasterId = cart.find((item) => item.masterId)?.masterId ?? null;
   const hasUnassignedService = cart.some((item) => item.serviceName && !item.masterId);
 
   // Mutations
@@ -127,9 +126,9 @@ function SalesPageInner() {
           quantity: item.quantity,
           priceUzs: item.priceUzs,
           priceUsd: item.priceUsd,
+          masterId: item.masterId ?? undefined,
         })),
         goesToWorkshop: hasWorkshopItems,
-        assignedToId: firstMasterId ?? undefined,
         notes: saleNotes || undefined,
       }),
     onSuccess: (sale) => {
@@ -435,7 +434,7 @@ function SalesPageInner() {
                     </div>
                   </div>
 
-                  <div className="max-h-[calc(100vh-480px)] overflow-y-auto divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-100">
                     {cart.length === 0 ? (
                       <div className="text-center py-10 text-gray-400 text-sm">
                         <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
@@ -634,7 +633,7 @@ function SalesPageInner() {
                     </div>
                   </div>
 
-                  <div className="max-h-[calc(100vh-480px)] overflow-y-auto divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-100">
                     {cart.length === 0 ? (
                       <div className="text-center py-10 text-gray-400 text-sm">
                         <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
