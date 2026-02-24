@@ -8,6 +8,7 @@ import { CurrencyDisplay, EmptyState } from "@/components/shared";
 import { formatUzs, formatUsd } from "@ezoz/shared";
 import toast from "react-hot-toast";
 import { useT, getT } from "@/hooks/useT";
+import { useAuth } from "@/hooks/useAuth";
 
 interface CustomerFormData {
   fullName: string;
@@ -35,6 +36,7 @@ const defaultForm: CustomerFormData = {
 
 export function CustomersPage() {
   const t = useT();
+  const { can } = useAuth();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -193,17 +195,19 @@ export function CustomersPage() {
         title={t("Mijozlar")}
         subtitle={`${listQuery.data?.total ?? 0} ${t("ta mijoz")}`}
         actions={
-          <Button
-            size="sm"
-            onClick={() => {
-              setEditing(null);
-              setForm(defaultForm);
-              setModalOpen(true);
-            }}
-          >
-            <Plus className="w-4 h-4" />
-            {t("Yangi mijoz")}
-          </Button>
+          can("customer:create") ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditing(null);
+                setForm(defaultForm);
+                setModalOpen(true);
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              {t("Yangi mijoz")}
+            </Button>
+          ) : undefined
         }
       />
 
@@ -253,23 +257,27 @@ export function CustomersPage() {
                       </td>
                       <td>
                         <div className="flex items-center gap-1">
-                          <button
-                            className="p-1.5 hover:bg-gray-100 rounded-lg"
-                            onClick={(e) => { e.stopPropagation(); openEdit(c); }}
-                          >
-                            <Edit2 className="w-3.5 h-3.5 text-gray-500" />
-                          </button>
-                          <button
-                            className="p-1.5 hover:bg-red-50 rounded-lg"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(getT()(`"${c.fullName}" ni o'chirmoqchimisiz?`))) {
-                                deleteMutation.mutate(c.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                          </button>
+                          {can("customer:update") && (
+                            <button
+                              className="p-1.5 hover:bg-gray-100 rounded-lg"
+                              onClick={(e) => { e.stopPropagation(); openEdit(c); }}
+                            >
+                              <Edit2 className="w-3.5 h-3.5 text-gray-500" />
+                            </button>
+                          )}
+                          {can("customer:delete") && (
+                            <button
+                              className="p-1.5 hover:bg-red-50 rounded-lg"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm(getT()(`"${c.fullName}" ni o'chirmoqchimisiz?`))) {
+                                  deleteMutation.mutate(c.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </TableRow>
@@ -380,25 +388,29 @@ export function CustomersPage() {
         }
         footer={
           <div className="flex items-center justify-between w-full">
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => {
-                if (detailId && confirm(getT()("Bu mijozni o'chirmoqchimisiz?"))) {
-                  deleteMutation.mutate(detailId);
-                }
-              }}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              {t("O'chirish")}
-            </Button>
+            {can("customer:delete") ? (
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => {
+                  if (detailId && confirm(getT()("Bu mijozni o'chirmoqchimisiz?"))) {
+                    deleteMutation.mutate(detailId);
+                  }
+                }}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                {t("O'chirish")}
+              </Button>
+            ) : <span />}
             <div className="flex items-center gap-2">
               <Button variant="secondary" size="sm" onClick={() => setDetailId(null)}>
                 {t("Bekor qilish")}
               </Button>
-              <Button size="sm" loading={updateMutation.isPending} onClick={handleSlideFormSave}>
-                {t("Saqlash")}
-              </Button>
+              {can("customer:update") && (
+                <Button size="sm" loading={updateMutation.isPending} onClick={handleSlideFormSave}>
+                  {t("Saqlash")}
+                </Button>
+              )}
             </div>
           </div>
         }

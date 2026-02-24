@@ -61,6 +61,13 @@ export const Permissions = {
 
   // Marketplace
   MARKETPLACE_MANAGE: "marketplace:manage",
+
+  // Dashboard
+  DASHBOARD_VIEW: "dashboard:view",
+
+  // Warehouse extended
+  WAREHOUSE_WRITE_OFF: "warehouse:write_off",
+  WAREHOUSE_RETURN: "warehouse:return",
 } as const;
 
 export type Permission = (typeof Permissions)[keyof typeof Permissions];
@@ -68,6 +75,7 @@ export type Permission = (typeof Permissions)[keyof typeof Permissions];
 export const RolePermissions: Record<UserRole, readonly Permission[]> = {
   [UserRole.BOSS]: Object.values(Permissions),
   [UserRole.CASHIER_SALES]: [
+    Permissions.DASHBOARD_VIEW,
     Permissions.CUSTOMER_READ,
     Permissions.CUSTOMER_CREATE,
     Permissions.CUSTOMER_UPDATE,
@@ -83,6 +91,7 @@ export const RolePermissions: Record<UserRole, readonly Permission[]> = {
     Permissions.SHIFT_OWN,
   ],
   [UserRole.CASHIER_SERVICE]: [
+    Permissions.DASHBOARD_VIEW,
     Permissions.CUSTOMER_READ,
     Permissions.CUSTOMER_CREATE,
     Permissions.CUSTOMER_UPDATE,
@@ -97,6 +106,7 @@ export const RolePermissions: Record<UserRole, readonly Permission[]> = {
     Permissions.SHIFT_OWN,
   ],
   [UserRole.MASTER]: [
+    Permissions.DASHBOARD_VIEW,
     Permissions.WORKSHOP_MANAGE,
   ],
 };
@@ -134,6 +144,12 @@ export interface PermissionGroup {
 
 export const PermissionGroups: PermissionGroup[] = [
   {
+    title: "Bosh sahifa",
+    permissions: [
+      { key: Permissions.DASHBOARD_VIEW, label: "Bosh sahifani ko'rish" },
+    ],
+  },
+  {
     title: "Mijozlar",
     permissions: [
       { key: Permissions.CUSTOMER_READ, label: "Ko'rish" },
@@ -166,6 +182,8 @@ export const PermissionGroups: PermissionGroup[] = [
       { key: Permissions.WAREHOUSE_TRANSFER, label: "Omborlar arasi ko'chirish" },
       { key: Permissions.WAREHOUSE_INVENTORY, label: "Inventarizatsiya" },
       { key: Permissions.WAREHOUSE_REVALUE, label: "Qayta baholash" },
+      { key: Permissions.WAREHOUSE_WRITE_OFF, label: "Chiqim (mahsulot olib tashlash)" },
+      { key: Permissions.WAREHOUSE_RETURN, label: "Qaytarish (yetkazuvchiga)" },
     ],
   },
   {
@@ -204,13 +222,6 @@ export const PermissionGroups: PermissionGroup[] = [
     permissions: [
       { key: Permissions.WORKSHOP_VIEW, label: "Vazifalarni ko'rish" },
       { key: Permissions.WORKSHOP_MANAGE, label: "Vazifalarni boshqarish" },
-    ],
-  },
-  {
-    title: "Smena",
-    permissions: [
-      { key: Permissions.SHIFT_OWN, label: "O'z smenasini boshqarish" },
-      { key: Permissions.SHIFT_VIEW_ALL, label: "Barcha smenalarni ko'rish" },
     ],
   },
   {

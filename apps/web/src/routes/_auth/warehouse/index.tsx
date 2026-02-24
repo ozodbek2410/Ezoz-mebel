@@ -40,7 +40,7 @@ import { useCurrencyStore } from "@/store/currency.store";
 import toast from "react-hot-toast";
 
 export function WarehousePage() {
-  const { isBoss } = useAuth();
+  const { isBoss, can } = useAuth();
   const t = useT();
   const [activeTab, setActiveTab] = useState("stock");
 
@@ -54,14 +54,10 @@ export function WarehousePage() {
             { id: "stock", label: t("Qoldiqlar") },
             { id: "purchase", label: t("Kirim") },
             { id: "transfer", label: t("Ko'chirish") },
-            ...(isBoss()
-              ? [
-                  { id: "writeoff", label: t("Chiqim") },
-                  { id: "return", label: t("Qaytarish") },
-                  { id: "inventory", label: t("Inventarizatsiya") },
-                  { id: "revalue", label: t("Qayta baholash") },
-                ]
-              : []),
+            ...(can("warehouse:write_off") ? [{ id: "writeoff", label: t("Chiqim") }] : []),
+            ...(can("warehouse:return") ? [{ id: "return", label: t("Qaytarish") }] : []),
+            ...(can("warehouse:inventory") ? [{ id: "inventory", label: t("Inventarizatsiya") }] : []),
+            ...(can("warehouse:revalue") ? [{ id: "revalue", label: t("Qayta baholash") }] : []),
           ]}
           activeTab={activeTab}
           onChange={setActiveTab}
@@ -216,7 +212,7 @@ const emptyItem: PurchaseItemRow = { productId: "", quantity: "", priceUzs: "", 
 
 function PurchaseTab() {
   const queryClient = useQueryClient();
-  const { isBoss } = useAuth();
+  const { isBoss, can } = useAuth();
   const t = useT();
   const rate = useCurrencyStore((s) => s.rate);
   const [mode, setMode] = useState<"list" | "create" | "detail">("list");
@@ -428,7 +424,7 @@ function PurchaseTab() {
                   placeholder={t("Tanlang (ixtiyoriy)")}
                 />
               </div>
-              {isBoss() && (
+              {(isBoss() || can("warehouse:purchase")) && (
                 <Button variant="secondary" size="sm" className="mb-0.5" onClick={() => setShowSupplierModal(true)}>
                   <Plus className="w-4 h-4" />
                 </Button>
