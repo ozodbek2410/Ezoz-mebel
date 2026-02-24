@@ -136,7 +136,7 @@ export const warehouseRouter = router({
             categoryId: expenseCategory.id,
             amountUzs: totalUzs,
             amountUsd: totalUsd,
-            description: `Kirim #${purchase.documentNo}${supplierName ? ` — ${supplierName}` : ""}`,
+            description: `Kirim #${purchase.id}${supplierName ? ` — ${supplierName}` : ""}`,
             cashRegister: input.cashRegister,
             paymentType: input.paymentType,
             userId: ctx.user.userId,
@@ -151,7 +151,7 @@ export const warehouseRouter = router({
             amountUsd: totalUsd,
             balanceAfterUzs: 0,
             balanceAfterUsd: 0,
-            description: `Kirim #${purchase.documentNo}`,
+            description: `Kirim #${purchase.id}`,
             userId: ctx.user.userId,
           },
         });

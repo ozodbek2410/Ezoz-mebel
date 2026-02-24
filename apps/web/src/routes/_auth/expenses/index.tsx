@@ -10,6 +10,13 @@ import { formatUzs } from "@ezoz/shared";
 import toast from "react-hot-toast";
 import { useT, getT } from "@/hooks/useT";
 
+const PAYMENT_LABELS: Record<string, string> = {
+  CASH_UZS: "Naqd (UZS)",
+  CASH_USD: "Naqd (USD)",
+  CARD: "Karta",
+  TRANSFER: "O'tkazma",
+};
+
 export function ExpensesPage() {
   const t = useT();
   const { isBoss, user } = useAuth();
@@ -131,7 +138,9 @@ export function ExpensesPage() {
                       {exp.cashRegister === "SALES" ? t("Savdo") : t("Xizmat")}
                     </Badge>
                   </td>
-                  <td className="text-sm text-gray-500 hidden sm:table-cell">{exp.paymentType}</td>
+                  <td className="text-sm text-gray-500 hidden sm:table-cell">
+                    {t(PAYMENT_LABELS[exp.paymentType] ?? exp.paymentType)}
+                  </td>
                   <td>
                     <CurrencyDisplay amountUzs={exp.amountUzs} amountUsd={exp.amountUsd} />
                   </td>
