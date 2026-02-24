@@ -13,6 +13,7 @@ import {
   Badge, PhoneInput,
 } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/store/auth.store";
 import { useT, getT } from "@/hooks/useT";
 import {
   formatUzs,
@@ -52,6 +53,7 @@ const monthNames = [
 // ===== Main Page =====
 export function EmployeesPage() {
   const { isBoss } = useAuth();
+  const { user: currentUser, updateProfile } = useAuthStore();
   const queryClient = useQueryClient();
   const t = useT();
 
@@ -151,6 +153,10 @@ export function EmployeesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employee"] });
       queryClient.invalidateQueries({ queryKey: ["auth"] });
+      // If updating current user — sync auth store immediately
+      if (selectedId === currentUser?.userId) {
+        updateProfile({ role: editForm.role, customPermissions: editPermissions });
+      }
       setEditOpen(false);
       toast.success(getT()("Saqlandi"));
     },
