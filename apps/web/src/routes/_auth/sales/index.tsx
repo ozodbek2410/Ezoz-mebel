@@ -407,7 +407,7 @@ function SalesPageInner() {
 
               {/* ===== RIGHT: CART ===== */}
               <div className="w-full lg:w-[400px] shrink-0">
-                <div className="card sticky top-20">
+                <div className="card sticky top-20 flex flex-col max-h-[calc(100vh-5.5rem)]">
                   <div className="card-header">
                     <div className="flex items-center gap-2">
                       <ShoppingCart className="w-5 h-5 text-brand-600" />
@@ -446,7 +446,7 @@ function SalesPageInner() {
                     </div>
                   </div>
 
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-100 overflow-y-auto flex-1">
                     {cart.length === 0 ? (
                       <div className="text-center py-10 text-gray-400 text-sm">
                         <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
@@ -606,7 +606,7 @@ function SalesPageInner() {
 
               {/* RIGHT: CART (product mode) */}
               <div className="w-full lg:w-[400px] shrink-0">
-                <div className="card sticky top-20">
+                <div className="card sticky top-20 flex flex-col max-h-[calc(100vh-5.5rem)]">
                   <div className="card-header">
                     <div className="flex items-center gap-2">
                       <ShoppingCart className="w-5 h-5 text-brand-600" />
@@ -645,7 +645,7 @@ function SalesPageInner() {
                     </div>
                   </div>
 
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-gray-100 overflow-y-auto flex-1">
                     {cart.length === 0 ? (
                       <div className="text-center py-10 text-gray-400 text-sm">
                         <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />

@@ -521,7 +521,7 @@
     @apply bg-gray-50/80;
   }
   .pos-cart-total {
-    @apply p-4 border-t-2 border-gray-200;
+    @apply p-4 border-t-2 border-gray-200 shrink-0;
     background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
   }
   .pos-qty-control {
