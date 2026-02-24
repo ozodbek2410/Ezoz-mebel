@@ -16,6 +16,7 @@ export const employeeRouter = router({
         role: true,
         baseSalaryUzs: true,
         bonusPerJob: true,
+        customPermissions: true,
         _count: { select: { advances: true, jobRecords: true } },
       },
       orderBy: { fullName: "asc" },

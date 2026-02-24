@@ -137,7 +137,7 @@ export const PermissionGroups: PermissionGroup[] = [
     title: "Mijozlar",
     permissions: [
       { key: Permissions.CUSTOMER_READ, label: "Ko'rish" },
-      { key: Permissions.CUSTOMER_CREATE, label: "Yaratish" },
+      { key: Permissions.CUSTOMER_CREATE, label: "Yangi qo'shish" },
       { key: Permissions.CUSTOMER_UPDATE, label: "Tahrirlash" },
       { key: Permissions.CUSTOMER_DELETE, label: "O'chirish" },
     ],
@@ -146,24 +146,24 @@ export const PermissionGroups: PermissionGroup[] = [
     title: "Mahsulotlar",
     permissions: [
       { key: Permissions.PRODUCT_READ, label: "Ko'rish" },
-      { key: Permissions.PRODUCT_CREATE, label: "Yaratish" },
+      { key: Permissions.PRODUCT_CREATE, label: "Yangi qo'shish" },
       { key: Permissions.PRODUCT_UPDATE, label: "Tahrirlash" },
       { key: Permissions.PRODUCT_DELETE, label: "O'chirish" },
-      { key: Permissions.PRODUCT_PRICE_BELOW_MIN, label: "Minimal narxdan past sotish" },
+      { key: Permissions.PRODUCT_PRICE_BELOW_MIN, label: "Min. narxdan past sotish" },
     ],
   },
   {
     title: "Kategoriyalar",
     permissions: [
-      { key: Permissions.CATEGORY_MANAGE, label: "Boshqarish" },
+      { key: Permissions.CATEGORY_MANAGE, label: "Kategoriya boshqarish" },
     ],
   },
   {
     title: "Ombor",
     permissions: [
-      { key: Permissions.WAREHOUSE_READ, label: "Ko'rish" },
+      { key: Permissions.WAREHOUSE_READ, label: "Qoldiqlarni ko'rish" },
       { key: Permissions.WAREHOUSE_PURCHASE, label: "Kirim qilish" },
-      { key: Permissions.WAREHOUSE_TRANSFER, label: "Ko'chirish" },
+      { key: Permissions.WAREHOUSE_TRANSFER, label: "Omborlar arasi ko'chirish" },
       { key: Permissions.WAREHOUSE_INVENTORY, label: "Inventarizatsiya" },
       { key: Permissions.WAREHOUSE_REVALUE, label: "Qayta baholash" },
     ],
@@ -180,7 +180,7 @@ export const PermissionGroups: PermissionGroup[] = [
     permissions: [
       { key: Permissions.PAYMENT_RECEIVE, label: "To'lov qabul qilish" },
       { key: Permissions.RECEIPT_PRINT, label: "Chek chop etish" },
-      { key: Permissions.EXPENSE_CREATE, label: "Xarajat yaratish" },
+      { key: Permissions.EXPENSE_CREATE, label: "Xarajat kiritish" },
       { key: Permissions.EXPENSE_VIEW_ALL, label: "Barcha xarajatlarni ko'rish" },
     ],
   },
@@ -194,7 +194,7 @@ export const PermissionGroups: PermissionGroup[] = [
   {
     title: "Xodimlar",
     permissions: [
-      { key: Permissions.EMPLOYEE_MANAGE, label: "Boshqarish" },
+      { key: Permissions.EMPLOYEE_MANAGE, label: "Xodimlarni boshqarish" },
       { key: Permissions.EMPLOYEE_ADVANCE, label: "Avans berish" },
       { key: Permissions.EMPLOYEE_SALARY, label: "Oylik to'lash" },
     ],
@@ -202,22 +202,22 @@ export const PermissionGroups: PermissionGroup[] = [
   {
     title: "Ustaxona",
     permissions: [
-      { key: Permissions.WORKSHOP_VIEW, label: "Ko'rish" },
-      { key: Permissions.WORKSHOP_MANAGE, label: "Boshqarish" },
+      { key: Permissions.WORKSHOP_VIEW, label: "Vazifalarni ko'rish" },
+      { key: Permissions.WORKSHOP_MANAGE, label: "Vazifalarni boshqarish" },
     ],
   },
   {
     title: "Smena",
     permissions: [
-      { key: Permissions.SHIFT_OWN, label: "O'z smenasi" },
-      { key: Permissions.SHIFT_VIEW_ALL, label: "Barcha smenalar" },
+      { key: Permissions.SHIFT_OWN, label: "O'z smenasini boshqarish" },
+      { key: Permissions.SHIFT_VIEW_ALL, label: "Barcha smenalarni ko'rish" },
     ],
   },
   {
     title: "Admin",
     permissions: [
-      { key: Permissions.ADMIN_SETTINGS, label: "Sozlamalar" },
-      { key: Permissions.ADMIN_USERS, label: "Foydalanuvchilar boshqarish" },
+      { key: Permissions.ADMIN_SETTINGS, label: "Tizim sozlamalari" },
+      { key: Permissions.ADMIN_USERS, label: "Foydalanuvchi boshqarish" },
       { key: Permissions.MARKETPLACE_MANAGE, label: "Marketplace boshqarish" },
     ],
   },

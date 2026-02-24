@@ -733,38 +733,68 @@ function PermissionsPanel({
   }
 
   return (
-    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+    <div className="space-y-2 max-h-[440px] overflow-y-auto pr-1">
       {PermissionGroups.map((group) => {
         const groupKeys = group.permissions.map((p) => p.key);
         const selectedCount = groupKeys.filter((k) => selectedPermissions.includes(k)).length;
         const allSelected = selectedCount === groupKeys.length;
+        const someSelected = selectedCount > 0 && !allSelected;
 
         return (
-          <div key={group.title} className="border border-gray-200 rounded-lg overflow-hidden">
+          <div key={group.title} className={`rounded-lg border overflow-hidden transition-colors ${
+            allSelected ? "border-brand-200" : someSelected ? "border-amber-200" : "border-gray-200"
+          }`}>
+            {/* Group header — click to toggle all */}
             <button
               type="button"
               onClick={() => toggleGroup(groupKeys, allSelected)}
-              className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+              className={`w-full flex items-center justify-between px-3 py-2 transition-colors ${
+                allSelected ? "bg-brand-50 hover:bg-brand-100" :
+                someSelected ? "bg-amber-50 hover:bg-amber-100" :
+                "bg-gray-50 hover:bg-gray-100"
+              }`}
             >
               <div className="flex items-center gap-2">
-                <div className={`w-4 h-4 rounded border flex items-center justify-center text-white text-[10px] ${
-                  allSelected ? "bg-brand-600 border-brand-600" : selectedCount > 0 ? "bg-brand-300 border-brand-300" : "border-gray-300"
+                <div className={`w-[18px] h-[18px] rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                  allSelected ? "bg-brand-600 border-brand-600 text-white" :
+                  someSelected ? "bg-amber-400 border-amber-400 text-white" :
+                  "border-gray-300 bg-white"
                 }`}>
-                  {(allSelected || selectedCount > 0) && <Check size={10} />}
+                  {(allSelected || someSelected) && <Check size={11} />}
                 </div>
-                <span className="text-sm font-medium text-gray-700">{t(group.title)}</span>
+                <span className={`text-sm font-semibold ${
+                  allSelected ? "text-brand-700" : someSelected ? "text-amber-700" : "text-gray-700"
+                }`}>
+                  {t(group.title)}
+                </span>
               </div>
-              <span className="text-xs text-gray-400">{selectedCount}/{groupKeys.length}</span>
+              <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                allSelected ? "bg-brand-100 text-brand-700" :
+                someSelected ? "bg-amber-100 text-amber-700" :
+                "bg-gray-100 text-gray-400"
+              }`}>
+                {selectedCount}/{groupKeys.length}
+              </span>
             </button>
-            <div className="px-3 py-2 space-y-1">
+
+            {/* Permission chips */}
+            <div className="px-3 py-2.5 flex flex-wrap gap-1.5 bg-white">
               {group.permissions.map((perm) => {
                 const isSelected = selectedPermissions.includes(perm.key);
                 return (
-                  <label key={perm.key} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-gray-50 rounded px-1 -mx-1">
-                    <input type="checkbox" checked={isSelected} onChange={() => togglePermission(perm.key)}
-                      className="rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
-                    <span className="text-sm text-gray-600">{t(perm.label)}</span>
-                  </label>
+                  <button
+                    key={perm.key}
+                    type="button"
+                    onClick={() => togglePermission(perm.key)}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                      isSelected
+                        ? "bg-brand-600 border-brand-600 text-white shadow-sm"
+                        : "bg-white border-gray-200 text-gray-500 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50"
+                    }`}
+                  >
+                    {isSelected && <Check size={10} className="flex-shrink-0" />}
+                    {t(perm.label)}
+                  </button>
                 );
               })}
             </div>
