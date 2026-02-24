@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useLocation, Link } from "@tanstack/react-router";
+import { useLocation, Link, useRouter } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { usePWA } from "@/hooks/usePWA";
 import { useUIStore } from "@/store/ui.store";
@@ -326,6 +326,7 @@ export function MobileMenuButton() {
 export function Sidebar() {
   const t = useT();
   const { user, logout, can } = useAuth();
+  const router = useRouter();
   const { canInstall, install } = usePWA();
   const location = useLocation();
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -473,7 +474,7 @@ export function Sidebar() {
             </>
           )}
           <button
-            onClick={logout}
+            onClick={() => { logout(); void router.navigate({ to: "/login" }); }}
             className="text-gray-500 hover:text-red-400 transition-colors p-1"
             title={t("Chiqish")}
           >
