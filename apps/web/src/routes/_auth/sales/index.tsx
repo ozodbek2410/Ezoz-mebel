@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import {
   Plus, ShoppingCart, Trash2, Check, X,
-  User, Package, Banknote, Wrench, Loader2, UserCheck,
+  User, Package, Banknote, Wrench, UserCheck,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -123,49 +123,15 @@ function SalesPageInner() {
   const hasWorkshopItems = cart.some((item) => item.serviceName && item.masterId);
   const hasUnassignedService = cart.some((item) => item.serviceName && !item.masterId);
 
-  // Mutations
-  const createSale = useMutation({
-    mutationFn: () =>
-      trpc.sale.create.mutate({
-        customerId: selectedCustomer?.id,
-        warehouseId: targetWarehouse?.id,
-        saleType,
-        items: cart.map((item) => ({
-          productId: item.productId ?? undefined,
-          serviceName: item.serviceName ?? undefined,
-          quantity: item.quantity,
-          priceUzs: item.priceUzs,
-          priceUsd: item.priceUsd,
-          masterId: item.masterId ?? undefined,
-        })),
-        goesToWorkshop: hasWorkshopItems,
-        notes: saleNotes || undefined,
-      }),
-    onSuccess: (sale) => {
-      queryClient.invalidateQueries({ queryKey: ["sale"] });
-      queryClient.invalidateQueries({ queryKey: ["product"] });
-      setCart([]);
-      setSelectedCustomer(null);
-      setSaleNotes("");
-      toast.success(getT()(`Sotuv #${sale.documentNo} yaratildi`));
-      setPaymentSaleId(sale.id);
-      setPaymentSaleTotal(Number(sale.totalUzs));
-      setPaymentCustomerId(selectedCustomer?.id);
-      setPaymentForm({ cashUzs: String(sale.totalUzs), cardUzs: "0", transferUzs: "0" });
-      setPaymentOpen(true);
-    },
-    onError: (err) => toast.error(err.message),
-  });
+  // Open payment modal (no sale created yet)
+  function openPaymentModal() {
+    setPaymentSaleId(null);
+    setPaymentSaleTotal(cartTotal.uzs);
+    setPaymentCustomerId(selectedCustomer?.id);
+    setPaymentForm({ cashUzs: String(cartTotal.uzs), cardUzs: "0", transferUzs: "0" });
+    setPaymentOpen(true);
+  }
 
-  const completeSale = useMutation({
-    mutationFn: (id: number) => trpc.sale.complete.mutate({ id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["sale"] });
-      queryClient.invalidateQueries({ queryKey: ["warehouse"] });
-      toast.success(getT()("Sotuv yakunlandi"));
-    },
-    onError: (err) => toast.error(err.message),
-  });
 
   const cancelSale = useMutation({
     mutationFn: (id: number) => trpc.sale.cancel.mutate({ id }),
@@ -176,9 +142,31 @@ function SalesPageInner() {
     onError: (err) => toast.error(err.message),
   });
 
-  const createPayments = useMutation({
+  const confirmSale = useMutation({
     mutationFn: async () => {
-      const saleId = paymentSaleId ?? undefined;
+      let saleId: number;
+      // New sale from POS
+      if (!paymentSaleId) {
+        const sale = await trpc.sale.create.mutate({
+          customerId: selectedCustomer?.id,
+          warehouseId: targetWarehouse?.id,
+          saleType,
+          items: cart.map((item) => ({
+            productId: item.productId ?? undefined,
+            serviceName: item.serviceName ?? undefined,
+            quantity: item.quantity,
+            priceUzs: item.priceUzs,
+            priceUsd: item.priceUsd,
+            masterId: item.masterId ?? undefined,
+          })),
+          goesToWorkshop: hasWorkshopItems,
+          notes: saleNotes || undefined,
+        });
+        saleId = sale.id;
+      } else {
+        saleId = paymentSaleId;
+      }
+      // Create payments
       const customerId = paymentCustomerId;
       const cash = Number(paymentForm.cashUzs);
       const card = Number(paymentForm.cardUzs);
@@ -192,14 +180,21 @@ function SalesPageInner() {
       if (transfer > 0) {
         await trpc.payment.create.mutate({ saleId, customerId, amountUzs: transfer, amountUsd: 0, paymentType: "TRANSFER", source: "NEW_SALE" });
       }
+      // Complete sale
+      await trpc.sale.complete.mutate({ id: saleId });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sale"] });
+      queryClient.invalidateQueries({ queryKey: ["product"] });
+      queryClient.invalidateQueries({ queryKey: ["warehouse"] });
       setPaymentOpen(false);
-      const sid = paymentSaleId;
       setPaymentSaleId(null);
-      if (sid) completeSale.mutate(sid);
-      toast.success(getT()("To'lov qabul qilindi"));
+      if (!paymentSaleId) {
+        setCart([]);
+        setSelectedCustomer(null);
+        setSaleNotes("");
+      }
+      toast.success(getT()("Sotuv yakunlandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -552,10 +547,10 @@ function SalesPageInner() {
                     <Input placeholder={t("Izoh...")} value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} className="mb-3" />
                     <button
                       className="btn-pos-sell"
-                      disabled={cart.length === 0 || hasUnassignedService || createSale.isPending}
-                      onClick={() => createSale.mutate()}
+                      disabled={cart.length === 0 || hasUnassignedService}
+                      onClick={openPaymentModal}
                     >
-                      {createSale.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Banknote className="w-6 h-6" />}
+                      <Banknote className="w-6 h-6" />
                       {t("XIZMAT SOTISH")}
                     </button>
                   </div>
@@ -722,10 +717,10 @@ function SalesPageInner() {
                     <Input placeholder={t("Izoh...")} value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} className="mb-3" />
                     <button
                       className="btn-pos-sell"
-                      disabled={cart.length === 0 || createSale.isPending}
-                      onClick={() => createSale.mutate()}
+                      disabled={cart.length === 0}
+                      onClick={openPaymentModal}
                     >
-                      {createSale.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Banknote className="w-6 h-6" />}
+                      <Banknote className="w-6 h-6" />
                       {t("SOTISH")}
                     </button>
                   </div>
@@ -810,10 +805,10 @@ function SalesPageInner() {
         title={t("To'lov qabul qilish")}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setPaymentOpen(false)}>{t("Keyinroq")}</Button>
+            <Button variant="secondary" onClick={() => setPaymentOpen(false)}>{t("Bekor")}</Button>
             <Button
               variant="success"
-              loading={createPayments.isPending || completeSale.isPending}
+              loading={confirmSale.isPending}
               onClick={() => {
                 const cash = Number(paymentForm.cashUzs);
                 const card = Number(paymentForm.cardUzs);
@@ -823,7 +818,7 @@ function SalesPageInner() {
                   toast.error(getT()("Mijoz tanlanmagan — summa to'liq bo'lishi kerak"));
                   return;
                 }
-                createPayments.mutate();
+                confirmSale.mutate();
               }}
             >
               <Check className="w-4 h-4" /> {t("To'lovni tasdiqlash")}
