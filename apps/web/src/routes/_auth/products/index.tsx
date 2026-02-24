@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -7,6 +7,7 @@ import { Button, SearchInput, Modal, Input, CurrencyPairInput, Select, Badge, Ta
 import { CurrencyDisplay } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
 import { useT, getT } from "@/hooks/useT";
+import { useUIStore } from "@/store/ui.store";
 import { uploadProductImage } from "@/lib/upload";
 import QRCode from "qrcode";
 import toast from "react-hot-toast";
@@ -158,6 +159,12 @@ export function ProductsPage() {
   const { isBoss, can } = useAuth();
   const t = useT();
   const queryClient = useQueryClient();
+  const { setSidebarCollapsed } = useUIStore();
+
+  // Auto-collapse sidebar on mount for more product table space
+  useEffect(() => {
+    setSidebarCollapsed(true);
+  }, []);
 
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
@@ -172,11 +179,6 @@ export function ProductsPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showCategories, setShowCategories] = useState(false);
   const [page, setPage] = useState(1);
-  const tableRef = useRef<HTMLDivElement>(null);
-
-  function scrollToTable() {
-    tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
 
   function toggleSort(key: typeof sortKey) {
     if (sortKey === key) {
@@ -602,13 +604,13 @@ export function ProductsPage() {
           )}
 
           {/* Products table */}
-          <div className="flex-1 min-w-0" ref={tableRef}>
+          <div className="flex-1 min-w-0">
             {/* Top pagination */}
             <div className="mb-3 flex items-center justify-between">
               <Pagination
                 page={page}
                 totalPages={totalPages}
-                onPageChange={(p) => { setPage(p); scrollToTable(); }}
+                onPageChange={setPage}
               />
               {total > 0 && (
                 <span className="text-xs text-gray-400">{total} {t("ta mahsulot")}</span>
