@@ -52,6 +52,7 @@ function SalesPageInner() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<{ id: number; fullName: string } | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [saleNotes, setSaleNotes] = useState("");
 
@@ -110,7 +111,7 @@ function SalesPageInner() {
   const customerSearchQuery = useQuery({
     queryKey: ["customer", "search", customerSearch],
     queryFn: () => trpc.customer.search.query({ query: customerSearch }),
-    enabled: customerSearch.length >= 2,
+    enabled: customerDropdownOpen && !selectedCustomer,
   });
 
   const salesQuery = useQuery({
@@ -432,21 +433,27 @@ function SalesPageInner() {
                         placeholder={t("Mijoz tanlash (ixtiyoriy)...")}
                         value={selectedCustomer ? selectedCustomer.fullName : customerSearch}
                         onChange={(e) => { setCustomerSearch(e.target.value); setSelectedCustomer(null); }}
-                        onClear={() => { setCustomerSearch(""); setSelectedCustomer(null); }}
+                        onClear={() => { setCustomerSearch(""); setSelectedCustomer(null); setCustomerDropdownOpen(false); }}
+                        onFocus={() => setCustomerDropdownOpen(true)}
+                        onBlur={() => setTimeout(() => setCustomerDropdownOpen(false), 150)}
                       />
-                      {!selectedCustomer && customerSearch.length >= 2 && customerSearchQuery.data && (
-                        <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border max-h-40 overflow-y-auto">
-                          {customerSearchQuery.data.map((c) => (
-                            <button
-                              key={c.id}
-                              className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
-                              onClick={() => { setSelectedCustomer({ id: c.id, fullName: c.fullName }); setCustomerSearch(""); }}
-                            >
-                              <User className="w-3.5 h-3.5 text-gray-400" />
-                              <span>{c.fullName}</span>
-                              {c.phone && <span className="text-xs text-gray-400">{c.phone}</span>}
-                            </button>
-                          ))}
+                      {customerDropdownOpen && !selectedCustomer && customerSearchQuery.data && (
+                        <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border max-h-48 overflow-y-auto">
+                          {customerSearchQuery.data.length === 0 ? (
+                            <div className="px-3 py-2 text-sm text-gray-400">{t("Mijoz topilmadi")}</div>
+                          ) : (
+                            customerSearchQuery.data.map((c) => (
+                              <button
+                                key={c.id}
+                                className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+                                onMouseDown={() => { setSelectedCustomer({ id: c.id, fullName: c.fullName }); setCustomerSearch(""); setCustomerDropdownOpen(false); }}
+                              >
+                                <User className="w-3.5 h-3.5 text-gray-400" />
+                                <span>{c.fullName}</span>
+                                {c.phone && <span className="text-xs text-gray-400">{c.phone}</span>}
+                              </button>
+                            ))
+                          )}
                         </div>
                       )}
                     </div>
@@ -631,21 +638,27 @@ function SalesPageInner() {
                         placeholder={t("Mijoz tanlash (ixtiyoriy)...")}
                         value={selectedCustomer ? selectedCustomer.fullName : customerSearch}
                         onChange={(e) => { setCustomerSearch(e.target.value); setSelectedCustomer(null); }}
-                        onClear={() => { setCustomerSearch(""); setSelectedCustomer(null); }}
+                        onClear={() => { setCustomerSearch(""); setSelectedCustomer(null); setCustomerDropdownOpen(false); }}
+                        onFocus={() => setCustomerDropdownOpen(true)}
+                        onBlur={() => setTimeout(() => setCustomerDropdownOpen(false), 150)}
                       />
-                      {!selectedCustomer && customerSearch.length >= 2 && customerSearchQuery.data && (
-                        <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border max-h-40 overflow-y-auto">
-                          {customerSearchQuery.data.map((c) => (
-                            <button
-                              key={c.id}
-                              className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
-                              onClick={() => { setSelectedCustomer({ id: c.id, fullName: c.fullName }); setCustomerSearch(""); }}
-                            >
-                              <User className="w-3.5 h-3.5 text-gray-400" />
-                              <span>{c.fullName}</span>
-                              {c.phone && <span className="text-xs text-gray-400">{c.phone}</span>}
-                            </button>
-                          ))}
+                      {customerDropdownOpen && !selectedCustomer && customerSearchQuery.data && (
+                        <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border max-h-48 overflow-y-auto">
+                          {customerSearchQuery.data.length === 0 ? (
+                            <div className="px-3 py-2 text-sm text-gray-400">{t("Mijoz topilmadi")}</div>
+                          ) : (
+                            customerSearchQuery.data.map((c) => (
+                              <button
+                                key={c.id}
+                                className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+                                onMouseDown={() => { setSelectedCustomer({ id: c.id, fullName: c.fullName }); setCustomerSearch(""); setCustomerDropdownOpen(false); }}
+                              >
+                                <User className="w-3.5 h-3.5 text-gray-400" />
+                                <span>{c.fullName}</span>
+                                {c.phone && <span className="text-xs text-gray-400">{c.phone}</span>}
+                              </button>
+                            ))
+                          )}
                         </div>
                       )}
                     </div>

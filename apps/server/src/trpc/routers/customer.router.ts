@@ -84,15 +84,16 @@ export const customerRouter = router({
   search: protectedProcedure
     .input(searchCustomerSchema)
     .query(async ({ ctx, input }) => {
+      const where: Record<string, unknown> = { isActive: true };
+      if (input.query) {
+        where["OR"] = [
+          { fullName: { contains: input.query, mode: "insensitive" } },
+          { phone: { contains: input.query } },
+          { phone2: { contains: input.query } },
+        ];
+      }
       return ctx.db.customer.findMany({
-        where: {
-          isActive: true,
-          OR: [
-            { fullName: { contains: input.query, mode: "insensitive" } },
-            { phone: { contains: input.query } },
-            { phone2: { contains: input.query } },
-          ],
-        },
+        where,
         take: 20,
         orderBy: { fullName: "asc" },
       });

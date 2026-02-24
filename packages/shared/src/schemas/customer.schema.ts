@@ -17,7 +17,7 @@ export const updateCustomerSchema = createCustomerSchema.partial().extend({
 });
 
 export const searchCustomerSchema = z.object({
-  query: z.string().min(1),
+  query: z.string().default(""),
 });
 
 export type CreateCustomerInput = z.infer<typeof createCustomerSchema>;
