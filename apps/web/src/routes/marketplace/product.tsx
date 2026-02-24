@@ -4,6 +4,7 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { formatUzs } from "@ezoz/shared";
 import { useMarketplaceStore } from "@/store/marketplace.store";
+import { useT } from "@/hooks/useT";
 
 interface ProductDetailPageProps {
   productId: number;
@@ -14,6 +15,7 @@ interface ProductDetailPageProps {
 }
 
 export function ProductDetailPage({ productId, onBack, companyName, companyPhone, onGoToCart }: ProductDetailPageProps) {
+  const t = useT();
   const [currentImage, setCurrentImage] = useState(0);
   const [addedToCart, setAddedToCart] = useState(false);
 
@@ -53,9 +55,9 @@ export function ProductDetailPage({ productId, onBack, companyName, companyPhone
         <div className="flex items-center justify-center py-32">
           <div className="text-center">
             <Package className="w-14 h-14 text-gray-200 mx-auto mb-3" />
-            <p className="text-gray-400 mb-3">Mahsulot topilmadi</p>
+            <p className="text-gray-400 mb-3">{t("Mahsulot topilmadi")}</p>
             <button onClick={onBack} className="text-sm text-brand-600 font-medium">
-              Katalogga qaytish
+              {t("Katalogga qaytish")}
             </button>
           </div>
         </div>
@@ -205,7 +207,7 @@ export function ProductDetailPage({ productId, onBack, companyName, companyPhone
                 <p className="text-2xl lg:text-3xl font-bold text-gray-900">{formatUzs(Number(product.sellPriceUzs))}</p>
               ) : (
                 <div className="bg-brand-50 border border-brand-100 rounded-xl p-4">
-                  <p className="text-brand-700 font-semibold text-sm">Narxi kelishiladi</p>
+                  <p className="text-brand-700 font-semibold text-sm">{t("Narxi kelishiladi")}</p>
                   {companyPhone && (
                     <a
                       href={`tel:${companyPhone}`}
@@ -223,10 +225,10 @@ export function ProductDetailPage({ productId, onBack, companyName, companyPhone
                 {hasStock ? (
                   <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
                     <Check className="w-4 h-4" />
-                    Omborda mavjud
+                    {t("Omborda mavjud")}
                   </span>
                 ) : (
-                  <span className="text-sm text-red-500 font-medium">Hozirda mavjud emas</span>
+                  <span className="text-sm text-red-500 font-medium">{t("Hozirda mavjud emas")}</span>
                 )}
               </div>
 
@@ -254,7 +256,7 @@ export function ProductDetailPage({ productId, onBack, companyName, companyPhone
                       className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-600 text-white rounded-xl font-semibold text-sm hover:bg-brand-700 transition-colors"
                     >
                       <ShoppingBag className="w-4 h-4" />
-                      Savatchaga o'tish
+                      {t("Savatchaga o'tish")}
                     </button>
                   </div>
                 ) : product.showPrice ? (
@@ -269,12 +271,12 @@ export function ProductDetailPage({ productId, onBack, companyName, companyPhone
                     {addedToCart ? (
                       <>
                         <Check className="w-4 h-4" />
-                        Qo'shildi!
+                        {t("Qo'shildi!")}
                       </>
                     ) : (
                       <>
                         <ShoppingBag className="w-4 h-4" />
-                        Savatga qo'shish — {formatUzs(Number(product.sellPriceUzs))}
+                        {t("Savatga qo'shish")} — {formatUzs(Number(product.sellPriceUzs))}
                       </>
                     )}
                   </button>
@@ -284,7 +286,7 @@ export function ProductDetailPage({ productId, onBack, companyName, companyPhone
                     className="w-full flex items-center justify-center gap-2 py-3.5 bg-brand-600 text-white rounded-xl font-semibold text-sm hover:bg-brand-700 transition-colors"
                   >
                     <Phone className="w-4 h-4" />
-                    Qo'ng'iroq qilish
+                    {t("Qo'ng'iroq qilish")}
                   </a>
                 ) : null}
 
@@ -304,7 +306,7 @@ export function ProductDetailPage({ productId, onBack, companyName, companyPhone
                     }}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm border-2 border-brand-600 text-brand-600 hover:bg-brand-50 transition-colors"
                   >
-                    Buyurtma berish
+                    {t("Buyurtma berish")}
                   </button>
                 )}
               </div>
@@ -313,21 +315,21 @@ export function ProductDetailPage({ productId, onBack, companyName, companyPhone
             {/* Description */}
             {product.description && (
               <div className="bg-white rounded-2xl border border-gray-200 p-5 lg:p-6">
-                <h3 className="text-sm font-semibold text-gray-800 mb-2">Tavsif</h3>
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">{t("Tavsif")}</h3>
                 <p className="text-sm text-gray-500 leading-relaxed whitespace-pre-line">{product.description}</p>
               </div>
             )}
 
             {/* Specs */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 lg:p-6">
-              <h3 className="text-sm font-semibold text-gray-800 mb-3">Xususiyatlari</h3>
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">{t("Xususiyatlari")}</h3>
               <div className="divide-y divide-gray-100">
                 <div className="flex justify-between py-2.5 text-sm">
-                  <span className="text-gray-400">Kategoriya</span>
+                  <span className="text-gray-400">{t("Kategoriya")}</span>
                   <span className="font-medium text-gray-700">{product.category.name}</span>
                 </div>
                 <div className="flex justify-between py-2.5 text-sm">
-                  <span className="text-gray-400">O'lchov birligi</span>
+                  <span className="text-gray-400">{t("O'lchov birligi")}</span>
                   <span className="font-medium text-gray-700">{product.unit}</span>
                 </div>
               </div>
@@ -361,7 +363,7 @@ export function ProductDetailPage({ productId, onBack, companyName, companyPhone
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-600 text-white rounded-xl font-semibold text-sm hover:bg-brand-700 transition-colors"
               >
                 <ShoppingBag className="w-4 h-4" />
-                Savatchaga o'tish
+                {t("Savatchaga o'tish")}
               </button>
             </>
           ) : product.showPrice ? (
@@ -376,12 +378,12 @@ export function ProductDetailPage({ productId, onBack, companyName, companyPhone
               {addedToCart ? (
                 <>
                   <Check className="w-4 h-4" />
-                  Qo'shildi
+                  {t("Qo'shildi")}
                 </>
               ) : (
                 <>
                   <ShoppingBag className="w-4 h-4" />
-                  Savatga qo'shish — {formatUzs(Number(product.sellPriceUzs))}
+                  {t("Savatga qo'shish")} — {formatUzs(Number(product.sellPriceUzs))}
                 </>
               )}
             </button>
@@ -391,7 +393,7 @@ export function ProductDetailPage({ productId, onBack, companyName, companyPhone
               className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-600 text-white rounded-xl font-semibold text-sm"
             >
               <Phone className="w-4 h-4" />
-              Qo'ng'iroq qilish
+              {t("Qo'ng'iroq qilish")}
             </a>
           ) : null}
         </div>

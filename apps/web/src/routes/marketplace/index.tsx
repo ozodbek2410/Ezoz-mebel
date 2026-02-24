@@ -8,6 +8,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { formatUzs } from "@ezoz/shared";
 import { useMarketplaceStore } from "@/store/marketplace.store";
+import { useT } from "@/hooks/useT";
 import { ProductDetailPage } from "./product";
 import { CartPage } from "./cart";
 import { OrdersPage } from "./orders";
@@ -22,6 +23,7 @@ export function MarketplacePage() {
   const [page, setPage] = useState(1);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
 
+  const t = useT();
   const cartCount = useMarketplaceStore((s) => s.getCartCount());
 
   const productsQuery = useQuery({
@@ -90,9 +92,9 @@ export function MarketplacePage() {
             {/* Desktop navigation */}
             <nav className="hidden lg:flex items-center gap-1 ml-4">
               {([
-                { id: "home" as Tab, label: "Katalog", icon: Home },
-                { id: "orders" as Tab, label: "Buyurtmalar", icon: ClipboardList },
-                { id: "profile" as Tab, label: "Biz haqimizda", icon: User },
+                { id: "home" as Tab, label: t("Katalog"), icon: Home },
+                { id: "orders" as Tab, label: t("Buyurtmalar"), icon: ClipboardList },
+                { id: "profile" as Tab, label: t("Biz haqimizda"), icon: User },
               ]).map((item) => (
                 <button
                   key={item.id}
@@ -115,7 +117,7 @@ export function MarketplacePage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Mahsulot qidirish..."
+                  placeholder={t("Mahsulot qidirish...")}
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); setActiveTab("home"); }}
                   className="w-full pl-9 pr-9 py-2 bg-gray-100 rounded-lg text-sm text-gray-800 placeholder-gray-400 outline-none focus:bg-white focus:ring-2 focus:ring-brand-500/20 border border-transparent focus:border-brand-300 transition-all"
@@ -147,7 +149,7 @@ export function MarketplacePage() {
                 className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium relative transition-colors text-gray-600 hover:text-brand-600 hover:bg-gray-50"
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>Savatcha</span>
+                <span>{t("Savatcha")}</span>
                 {cartCount > 0 && (
                   <span className="absolute -top-0.5 left-5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
                     {cartCount}
@@ -163,7 +165,7 @@ export function MarketplacePage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Mahsulot qidirish..."
+                placeholder={t("Mahsulot qidirish...")}
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); setPage(1); setActiveTab("home"); }}
                 className="w-full pl-9 pr-9 py-2.5 bg-gray-100 rounded-xl text-sm text-gray-800 placeholder-gray-400 outline-none focus:bg-white focus:ring-2 focus:ring-brand-500/20 border border-transparent focus:border-brand-300 transition-all"
@@ -196,7 +198,7 @@ export function MarketplacePage() {
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  Barchasi
+                  {t("Barchasi")}
                 </button>
                 {categories.map((cat) => (
                   <button
@@ -230,7 +232,7 @@ export function MarketplacePage() {
             {/* Breadcrumb */}
             <div id="product-grid" className="flex items-center justify-between mb-3 lg:mb-4">
               <div className="flex items-center gap-1.5 text-xs lg:text-sm text-gray-400">
-                <span>Katalog</span>
+                <span>{t("Katalog")}</span>
                 {selectedCategory && categories.find((c) => c.id === selectedCategory) && (
                   <>
                     <ChevronRight className="w-3 h-3" />
@@ -240,7 +242,7 @@ export function MarketplacePage() {
                   </>
                 )}
               </div>
-              <p className="text-xs lg:text-sm text-gray-400">{total} ta mahsulot</p>
+              <p className="text-xs lg:text-sm text-gray-400">{`${total} ${t("ta mahsulot")}`}</p>
             </div>
 
             {/* Product Grid */}
@@ -260,13 +262,13 @@ export function MarketplacePage() {
             ) : products.length === 0 ? (
               <div className="text-center py-20">
                 <Package className="w-14 h-14 text-gray-200 mx-auto mb-3" />
-                <p className="text-gray-400 text-sm">Mahsulot topilmadi</p>
+                <p className="text-gray-400 text-sm">{t("Mahsulot topilmadi")}</p>
                 {search && (
                   <button
                     onClick={() => { setSearch(""); setPage(1); }}
                     className="mt-2 text-xs text-brand-600 font-medium"
                   >
-                    Qidiruvni tozalash
+                    {t("Qidiruvni tozalash")}
                   </button>
                 )}
               </div>
@@ -300,7 +302,7 @@ export function MarketplacePage() {
                       {product.showPrice ? (
                         <p className="text-sm lg:text-base font-bold text-gray-900">{formatUzs(Number(product.sellPriceUzs))}</p>
                       ) : (
-                        <p className="text-xs lg:text-sm text-brand-600 font-semibold">Narxi kelishiladi</p>
+                        <p className="text-xs lg:text-sm text-brand-600 font-semibold">{t("Narxi kelishiladi")}</p>
                       )}
                     </div>
                   </button>
@@ -316,7 +318,7 @@ export function MarketplacePage() {
                   disabled={page === 1}
                   className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-200 rounded-lg disabled:opacity-30 hover:bg-gray-50 transition-colors"
                 >
-                  Oldingi
+                  {t("Oldingi")}
                 </button>
                 {Array.from({ length: totalPages }).map((_, i) => {
                   const pageNum = i + 1;
@@ -345,7 +347,7 @@ export function MarketplacePage() {
                   disabled={page === totalPages}
                   className="px-3 py-1.5 text-xs font-medium text-gray-500 bg-white border border-gray-200 rounded-lg disabled:opacity-30 hover:bg-gray-50 transition-colors"
                 >
-                  Keyingi
+                  {t("Keyingi")}
                 </button>
               </div>
             )}
@@ -354,10 +356,10 @@ export function MarketplacePage() {
             {!search && !selectedCategory && (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mt-8">
                 {[
-                  { icon: Truck, title: "Bepul yetkazish", desc: "Shahar bo'ylab" },
-                  { icon: Shield, title: "Kafolat", desc: "1 yillik" },
-                  { icon: CreditCard, title: "Nasiya", desc: "12 oygacha" },
-                  { icon: Headphones, title: "Qo'llab-quvvatlash", desc: "Har doim aloqada" },
+                  { icon: Truck, title: t("Bepul yetkazish"), desc: t("Shahar bo'ylab") },
+                  { icon: Shield, title: t("Kafolat"), desc: t("1 yillik") },
+                  { icon: CreditCard, title: t("Nasiya"), desc: t("12 oygacha") },
+                  { icon: Headphones, title: t("Qo'llab-quvvatlash"), desc: t("Har doim aloqada") },
                 ].map((f, i) => (
                   <div key={i} className="bg-white rounded-xl p-4 lg:p-5 text-center border border-gray-100 hover:shadow-sm transition-shadow">
                     <div className="w-10 h-10 lg:w-12 lg:h-12 bg-brand-50 rounded-xl flex items-center justify-center mx-auto mb-2">
@@ -376,7 +378,7 @@ export function MarketplacePage() {
                 <div className="w-7 h-7 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold text-[9px]">EZ</div>
                 <span className="text-sm font-bold text-gray-800">{companyName}</span>
               </div>
-              <p className="text-xs text-gray-400">Sifatli mebel va professional xizmat</p>
+              <p className="text-xs text-gray-400">{t("Sifatli mebel va professional xizmat")}</p>
               <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
                 {company["address"] && (
                   <span className="flex items-center gap-1">
@@ -425,10 +427,10 @@ export function MarketplacePage() {
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-bottom lg:hidden">
         <div className="max-w-7xl mx-auto flex items-center justify-around h-16">
           {([
-            { id: "home" as Tab, icon: Home, label: "Bosh sahifa" },
-            { id: "cart" as Tab, icon: ShoppingBag, label: "Savatcha", badge: cartCount },
-            { id: "orders" as Tab, icon: ClipboardList, label: "Buyurtmalar" },
-            { id: "profile" as Tab, icon: User, label: "Profil" },
+            { id: "home" as Tab, icon: Home, label: t("Bosh sahifa") },
+            { id: "cart" as Tab, icon: ShoppingBag, label: t("Savatcha"), badge: cartCount },
+            { id: "orders" as Tab, icon: ClipboardList, label: t("Buyurtmalar") },
+            { id: "profile" as Tab, icon: User, label: t("Profil") },
           ]).map((tab) => (
             <button
               key={tab.id}

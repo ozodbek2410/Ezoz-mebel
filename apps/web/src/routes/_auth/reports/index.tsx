@@ -9,6 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input, Select, Tabs, Badge } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
+import { useT } from "@/hooks/useT";
 import { formatUzs, formatUsd } from "@ezoz/shared";
 
 const CHART_COLORS = ["#4f46e5", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#6366f1"];
@@ -25,6 +26,7 @@ function getMonthAgo(): string {
 
 export function ReportsPage() {
   const { isBoss } = useAuth();
+  const t = useT();
   const [activeTab, setActiveTab] = useState(isBoss() ? "boss" : "cashier");
   const [dateFrom, setDateFrom] = useState(getMonthAgo());
   const [dateTo, setDateTo] = useState(getToday());
@@ -68,16 +70,16 @@ export function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Hisobotlar" />
+      <PageHeader title={t("Hisobotlar")} />
 
       <div className="page-body">
         <div className="mb-6">
           <Tabs
             tabs={[
-              ...(isBoss() ? [{ id: "boss", label: "Umumiy hisobot" }] : []),
-              { id: "cashier", label: "Kassir hisoboti" },
-              { id: "charts", label: "Diagrammalar" },
-              { id: "inventory", label: "Inventar" },
+              ...(isBoss() ? [{ id: "boss", label: t("Umumiy hisobot") }] : []),
+              { id: "cashier", label: t("Kassir hisoboti") },
+              { id: "charts", label: t("Diagrammalar") },
+              { id: "inventory", label: t("Inventar") },
             ]}
             activeTab={activeTab}
             onChange={setActiveTab}
@@ -87,15 +89,15 @@ export function ReportsPage() {
         {/* Date filters */}
         {activeTab !== "inventory" && activeTab !== "charts" && (
           <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 mb-6">
-            <Input label="Dan" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            <Input label="Gacha" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            <Input label={t("Dan")} type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <Input label={t("Gacha")} type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
             {activeTab === "cashier" && (
               <Select
-                label="Kassa"
+                label={t("Kassa")}
                 options={[
-                  { value: "", label: "Barchasi" },
-                  { value: "SALES", label: "Savdo" },
-                  { value: "SERVICE", label: "Xizmat" },
+                  { value: "", label: t("Barchasi") },
+                  { value: "SALES", label: t("Savdo") },
+                  { value: "SERVICE", label: t("Xizmat") },
                 ]}
                 value={cashRegister}
                 onChange={(e) => setCashRegister(e.target.value)}
@@ -122,31 +124,31 @@ export function ReportsPage() {
         {activeTab === "cashier" && cashierReport.data && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard label="Sotuvlar soni" value={String(cashierReport.data.salesCount)}
+              <StatCard label={t("Sotuvlar soni")} value={String(cashierReport.data.salesCount)}
                 icon={<ShoppingBag className="w-5 h-5 text-brand-600" />} />
-              <StatCard label="Jami sotuvlar" value={formatUzs(cashierReport.data.totalSalesUzs)}
+              <StatCard label={t("Jami sotuvlar")} value={formatUzs(cashierReport.data.totalSalesUzs)}
                 sub={formatUsd(cashierReport.data.totalSalesUsd)}
                 icon={<DollarSign className="w-5 h-5 text-green-600" />} />
-              <StatCard label="Xarajatlar" value={formatUzs(cashierReport.data.totalExpensesUzs)}
+              <StatCard label={t("Xarajatlar")} value={formatUzs(cashierReport.data.totalExpensesUzs)}
                 icon={<TrendingDown className="w-5 h-5 text-red-600" />} variant="danger" />
-              <StatCard label="Sof foyda" value={formatUzs(cashierReport.data.netUzs)}
+              <StatCard label={t("Sof foyda")} value={formatUzs(cashierReport.data.netUzs)}
                 icon={<TrendingUp className="w-5 h-5 text-green-600" />}
                 variant={cashierReport.data.netUzs >= 0 ? "success" : "danger"} />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="card card-body">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">Tushumlar tafsiloti</h4>
+                <h4 className="text-sm font-medium text-gray-500 mb-3">{t("Tushumlar tafsiloti")}</h4>
                 <div className="space-y-2">
-                  <DetailRow label="Jami to'lovlar (UZS)" value={formatUzs(cashierReport.data.totalPaymentsUzs)} />
-                  <DetailRow label="Jami to'lovlar (USD)" value={formatUsd(cashierReport.data.totalPaymentsUsd)} className="text-usd" />
+                  <DetailRow label={t("Jami to'lovlar (UZS)")} value={formatUzs(cashierReport.data.totalPaymentsUzs)} />
+                  <DetailRow label={t("Jami to'lovlar (USD)")} value={formatUsd(cashierReport.data.totalPaymentsUsd)} className="text-usd" />
                 </div>
               </div>
               <div className="card card-body">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">Xarajatlar tafsiloti</h4>
+                <h4 className="text-sm font-medium text-gray-500 mb-3">{t("Xarajatlar tafsiloti")}</h4>
                 <div className="space-y-2">
-                  <DetailRow label="Xarajatlar (UZS)" value={formatUzs(cashierReport.data.totalExpensesUzs)} className="text-red-600" />
-                  <DetailRow label="Xarajatlar (USD)" value={formatUsd(cashierReport.data.totalExpensesUsd)} className="text-red-500" />
+                  <DetailRow label={t("Xarajatlar (UZS)")} value={formatUzs(cashierReport.data.totalExpensesUzs)} className="text-red-600" />
+                  <DetailRow label={t("Xarajatlar (USD)")} value={formatUsd(cashierReport.data.totalExpensesUsd)} className="text-red-500" />
                 </div>
               </div>
             </div>
@@ -157,39 +159,39 @@ export function ReportsPage() {
         {activeTab === "boss" && bossReport.data && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard label="Savdo kassa" value={formatUzs(bossReport.data.salesCashUzs)}
+              <StatCard label={t("Savdo kassa")} value={formatUzs(bossReport.data.salesCashUzs)}
                 sub={formatUsd(bossReport.data.salesCashUsd)}
                 icon={<Wallet className="w-5 h-5 text-brand-600" />} />
-              <StatCard label="Xizmat kassa" value={formatUzs(bossReport.data.serviceCashUzs)}
+              <StatCard label={t("Xizmat kassa")} value={formatUzs(bossReport.data.serviceCashUzs)}
                 sub={formatUsd(bossReport.data.serviceCashUsd)}
                 icon={<Wallet className="w-5 h-5 text-cyan-600" />} />
-              <StatCard label="Jami xarajatlar" value={formatUzs(bossReport.data.totalExpensesUzs)}
+              <StatCard label={t("Jami xarajatlar")} value={formatUzs(bossReport.data.totalExpensesUzs)}
                 icon={<TrendingDown className="w-5 h-5 text-red-600" />} variant="danger" />
-              <StatCard label="Sof foyda" value={formatUzs(bossReport.data.netProfitUzs)}
+              <StatCard label={t("Sof foyda")} value={formatUzs(bossReport.data.netProfitUzs)}
                 icon={<TrendingUp className="w-5 h-5 text-green-600" />}
                 variant={bossReport.data.netProfitUzs >= 0 ? "success" : "danger"} />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="card card-body">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">Savdo kassa</h4>
+                <h4 className="text-sm font-medium text-gray-500 mb-3">{t("Savdo kassa")}</h4>
                 <div className="space-y-2">
-                  <DetailRow label="Tushum" value={formatUzs(bossReport.data.salesCashUzs)} className="text-green-600" />
-                  <DetailRow label="Xarajat" value={formatUzs(bossReport.data.salesExpensesUzs)} className="text-red-600" />
+                  <DetailRow label={t("Tushum")} value={formatUzs(bossReport.data.salesCashUzs)} className="text-green-600" />
+                  <DetailRow label={t("Xarajat")} value={formatUzs(bossReport.data.salesExpensesUzs)} className="text-red-600" />
                 </div>
               </div>
               <div className="card card-body">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">Xizmat kassa</h4>
+                <h4 className="text-sm font-medium text-gray-500 mb-3">{t("Xizmat kassa")}</h4>
                 <div className="space-y-2">
-                  <DetailRow label="Tushum" value={formatUzs(bossReport.data.serviceCashUzs)} className="text-green-600" />
-                  <DetailRow label="Xarajat" value={formatUzs(bossReport.data.serviceExpensesUzs)} className="text-red-600" />
+                  <DetailRow label={t("Tushum")} value={formatUzs(bossReport.data.serviceCashUzs)} className="text-green-600" />
+                  <DetailRow label={t("Xarajat")} value={formatUzs(bossReport.data.serviceExpensesUzs)} className="text-red-600" />
                 </div>
               </div>
               <div className="card card-body">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">Qo'shimcha</h4>
+                <h4 className="text-sm font-medium text-gray-500 mb-3">{t("Qo'shimcha")}</h4>
                 <div className="space-y-2">
-                  <DetailRow label="Avanslar" value={formatUzs(bossReport.data.totalAdvancesUzs)} className="text-amber-600" />
-                  <DetailRow label="Jami tushum" value={formatUzs(bossReport.data.totalIncomeUzs)} className="text-green-600" />
+                  <DetailRow label={t("Avanslar")} value={formatUzs(bossReport.data.totalAdvancesUzs)} className="text-amber-600" />
+                  <DetailRow label={t("Jami tushum")} value={formatUzs(bossReport.data.totalIncomeUzs)} className="text-green-600" />
                 </div>
               </div>
             </div>
@@ -200,10 +202,10 @@ export function ReportsPage() {
         {activeTab === "inventory" && inventoryReport.data && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard label="Ombor qiymati (sotish)" value={formatUzs(inventoryReport.data.totalValueUzs)} icon={<BarChart3 className="w-5 h-5 text-brand-600" />} />
-              <StatCard label="Ombor qiymati (USD)" value={formatUsd(inventoryReport.data.totalValueUsd)} icon={<DollarSign className="w-5 h-5 text-usd" />} />
-              <StatCard label="Tan narxi" value={formatUzs(inventoryReport.data.totalCostUzs)} icon={<BarChart3 className="w-5 h-5 text-gray-600" />} />
-              <StatCard label="Potensial foyda" value={formatUzs(inventoryReport.data.totalValueUzs - inventoryReport.data.totalCostUzs)} icon={<TrendingUp className="w-5 h-5 text-green-600" />} variant="success" />
+              <StatCard label={t("Ombor qiymati (sotish)")} value={formatUzs(inventoryReport.data.totalValueUzs)} icon={<BarChart3 className="w-5 h-5 text-brand-600" />} />
+              <StatCard label={t("Ombor qiymati (USD)")} value={formatUsd(inventoryReport.data.totalValueUsd)} icon={<DollarSign className="w-5 h-5 text-usd" />} />
+              <StatCard label={t("Tan narxi")} value={formatUzs(inventoryReport.data.totalCostUzs)} icon={<BarChart3 className="w-5 h-5 text-gray-600" />} />
+              <StatCard label={t("Potensial foyda")} value={formatUzs(inventoryReport.data.totalValueUzs - inventoryReport.data.totalCostUzs)} icon={<TrendingUp className="w-5 h-5 text-green-600" />} variant="success" />
             </div>
 
             <div className="card overflow-hidden">
@@ -211,13 +213,13 @@ export function ReportsPage() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Mahsulot</th>
-                      <th className="hidden sm:table-cell">Guruh</th>
-                      <th className="hidden md:table-cell">Ombor</th>
-                      <th>Qoldiq</th>
-                      <th className="hidden sm:table-cell">Sotish narxi</th>
-                      <th className="hidden md:table-cell">Tan narxi</th>
-                      <th>Jami qiymat</th>
+                      <th>{t("Mahsulot")}</th>
+                      <th className="hidden sm:table-cell">{t("Guruh")}</th>
+                      <th className="hidden md:table-cell">{t("Ombor")}</th>
+                      <th>{t("Qoldiq")}</th>
+                      <th className="hidden sm:table-cell">{t("Sotish narxi")}</th>
+                      <th className="hidden md:table-cell">{t("Tan narxi")}</th>
+                      <th>{t("Jami qiymat")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -276,6 +278,7 @@ function ChartsTab({
   setDateFrom: (d: string) => void;
   setDateTo: (d: string) => void;
 }) {
+  const t = useT();
   const formatNum = (v: number) => {
     if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
     if (v >= 1000) return `${(v / 1000).toFixed(0)}K`;
@@ -295,7 +298,7 @@ function ChartsTab({
                 chartDays === d ? "bg-brand-600 text-white" : "bg-white border text-gray-600 hover:bg-gray-50"
               }`}
             >
-              {d} kun
+              {d} {t("kun")}
             </button>
           ))}
         </div>
@@ -307,7 +310,7 @@ function ChartsTab({
 
       {/* Sales & Expenses Chart */}
       <div className="card card-body">
-        <h3 className="font-semibold text-gray-900 mb-4">Sotuvlar va xarajatlar</h3>
+        <h3 className="font-semibold text-gray-900 mb-4">{t("Sotuvlar va xarajatlar")}</h3>
         <ResponsiveContainer width="100%" height={320}>
           <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -324,20 +327,20 @@ function ChartsTab({
             <Tooltip
               formatter={(value: number, name: string) => [
                 formatUzs(value),
-                name === "salesUzs" ? "Sotuvlar" : "Xarajatlar",
+                name === "salesUzs" ? t("Sotuvlar") : t("Xarajatlar"),
               ]}
               labelFormatter={(label: string) => new Date(label).toLocaleDateString("uz")}
               contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
             />
-            <Bar dataKey="salesUzs" name="Sotuvlar" fill="#4f46e5" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="expensesUzs" name="Xarajatlar" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="salesUzs" name={t("Sotuvlar")} fill="#4f46e5" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="expensesUzs" name={t("Xarajatlar")} fill="#ef4444" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Sales Count Line Chart */}
       <div className="card card-body">
-        <h3 className="font-semibold text-gray-900 mb-4">Sotuvlar soni (kunlik)</h3>
+        <h3 className="font-semibold text-gray-900 mb-4">{t("Sotuvlar soni (kunlik)")}</h3>
         <ResponsiveContainer width="100%" height={240}>
           <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -352,7 +355,7 @@ function ChartsTab({
             />
             <YAxis fontSize={11} tick={{ fill: "#9ca3af" }} />
             <Tooltip
-              formatter={(value: number) => [value, "Sotuvlar"]}
+              formatter={(value: number) => [value, t("Sotuvlar")]}
               labelFormatter={(label: string) => new Date(label).toLocaleDateString("uz")}
               contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
             />
@@ -365,9 +368,9 @@ function ChartsTab({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bar chart */}
         <div className="card card-body">
-          <h3 className="font-semibold text-gray-900 mb-4">Top mahsulotlar (tushum bo'yicha)</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t("Top mahsulotlar (tushum bo'yicha)")}</h3>
           {topProducts.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">Ma'lumot yo'q</p>
+            <p className="text-sm text-gray-400 text-center py-8">{t("Ma'lumot yo'q")}</p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={topProducts} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 0 }}>
@@ -382,7 +385,7 @@ function ChartsTab({
                   tickFormatter={(v: string) => v.length > 18 ? v.slice(0, 16) + "..." : v}
                 />
                 <Tooltip
-                  formatter={(value: number) => [formatUzs(value), "Tushum"]}
+                  formatter={(value: number) => [formatUzs(value), t("Tushum")]}
                   contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
                 />
                 <Bar dataKey="totalUzs" fill="#4f46e5" radius={[0, 4, 4, 0]} />
@@ -393,9 +396,9 @@ function ChartsTab({
 
         {/* Pie chart */}
         <div className="card card-body">
-          <h3 className="font-semibold text-gray-900 mb-4">Mahsulot ulushi</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">{t("Mahsulot ulushi")}</h3>
           {topProducts.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">Ma'lumot yo'q</p>
+            <p className="text-sm text-gray-400 text-center py-8">{t("Ma'lumot yo'q")}</p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -417,7 +420,7 @@ function ChartsTab({
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => [formatUzs(value), "Tushum"]}
+                  formatter={(value: number) => [formatUzs(value), t("Tushum")]}
                   contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "12px" }}
                 />
               </PieChart>

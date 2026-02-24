@@ -9,10 +9,12 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button, Modal, Input, Tabs } from "@/components/ui";
 import { StatusBadge } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
+import { useT, getT } from "@/hooks/useT";
 import toast from "react-hot-toast";
 
 export function WorkshopPage() {
   const { isMaster, isBoss, user } = useAuth();
+  const t = useT();
   const queryClient = useQueryClient();
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -42,7 +44,7 @@ export function WorkshopPage() {
       queryClient.invalidateQueries({ queryKey: ["workshop"] });
       queryClient.invalidateQueries({ queryKey: ["sale"] });
       setNotesOpen(false);
-      toast.success("Status yangilandi");
+      toast.success(getT()("Status yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -52,7 +54,7 @@ export function WorkshopPage() {
       trpc.workshop.assignTask.mutate(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workshop"] });
-      toast.success("Usta tayinlandi");
+      toast.success(getT()("Usta tayinlandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -103,7 +105,7 @@ export function WorkshopPage() {
   // Clean up old-format descriptions like "Sotuv #cuid - kesish/xizmat"
   function getServiceName(description: string, saleItems: Array<{ serviceName: string | null }>) {
     if (description.startsWith("Sotuv #")) {
-      return saleItems.find((i) => i.serviceName)?.serviceName ?? "Xizmat/kesish";
+      return saleItems.find((i) => i.serviceName)?.serviceName ?? t("Xizmat/kesish");
     }
     return description;
   }
@@ -111,8 +113,8 @@ export function WorkshopPage() {
   return (
     <>
       <PageHeader
-        title="Ustaxona"
-        subtitle={`${pendingCount} kutilmoqda, ${inProgressCount} bajarilmoqda`}
+        title={t("Ustaxona")}
+        subtitle={`${pendingCount} ${t("kutilmoqda")}, ${inProgressCount} ${t("bajarilmoqda")}`}
       />
 
       <div className="page-body">
@@ -120,10 +122,10 @@ export function WorkshopPage() {
         <div className="mb-4">
           <Tabs
             tabs={[
-              { id: "all", label: "Barchasi", count: saleGroups.length },
-              { id: "PENDING", label: "Kutilmoqda", count: pendingCount },
-              { id: "IN_PROGRESS", label: "Bajarilmoqda", count: inProgressCount },
-              { id: "COMPLETED", label: "Yakunlangan", count: completedCount },
+              { id: "all", label: t("Barchasi"), count: saleGroups.length },
+              { id: "PENDING", label: t("Kutilmoqda"), count: pendingCount },
+              { id: "IN_PROGRESS", label: t("Bajarilmoqda"), count: inProgressCount },
+              { id: "COMPLETED", label: t("Yakunlangan"), count: completedCount },
             ]}
             activeTab={statusFilter}
             onChange={setStatusFilter}
@@ -144,7 +146,7 @@ export function WorkshopPage() {
         ) : filteredGroups.length === 0 ? (
           <div className="card card-body text-center py-12">
             <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-400">Vazifalar yo'q</p>
+            <p className="text-gray-400">{t("Vazifalar yo'q")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -164,7 +166,7 @@ export function WorkshopPage() {
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-gray-400" />
                         <span className="font-semibold text-sm text-gray-900">
-                          {sale?.customer?.fullName ?? "Oddiy mijoz"}
+                          {sale?.customer?.fullName ?? t("Oddiy mijoz")}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -226,13 +228,13 @@ export function WorkshopPage() {
                                   if (e.target.value) assignTask.mutate({ taskId: task.id, assignedToId: Number(e.target.value) });
                                 }}
                               >
-                                <option value="">Usta tayinlash...</option>
+                                <option value="">{t("Usta tayinlash...")} </option>
                                 {masters.map((m) => (
                                   <option key={m.id} value={m.id}>{m.fullName}</option>
                                 ))}
                               </select>
                             ) : (
-                              <span className="text-xs text-gray-400 italic">Tayinlanmagan</span>
+                              <span className="text-xs text-gray-400 italic">{t("Tayinlanmagan")}</span>
                             )}
                           </div>
 
@@ -240,13 +242,13 @@ export function WorkshopPage() {
                           {task.startedAt && (
                             <div className="flex items-center gap-1.5 text-xs text-gray-400">
                               <Clock className="w-3 h-3" />
-                              <span>Boshlangan: {formatDate(task.startedAt)}</span>
+                              <span>{t("Boshlangan")}: {formatDate(task.startedAt)}</span>
                             </div>
                           )}
                           {task.completedAt && (
                             <div className="flex items-center gap-1.5 text-xs text-green-600">
                               <CheckCircle className="w-3 h-3" />
-                              <span>Yakunlangan: {formatDate(task.completedAt)}</span>
+                              <span>{t("Yakunlangan")}: {formatDate(task.completedAt)}</span>
                             </div>
                           )}
 
@@ -270,7 +272,7 @@ export function WorkshopPage() {
                                   onClick={() => updateStatus.mutate({ taskId: task.id, status: "IN_PROGRESS" })}
                                 >
                                   <Play className="w-3.5 h-3.5" />
-                                  Boshlash
+                                  {t("Boshlash")}
                                 </Button>
                               )}
                               {task.status === "IN_PROGRESS" && (
@@ -281,7 +283,7 @@ export function WorkshopPage() {
                                   onClick={() => { setNotesTaskId(task.id); setNotes(""); setNotesOpen(true); }}
                                 >
                                   <CheckCircle className="w-3.5 h-3.5" />
-                                  Yakunlash
+                                  {t("Yakunlash")}
                                 </Button>
                               )}
                             </div>
@@ -301,11 +303,11 @@ export function WorkshopPage() {
       <Modal
         open={notesOpen}
         onClose={() => setNotesOpen(false)}
-        title="Vazifani yakunlash"
+        title={t("Vazifani yakunlash")}
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setNotesOpen(false)}>Bekor qilish</Button>
+            <Button variant="secondary" onClick={() => setNotesOpen(false)}>{t("Bekor qilish")}</Button>
             <Button
               variant="success"
               loading={updateStatus.isPending}
@@ -314,16 +316,16 @@ export function WorkshopPage() {
               }}
             >
               <CheckCircle className="w-4 h-4" />
-              Yakunlash
+              {t("Yakunlash")}
             </Button>
           </>
         }
       >
         <Input
-          label="Izoh (ixtiyoriy)"
+          label={t("Izoh (ixtiyoriy)")}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Bajarilgan ish haqida izoh..."
+          placeholder={t("Bajarilgan ish haqida izoh...")}
         />
       </Modal>
     </>

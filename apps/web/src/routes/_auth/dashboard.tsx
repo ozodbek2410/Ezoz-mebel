@@ -6,6 +6,7 @@ import { useCurrencyStore } from "@/store/currency.store";
 import { formatUzs } from "@ezoz/shared";
 import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui";
+import { useT } from "@/hooks/useT";
 import {
   ShoppingCart,
   Users,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 
 export function DashboardPage() {
+  const t = useT();
   const { user, isBoss, isMaster } = useAuth();
   const { rate } = useCurrencyStore();
 
@@ -34,38 +36,38 @@ export function DashboardPage() {
   return (
     <>
       <PageHeader
-        title={`Xush kelibsiz, ${user?.fullName ?? ""}`}
-        subtitle={rate ? `Bugungi kurs: 1$ = ${rate.toLocaleString()} so'm` : undefined}
+        title={`${t("Xush kelibsiz")}, ${user?.fullName ?? ""}`}
+        subtitle={rate ? `${t("Bugungi kurs")}: 1$ = ${rate.toLocaleString()} ${t("so'm")}` : undefined}
       />
 
       <div className="page-body">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard
-            label="Bugungi sotuvlar"
+            label={t("Bugungi sotuvlar")}
             value={String(stats?.todaySalesCount ?? 0)}
-            sub="hujjat"
+            sub={t("hujjat")}
             icon={ShoppingCart}
             color="text-blue-600 bg-blue-100"
           />
           <StatCard
-            label="Bugungi kirim"
+            label={t("Bugungi kirim")}
             value={formatUzs(stats?.todayIncomeUzs ?? 0)}
-            sub="naqd + karta"
+            sub={t("naqd + karta")}
             icon={TrendingUp}
             color="text-green-600 bg-green-100"
           />
           <StatCard
-            label="Bugungi xarajatlar"
+            label={t("Bugungi xarajatlar")}
             value={formatUzs(stats?.todayExpensesUzs ?? 0)}
-            sub="barcha kassalar"
+            sub={t("barcha kassalar")}
             icon={Wallet}
             color="text-red-600 bg-red-100"
           />
           <StatCard
-            label="Aktiv mijozlar"
+            label={t("Aktiv mijozlar")}
             value={String(stats?.activeCustomers ?? 0)}
-            sub="jami"
+            sub={t("jami")}
             icon={Users}
             color="text-purple-600 bg-purple-100"
           />
@@ -127,19 +129,20 @@ interface RecentSale {
 }
 
 function RecentSalesCard({ sales }: { sales: RecentSale[] }) {
+  const t = useT();
   return (
     <div className="card">
       <div className="card-header">
         <h3 className="font-semibold text-gray-900 flex items-center gap-2">
           <ShoppingCart size={16} className="text-blue-500" />
-          So'nggi sotuvlar
+          {t("So'nggi sotuvlar")}
         </h3>
       </div>
       <div className="card-body p-0">
         {sales.length === 0 ? (
           <div className="text-center text-gray-400 py-8">
             <ShoppingCart size={40} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm">Hali sotuvlar yo'q</p>
+            <p className="text-sm">{t("Hali sotuvlar yo'q")}</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -149,14 +152,14 @@ function RecentSalesCard({ sales }: { sales: RecentSale[] }) {
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs text-gray-500">{sale.documentNo}</span>
                     <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
-                      {sale.saleType === "PRODUCT" ? "Savdo" : "Xizmat"}
+                      {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}
                     </Badge>
                     <Badge variant={sale.status === "COMPLETED" ? "success" : sale.status === "OPEN" ? "warning" : "neutral"}>
-                      {sale.status === "COMPLETED" ? "Yakunlangan" : sale.status === "OPEN" ? "Ochiq" : sale.status}
+                      {sale.status === "COMPLETED" ? t("Yakunlangan") : sale.status === "OPEN" ? t("Ochiq") : sale.status}
                     </Badge>
                   </div>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {sale.customerName ?? "Nomsiz"} &middot; {sale.cashierName}
+                    {sale.customerName ?? t("Nomsiz")} &middot; {sale.cashierName}
                   </p>
                 </div>
                 <div className="text-right">
@@ -176,6 +179,7 @@ function RecentSalesCard({ sales }: { sales: RecentSale[] }) {
 
 // ===== Notes =====
 function NotesCard() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [content, setContent] = useState("");
 
@@ -212,27 +216,27 @@ function NotesCard() {
       <div className="card-header">
         <div className="flex items-center gap-2">
           <StickyNote size={16} className="text-amber-500" />
-          <h3 className="font-semibold text-gray-900">Eslatmalar</h3>
+          <h3 className="font-semibold text-gray-900">{t("Eslatmalar")}</h3>
         </div>
         <span className="text-xs text-gray-400">{content.length}/800</span>
       </div>
       <div className="card-body">
         <textarea
           className="input-field resize-none h-32"
-          placeholder="Eslatmalarni shu yerga yozing..."
+          placeholder={t("Eslatmalarni shu yerga yozing...")}
           maxLength={800}
           value={content}
           onChange={(e) => setContent(e.target.value)}
         />
         <div className="mt-2 flex items-center justify-between">
-          <span className="text-xs text-gray-400">Avtomatik saqlanadi</span>
+          <span className="text-xs text-gray-400">{t("Avtomatik saqlanadi")}</span>
           <button
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}
             className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1"
           >
             <Save size={12} />
-            {saveMutation.isPending ? "Saqlanmoqda..." : "Saqlash"}
+            {saveMutation.isPending ? t("Saqlanmoqda...") : t("Saqlash")}
           </button>
         </div>
       </div>
@@ -242,6 +246,7 @@ function NotesCard() {
 
 // ===== Workshop Tasks (Master) =====
 function WorkshopTasksCard() {
+  const t = useT();
   const tasksQuery = useQuery({
     queryKey: ["workshop", "myTasks"],
     queryFn: () => trpc.workshop.list.query({ status: "PENDING" }),
@@ -254,7 +259,7 @@ function WorkshopTasksCard() {
       <div className="card-header">
         <h3 className="font-semibold text-gray-900 flex items-center gap-2">
           <Wrench size={16} className="text-orange-500" />
-          Mening vazifalarim
+          {t("Mening vazifalarim")}
         </h3>
         {tasks.length > 0 && (
           <Badge variant="warning">{tasks.length}</Badge>
@@ -264,7 +269,7 @@ function WorkshopTasksCard() {
         {tasks.length === 0 ? (
           <div className="text-center text-gray-400 py-8">
             <Clock size={40} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm">Hali vazifalar yo'q</p>
+            <p className="text-sm">{t("Hali vazifalar yo'q")}</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -279,7 +284,7 @@ function WorkshopTasksCard() {
             {tasks.length > 5 && (
               <div className="px-5 py-2 text-center">
                 <a href="/workshop" className="text-xs text-brand-600 hover:text-brand-700">
-                  Barchasini ko'rish ({tasks.length})
+                  {t("Barchasini ko'rish")} ({tasks.length})
                 </a>
               </div>
             )}
@@ -300,12 +305,13 @@ interface LowStockItem {
 }
 
 function LowStockCard({ items }: { items: LowStockItem[] }) {
+  const t = useT();
   return (
     <div className="card">
       <div className="card-header">
         <h3 className="font-semibold text-gray-900 flex items-center gap-2">
           <AlertTriangle size={16} className="text-amber-500" />
-          Kam qolgan mahsulotlar
+          {t("Kam qolgan mahsulotlar")}
         </h3>
         {items.length > 0 && (
           <Badge variant="danger">{items.length}</Badge>
@@ -315,7 +321,7 @@ function LowStockCard({ items }: { items: LowStockItem[] }) {
         {items.length === 0 ? (
           <div className="text-center text-gray-400 py-8">
             <Package size={40} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm">Barcha mahsulotlar yetarli</p>
+            <p className="text-sm">{t("Barcha mahsulotlar yetarli")}</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-100">

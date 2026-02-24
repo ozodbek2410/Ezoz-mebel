@@ -8,8 +8,10 @@ import { CurrencyDisplay } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
 import { formatUzs } from "@ezoz/shared";
 import toast from "react-hot-toast";
+import { useT, getT } from "@/hooks/useT";
 
 export function ExpensesPage() {
+  const t = useT();
   const { isBoss, user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -51,7 +53,7 @@ export function ExpensesPage() {
       queryClient.invalidateQueries({ queryKey: ["expense"] });
       setModalOpen(false);
       setForm({ categoryId: "", amountUzs: "0", amountUsd: "0", description: "", cashRegister: "SALES", paymentType: "CASH_UZS" });
-      toast.success("Xarajat qo'shildi");
+      toast.success(getT()("Xarajat qo'shildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -62,7 +64,7 @@ export function ExpensesPage() {
       queryClient.invalidateQueries({ queryKey: ["expense", "categories"] });
       setCatModalOpen(false);
       setCatName("");
-      toast.success("Kategoriya qo'shildi");
+      toast.success(getT()("Kategoriya qo'shildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -78,19 +80,19 @@ export function ExpensesPage() {
   return (
     <>
       <PageHeader
-        title="Xarajatlar"
-        subtitle={`Jami: ${formatUzs(totalUzs)}`}
+        title={t("Xarajatlar")}
+        subtitle={`${t("Jami")}: ${formatUzs(totalUzs)}`}
         actions={
           <div className="flex items-center gap-2">
             {isBoss() && (
               <Button variant="secondary" size="sm" onClick={() => setCatModalOpen(true)}>
                 <Plus className="w-4 h-4" />
-                Kategoriya
+                {t("Kategoriya")}
               </Button>
             )}
             <Button size="sm" onClick={() => setModalOpen(true)}>
               <Plus className="w-4 h-4" />
-              Xarajat
+              {t("Xarajat")}
             </Button>
           </div>
         }
@@ -101,19 +103,19 @@ export function ExpensesPage() {
         <Table>
           <TableHead>
             <tr>
-              <th className="hidden sm:table-cell">Sana</th>
-              <th>Kategoriya</th>
-              <th>Tavsif</th>
-              <th className="hidden md:table-cell">Kassa</th>
-              <th className="hidden sm:table-cell">To'lov turi</th>
-              <th>Summa</th>
+              <th className="hidden sm:table-cell">{t("Sana")}</th>
+              <th>{t("Kategoriya")}</th>
+              <th>{t("Tavsif")}</th>
+              <th className="hidden md:table-cell">{t("Kassa")}</th>
+              <th className="hidden sm:table-cell">{t("To'lov turi")}</th>
+              <th>{t("Summa")}</th>
             </tr>
           </TableHead>
           <TableBody>
             {expensesQuery.isLoading ? (
               <TableLoading colSpan={6} />
             ) : expenses.length === 0 ? (
-              <TableEmpty colSpan={6} message="Xarajatlar yo'q" />
+              <TableEmpty colSpan={6} message={t("Xarajatlar yo'q")} />
             ) : (
               expenses.map((exp) => (
                 <TableRow key={exp.id}>
@@ -126,7 +128,7 @@ export function ExpensesPage() {
                   <td className="text-gray-700">{exp.description}</td>
                   <td className="hidden md:table-cell">
                     <Badge variant={exp.cashRegister === "SALES" ? "info" : "warning"}>
-                      {exp.cashRegister === "SALES" ? "Savdo" : "Xizmat"}
+                      {exp.cashRegister === "SALES" ? t("Savdo") : t("Xizmat")}
                     </Badge>
                   </td>
                   <td className="text-sm text-gray-500 hidden sm:table-cell">{exp.paymentType}</td>
@@ -145,41 +147,41 @@ export function ExpensesPage() {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Yangi xarajat"
+        title={t("Yangi xarajat")}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>Bekor qilish</Button>
+            <Button variant="secondary" onClick={() => setModalOpen(false)}>{t("Bekor qilish")}</Button>
             <Button
               loading={createExpense.isPending}
               onClick={() => {
                 if (!form.categoryId || !form.description) {
-                  toast.error("Kategoriya va tavsifni kiriting");
+                  toast.error(getT()("Kategoriya va tavsifni kiriting"));
                   return;
                 }
                 createExpense.mutate();
               }}
             >
-              Qo'shish
+              {t("Qo'shish")}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Select
-            label="Kategoriya"
+            label={t("Kategoriya")}
             options={catOptions}
             value={form.categoryId}
             onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
-            placeholder="Tanlang..."
+            placeholder={t("Tanlang...")}
           />
           <Input
-            label="Tavsif"
+            label={t("Tavsif")}
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            placeholder="Xarajat haqida"
+            placeholder={t("Xarajat haqida")}
           />
           <CurrencyPairInput
-            label="Summa"
+            label={t("Summa")}
             valueUzs={form.amountUzs}
             valueUsd={form.amountUsd}
             onChangeUzs={(v) => setForm((f) => ({ ...f, amountUzs: v }))}
@@ -187,21 +189,21 @@ export function ExpensesPage() {
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="Kassa"
+              label={t("Kassa")}
               options={[
-                { value: "SALES", label: "Savdo kassasi" },
-                { value: "SERVICE", label: "Xizmat kassasi" },
+                { value: "SALES", label: t("Savdo kassasi") },
+                { value: "SERVICE", label: t("Xizmat kassasi") },
               ]}
               value={form.cashRegister}
               onChange={(e) => setForm((f) => ({ ...f, cashRegister: e.target.value as "SALES" | "SERVICE" }))}
             />
             <Select
-              label="To'lov turi"
+              label={t("To'lov turi")}
               options={[
-                { value: "CASH_UZS", label: "Naqd (UZS)" },
-                { value: "CASH_USD", label: "Naqd (USD)" },
-                { value: "CARD", label: "Karta" },
-                { value: "TRANSFER", label: "O'tkazma" },
+                { value: "CASH_UZS", label: t("Naqd (UZS)") },
+                { value: "CASH_USD", label: t("Naqd (USD)") },
+                { value: "CARD", label: t("Karta") },
+                { value: "TRANSFER", label: t("O'tkazma") },
               ]}
               value={form.paymentType}
               onChange={(e) => setForm((f) => ({ ...f, paymentType: e.target.value }))}
@@ -214,21 +216,21 @@ export function ExpensesPage() {
       <Modal
         open={catModalOpen}
         onClose={() => setCatModalOpen(false)}
-        title="Yangi xarajat kategoriyasi"
+        title={t("Yangi xarajat kategoriyasi")}
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setCatModalOpen(false)}>Bekor qilish</Button>
+            <Button variant="secondary" onClick={() => setCatModalOpen(false)}>{t("Bekor qilish")}</Button>
             <Button loading={createCategory.isPending} onClick={() => {
-              if (!catName) { toast.error("Nom kiriting"); return; }
+              if (!catName) { toast.error(getT()("Nom kiriting")); return; }
               createCategory.mutate();
             }}>
-              Qo'shish
+              {t("Qo'shish")}
             </Button>
           </>
         }
       >
-        <Input label="Kategoriya nomi" value={catName} onChange={(e) => setCatName(e.target.value)} placeholder="Masalan: Transport" />
+        <Input label={t("Kategoriya nomi")} value={catName} onChange={(e) => setCatName(e.target.value)} placeholder={t("Masalan: Transport")} />
       </Modal>
     </>
   );

@@ -34,31 +34,32 @@ import {
 } from "@/components/ui";
 import { CurrencyDisplay } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
+import { useT, getT } from "@/hooks/useT";
 import { formatUzs, convertToUzs, convertToUsd } from "@ezoz/shared";
 import { useCurrencyStore } from "@/store/currency.store";
 import toast from "react-hot-toast";
 
 export function WarehousePage() {
   const { isBoss } = useAuth();
-  const queryClient = useQueryClient();
+  const t = useT();
   const [activeTab, setActiveTab] = useState("stock");
 
   return (
     <>
-      <PageHeader title="Ombor" />
+      <PageHeader title={t("Ombor")} />
 
       <div className="page-body">
         <Tabs
           tabs={[
-            { id: "stock", label: "Qoldiqlar" },
-            { id: "purchase", label: "Kirim" },
-            { id: "transfer", label: "Ko'chirish" },
+            { id: "stock", label: t("Qoldiqlar") },
+            { id: "purchase", label: t("Kirim") },
+            { id: "transfer", label: t("Ko'chirish") },
             ...(isBoss()
               ? [
-                  { id: "writeoff", label: "Chiqim" },
-                  { id: "return", label: "Qaytarish" },
-                  { id: "inventory", label: "Inventarizatsiya" },
-                  { id: "revalue", label: "Qayta baholash" },
+                  { id: "writeoff", label: t("Chiqim") },
+                  { id: "return", label: t("Qaytarish") },
+                  { id: "inventory", label: t("Inventarizatsiya") },
+                  { id: "revalue", label: t("Qayta baholash") },
                 ]
               : []),
           ]}
@@ -82,6 +83,7 @@ export function WarehousePage() {
 
 // ===== Stock Tab =====
 function StockTab() {
+  const t = useT();
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [search, setSearch] = useState("");
@@ -123,14 +125,14 @@ function StockTab() {
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
         <div className="w-full sm:w-48">
           <Select
-            options={[{ value: "", label: "Barcha omborlar" }, ...warehouseOptions]}
+            options={[{ value: "", label: t("Barcha omborlar") }, ...warehouseOptions]}
             value={selectedWarehouse}
             onChange={(e) => setSelectedWarehouse(e.target.value)}
           />
         </div>
         <div className="flex-1">
           <SearchInput
-            placeholder="Mahsulot qidirish..."
+            placeholder={t("Mahsulot qidirish...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onClear={() => setSearch("")}
@@ -144,7 +146,7 @@ function StockTab() {
               onChange={(e) => setLowStockOnly(e.target.checked)}
               className="rounded border-gray-300"
             />
-            Kam qoldiq
+            {t("Kam qoldiq")}
           </label>
           {lowStockCount > 0 && (
             <Badge variant="warning">
@@ -158,20 +160,20 @@ function StockTab() {
       <Table>
         <TableHead>
           <tr>
-            <th>Kod</th>
-            <th>Mahsulot</th>
-            <th>Guruh</th>
-            <th>Ombor</th>
-            <th>Qoldiq</th>
-            <th>Min</th>
-            <th>Narx</th>
+            <th>{t("Kod")}</th>
+            <th>{t("Mahsulot")}</th>
+            <th>{t("Guruh")}</th>
+            <th>{t("Ombor")}</th>
+            <th>{t("Qoldiq")}</th>
+            <th>{t("Min")}</th>
+            <th>{t("Narx")}</th>
           </tr>
         </TableHead>
         <TableBody>
           {stockQuery.isLoading ? (
             <TableLoading colSpan={7} />
           ) : filtered.length === 0 ? (
-            <TableEmpty colSpan={7} message="Omborda mahsulot topilmadi" />
+            <TableEmpty colSpan={7} message={t("Omborda mahsulot topilmadi")} />
           ) : (
             filtered.map((s) => {
               const qty = Number(s.quantity);
@@ -215,6 +217,7 @@ const emptyItem: PurchaseItemRow = { productId: "", quantity: "", priceUzs: "", 
 function PurchaseTab() {
   const queryClient = useQueryClient();
   const { isBoss } = useAuth();
+  const t = useT();
   const rate = useCurrencyStore((s) => s.rate);
   const [mode, setMode] = useState<"list" | "create" | "detail">("list");
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -275,7 +278,7 @@ function PurchaseTab() {
       queryClient.invalidateQueries({ queryKey: ["expense"] });
       resetForm();
       setMode("list");
-      toast.success("Kirim muvaffaqiyatli saqlandi");
+      toast.success(getT()("Kirim muvaffaqiyatli saqlandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -292,7 +295,7 @@ function PurchaseTab() {
       setSupplierId(String(data.id));
       setNewSupplier({ name: "", phone: "", notes: "" });
       setShowSupplierModal(false);
-      toast.success("Yetkazuvchi qo'shildi");
+      toast.success(getT()("Yetkazuvchi qo'shildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -346,41 +349,41 @@ function PurchaseTab() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <PackageCheck className="w-5 h-5 text-brand-600" />
-            <h3 className="text-base font-semibold">Kirim #{p.documentNo}</h3>
+            <h3 className="text-base font-semibold">{t("Kirim")} #{p.documentNo}</h3>
           </div>
           <Button variant="ghost" size="sm" onClick={() => { setMode("list"); setDetailId(null); }}>
-            Ortga
+            {t("Ortga")}
           </Button>
         </div>
         <div className="card card-body space-y-3 mb-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="text-gray-500">Sana:</span>
+              <span className="text-gray-500">{t("Sana")}:</span>
               <p className="font-medium">{new Date(p.createdAt).toLocaleDateString("uz")}</p>
             </div>
             <div>
-              <span className="text-gray-500">Yetkazuvchi:</span>
-              <p className="font-medium">{p.supplier?.name ?? "Noma'lum"}</p>
+              <span className="text-gray-500">{t("Yetkazuvchi")}:</span>
+              <p className="font-medium">{p.supplier?.name ?? t("Noma'lum")}</p>
             </div>
             <div>
-              <span className="text-gray-500">Jami UZS:</span>
+              <span className="text-gray-500">{t("Jami UZS")}:</span>
               <p className="font-medium text-red-600">{formatUzs(Number(p.totalUzs))}</p>
             </div>
             <div>
-              <span className="text-gray-500">Jami USD:</span>
+              <span className="text-gray-500">{t("Jami USD")}:</span>
               <p className="font-medium text-blue-600">${Number(p.totalUsd).toLocaleString()}</p>
             </div>
           </div>
-          {p.notes && <p className="text-sm text-gray-500">Izoh: {p.notes}</p>}
+          {p.notes && <p className="text-sm text-gray-500">{t("Izoh")}: {p.notes}</p>}
         </div>
         <Table>
           <TableHead>
             <tr>
-              <th>Mahsulot</th>
-              <th>Miqdor</th>
-              <th>Narx (UZS)</th>
-              <th>Narx (USD)</th>
-              <th>Jami (UZS)</th>
+              <th>{t("Mahsulot")}</th>
+              <th>{t("Miqdor")}</th>
+              <th>{t("Narx (UZS)")}</th>
+              <th>{t("Narx (USD)")}</th>
+              <th>{t("Jami (UZS)")}</th>
             </tr>
           </TableHead>
           <TableBody>
@@ -406,10 +409,10 @@ function PurchaseTab() {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <PackageCheck className="w-5 h-5 text-brand-600" />
-            <h3 className="text-base font-semibold">Yangi kirim</h3>
+            <h3 className="text-base font-semibold">{t("Yangi kirim")}</h3>
           </div>
           <Button variant="ghost" size="sm" onClick={() => { resetForm(); setMode("list"); }}>
-            Bekor qilish
+            {t("Bekor qilish")}
           </Button>
         </div>
 
@@ -418,11 +421,11 @@ function PurchaseTab() {
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <Select
-                  label="Yetkazuvchi"
+                  label={t("Yetkazuvchi")}
                   options={supplierOptions}
                   value={supplierId}
                   onChange={(e) => setSupplierId(e.target.value)}
-                  placeholder="Tanlang (ixtiyoriy)"
+                  placeholder={t("Tanlang (ixtiyoriy)")}
                 />
               </div>
               {isBoss() && (
@@ -432,23 +435,23 @@ function PurchaseTab() {
               )}
             </div>
             <Select
-              label="Ombor"
+              label={t("Ombor")}
               options={warehouseOptions}
               value={warehouseId}
               onChange={(e) => setWarehouseId(e.target.value)}
-              placeholder="Ombor tanlang"
+              placeholder={t("Ombor tanlang")}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Mahsulotlar</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t("Mahsulotlar")}</label>
             <Table>
               <TableHead>
                 <tr>
-                  <th className="w-[35%]">Mahsulot</th>
-                  <th className="w-[15%]">Miqdor</th>
-                  <th className="w-[20%]">Narx (UZS)</th>
-                  <th className="w-[20%]">Narx (USD)</th>
+                  <th className="w-[35%]">{t("Mahsulot")}</th>
+                  <th className="w-[15%]">{t("Miqdor")}</th>
+                  <th className="w-[20%]">{t("Narx (UZS)")}</th>
+                  <th className="w-[20%]">{t("Narx (USD)")}</th>
                   <th className="w-[10%]"></th>
                 </tr>
               </TableHead>
@@ -461,7 +464,7 @@ function PurchaseTab() {
                         value={item.productId}
                         onChange={(e) => updateItem(idx, "productId", e.target.value)}
                       >
-                        <option value="">Tanlang</option>
+                        <option value="">{t("Tanlang")}</option>
                         {productOptions.map((o) => (
                           <option key={o.value} value={o.value}>{o.label}</option>
                         ))}
@@ -492,39 +495,39 @@ function PurchaseTab() {
             </Table>
             <Button variant="ghost" size="sm" className="mt-2" onClick={addItemRow}>
               <Plus className="w-4 h-4" />
-              Qator qo'shish
+              {t("Qator qo'shish")}
             </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Select
-              label="Kassa"
+              label={t("Kassa")}
               options={[
-                { value: "SALES", label: "Savdo kassasi" },
-                { value: "SERVICE", label: "Xizmat kassasi" },
+                { value: "SALES", label: t("Savdo kassasi") },
+                { value: "SERVICE", label: t("Xizmat kassasi") },
               ]}
               value={cashRegister}
               onChange={(e) => setCashRegister(e.target.value as "SALES" | "SERVICE")}
             />
             <Select
-              label="To'lov turi"
+              label={t("To'lov turi")}
               options={[
-                { value: "CASH_UZS", label: "Naqd (UZS)" },
-                { value: "CASH_USD", label: "Naqd (USD)" },
-                { value: "CARD", label: "Karta" },
-                { value: "TRANSFER", label: "O'tkazma" },
+                { value: "CASH_UZS", label: t("Naqd (UZS)") },
+                { value: "CASH_USD", label: t("Naqd (USD)") },
+                { value: "CARD", label: t("Karta") },
+                { value: "TRANSFER", label: t("O'tkazma") },
               ]}
               value={paymentType}
               onChange={(e) => setPaymentType(e.target.value as "CASH_UZS" | "CASH_USD" | "CARD" | "TRANSFER")}
             />
-            <Input label="Izoh" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Kirim izohi..." />
+            <Input label={t("Izoh")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("Kirim izohi...")} />
           </div>
 
           <div className="flex items-center justify-between pt-2">
             <div className="text-sm text-gray-500">
               {validItems.length > 0 && (
                 <span>
-                  {validItems.length} ta mahsulot | Jami:{" "}
+                  {validItems.length} {t("ta mahsulot")} | {t("Jami")}:{" "}
                   <span className="text-red-600 font-semibold">
                     {formatUzs(validItems.reduce((sum, i) => sum + (Number(i.priceUzs) || 0) * (Number(i.quantity) || 0), 0))}
                   </span>
@@ -534,31 +537,31 @@ function PurchaseTab() {
             <Button
               loading={purchaseMutation.isPending}
               onClick={() => {
-                if (!warehouseId) { toast.error("Ombor tanlang"); return; }
-                if (validItems.length === 0) { toast.error("Kamida bitta mahsulot qo'shing"); return; }
+                if (!warehouseId) { toast.error(getT()("Ombor tanlang")); return; }
+                if (validItems.length === 0) { toast.error(getT()("Kamida bitta mahsulot qo'shing")); return; }
                 purchaseMutation.mutate();
               }}
             >
               <PackageCheck className="w-4 h-4" />
-              Saqlash
+              {t("Saqlash")}
             </Button>
           </div>
         </div>
 
-        {/* Yangi yetkazuvchi modal */}
-        <Modal open={showSupplierModal} onClose={() => setShowSupplierModal(false)} title="Yangi yetkazuvchi">
+        {/* New supplier modal */}
+        <Modal open={showSupplierModal} onClose={() => setShowSupplierModal(false)} title={t("Yangi yetkazuvchi")}>
           <div className="space-y-4">
-            <Input label="Ism / Kompaniya" value={newSupplier.name}
+            <Input label={t("Ism / Kompaniya")} value={newSupplier.name}
               onChange={(e) => setNewSupplier((f) => ({ ...f, name: e.target.value }))} />
-            <PhoneInput label="Telefon" value={newSupplier.phone}
+            <PhoneInput label={t("Telefon")} value={newSupplier.phone}
               onChange={(v) => setNewSupplier((f) => ({ ...f, phone: v }))} />
-            <Input label="Izoh" value={newSupplier.notes}
+            <Input label={t("Izoh")} value={newSupplier.notes}
               onChange={(e) => setNewSupplier((f) => ({ ...f, notes: e.target.value }))} />
             <Button loading={createSupplierMutation.isPending} onClick={() => {
-              if (!newSupplier.name.trim()) { toast.error("Ism kiriting"); return; }
+              if (!newSupplier.name.trim()) { toast.error(getT()("Ism kiriting")); return; }
               createSupplierMutation.mutate();
             }}>
-              Saqlash
+              {t("Saqlash")}
             </Button>
           </div>
         </Modal>
@@ -574,23 +577,23 @@ function PurchaseTab() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <PackageCheck className="w-5 h-5 text-brand-600" />
-          <h3 className="text-base font-semibold">Kirimlar ro'yxati</h3>
+          <h3 className="text-base font-semibold">{t("Kirimlar ro'yxati")}</h3>
         </div>
         <Button size="sm" onClick={() => setMode("create")}>
           <Plus className="w-4 h-4" />
-          Yangi kirim
+          {t("Yangi kirim")}
         </Button>
       </div>
 
       <Table>
         <TableHead>
           <tr>
-            <th>Hujjat</th>
-            <th>Sana</th>
-            <th>Yetkazuvchi</th>
-            <th>Mahsulotlar</th>
-            <th>Jami (UZS)</th>
-            <th>Jami (USD)</th>
+            <th>{t("Hujjat")}</th>
+            <th>{t("Sana")}</th>
+            <th>{t("Yetkazuvchi")}</th>
+            <th>{t("Mahsulotlar")}</th>
+            <th>{t("Jami (UZS)")}</th>
+            <th>{t("Jami (USD)")}</th>
             <th></th>
           </tr>
         </TableHead>
@@ -598,14 +601,14 @@ function PurchaseTab() {
           {purchasesQuery.isLoading ? (
             <TableLoading colSpan={7} />
           ) : purchases.length === 0 ? (
-            <TableEmpty colSpan={7} message="Kirimlar topilmadi" />
+            <TableEmpty colSpan={7} message={t("Kirimlar topilmadi")} />
           ) : (
             purchases.map((p) => (
               <TableRow key={p.id}>
                 <td className="font-mono text-xs">{p.documentNo}</td>
                 <td className="text-sm">{new Date(p.createdAt).toLocaleDateString("uz")}</td>
                 <td className="text-sm">{p.supplier?.name ?? "-"}</td>
-                <td className="text-sm">{p.items.length} ta</td>
+                <td className="text-sm">{p.items.length} {t("ta")}</td>
                 <td className="text-sm font-semibold text-red-600">{formatUzs(Number(p.totalUzs))}</td>
                 <td className="text-sm font-semibold text-blue-600">${Number(p.totalUsd).toLocaleString()}</td>
                 <td>
@@ -628,6 +631,7 @@ function PurchaseTab() {
 // ===== Transfer Tab =====
 function TransferTab() {
   const queryClient = useQueryClient();
+  const t = useT();
   const [form, setForm] = useState({ fromWarehouseId: "", toWarehouseId: "", productId: "", quantity: "", notes: "" });
 
   const warehousesQuery = useQuery({
@@ -652,7 +656,7 @@ function TransferTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
       setForm({ fromWarehouseId: "", toWarehouseId: "", productId: "", quantity: "", notes: "" });
-      toast.success("Ko'chirish amalga oshirildi");
+      toast.success(getT()("Ko'chirish amalga oshirildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -667,30 +671,30 @@ function TransferTab() {
     <div className="card card-body max-w-xl">
       <div className="flex items-center gap-2 mb-4">
         <ArrowRightLeft className="w-5 h-5 text-brand-600" />
-        <h3 className="text-base font-semibold">Omborlar arasi ko'chirish</h3>
+        <h3 className="text-base font-semibold">{t("Omborlar arasi ko'chirish")}</h3>
       </div>
       <div className="space-y-4">
-        <Select label="Qayerdan" options={warehouseOptions} value={form.fromWarehouseId}
-          onChange={(e) => setForm((f) => ({ ...f, fromWarehouseId: e.target.value }))} placeholder="Ombor tanlang" />
-        <Select label="Qayerga" options={warehouseOptions} value={form.toWarehouseId}
-          onChange={(e) => setForm((f) => ({ ...f, toWarehouseId: e.target.value }))} placeholder="Ombor tanlang" />
-        <Select label="Mahsulot" options={productOptions} value={form.productId}
-          onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))} placeholder="Mahsulot tanlang" />
-        <Input label="Miqdor" type="number" value={form.quantity}
+        <Select label={t("Qayerdan")} options={warehouseOptions} value={form.fromWarehouseId}
+          onChange={(e) => setForm((f) => ({ ...f, fromWarehouseId: e.target.value }))} placeholder={t("Ombor tanlang")} />
+        <Select label={t("Qayerga")} options={warehouseOptions} value={form.toWarehouseId}
+          onChange={(e) => setForm((f) => ({ ...f, toWarehouseId: e.target.value }))} placeholder={t("Ombor tanlang")} />
+        <Select label={t("Mahsulot")} options={productOptions} value={form.productId}
+          onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))} placeholder={t("Mahsulot tanlang")} />
+        <Input label={t("Miqdor")} type="number" value={form.quantity}
           onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} />
-        <Input label="Izoh" value={form.notes}
+        <Input label={t("Izoh")} value={form.notes}
           onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
         <Button loading={mutation.isPending} onClick={() => {
           if (!form.fromWarehouseId || !form.toWarehouseId || !form.productId || !form.quantity) {
-            toast.error("Barcha maydonlarni to'ldiring"); return;
+            toast.error(getT()("Barcha maydonlarni to'ldiring")); return;
           }
           if (form.fromWarehouseId === form.toWarehouseId) {
-            toast.error("Bir xil omborga ko'chirish mumkin emas"); return;
+            toast.error(getT()("Bir xil omborga ko'chirish mumkin emas")); return;
           }
           mutation.mutate();
         }}>
           <ArrowRightLeft className="w-4 h-4" />
-          Ko'chirish
+          {t("Ko'chirish")}
         </Button>
       </div>
     </div>
@@ -700,6 +704,7 @@ function TransferTab() {
 // ===== Write-Off Tab (Chiqim/Realizatsiya) =====
 function WriteOffTab() {
   const queryClient = useQueryClient();
+  const t = useT();
   const [form, setForm] = useState({ warehouseId: "", productId: "", quantity: "", reason: "" });
 
   const warehousesQuery = useQuery({
@@ -725,7 +730,7 @@ function WriteOffTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
       setForm({ warehouseId: "", productId: "", quantity: "", reason: "" });
-      toast.success("Chiqim amalga oshirildi");
+      toast.success(getT()("Chiqim amalga oshirildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -742,25 +747,25 @@ function WriteOffTab() {
     <div className="card card-body max-w-xl">
       <div className="flex items-center gap-2 mb-4">
         <PackageMinus className="w-5 h-5 text-red-600" />
-        <h3 className="text-base font-semibold">Chiqim (Realizatsiya / Hisobdan chiqarish)</h3>
+        <h3 className="text-base font-semibold">{t("Chiqim (Realizatsiya / Hisobdan chiqarish)")}</h3>
       </div>
       <div className="space-y-4">
-        <Select label="Ombor" options={warehouseOptions} value={form.warehouseId}
-          onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value, productId: "" }))} placeholder="Ombor tanlang" />
-        <Select label="Mahsulot" options={productOptions} value={form.productId}
-          onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))} placeholder="Mahsulot tanlang" />
-        <Input label="Miqdor" type="number" value={form.quantity}
+        <Select label={t("Ombor")} options={warehouseOptions} value={form.warehouseId}
+          onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value, productId: "" }))} placeholder={t("Ombor tanlang")} />
+        <Select label={t("Mahsulot")} options={productOptions} value={form.productId}
+          onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))} placeholder={t("Mahsulot tanlang")} />
+        <Input label={t("Miqdor")} type="number" value={form.quantity}
           onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} />
-        <Input label="Sabab" value={form.reason}
-          onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder="Chiqim sababi..." />
+        <Input label={t("Sabab")} value={form.reason}
+          onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={t("Chiqim sababi...")} />
         <Button variant="danger" loading={mutation.isPending} onClick={() => {
           if (!form.warehouseId || !form.productId || !form.quantity) {
-            toast.error("Barcha maydonlarni to'ldiring"); return;
+            toast.error(getT()("Barcha maydonlarni to'ldiring")); return;
           }
           mutation.mutate();
         }}>
           <PackageMinus className="w-4 h-4" />
-          Chiqarish
+          {t("Chiqarish")}
         </Button>
       </div>
     </div>
@@ -770,6 +775,7 @@ function WriteOffTab() {
 // ===== Return Tab (Qaytarish) =====
 function ReturnTab() {
   const queryClient = useQueryClient();
+  const t = useT();
   const [form, setForm] = useState({ warehouseId: "", productId: "", quantity: "", reason: "" });
 
   const warehousesQuery = useQuery({
@@ -793,7 +799,7 @@ function ReturnTab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
       setForm({ warehouseId: "", productId: "", quantity: "", reason: "" });
-      toast.success("Qaytarish amalga oshirildi");
+      toast.success(getT()("Qaytarish amalga oshirildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -808,25 +814,25 @@ function ReturnTab() {
     <div className="card card-body max-w-xl">
       <div className="flex items-center gap-2 mb-4">
         <PackagePlus className="w-5 h-5 text-green-600" />
-        <h3 className="text-base font-semibold">Omborga qaytarish</h3>
+        <h3 className="text-base font-semibold">{t("Omborga qaytarish")}</h3>
       </div>
       <div className="space-y-4">
-        <Select label="Ombor" options={warehouseOptions} value={form.warehouseId}
-          onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))} placeholder="Ombor tanlang" />
-        <Select label="Mahsulot" options={productOptions} value={form.productId}
-          onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))} placeholder="Mahsulot tanlang" />
-        <Input label="Miqdor" type="number" value={form.quantity}
+        <Select label={t("Ombor")} options={warehouseOptions} value={form.warehouseId}
+          onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))} placeholder={t("Ombor tanlang")} />
+        <Select label={t("Mahsulot")} options={productOptions} value={form.productId}
+          onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))} placeholder={t("Mahsulot tanlang")} />
+        <Input label={t("Miqdor")} type="number" value={form.quantity}
           onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} />
-        <Input label="Sabab" value={form.reason}
-          onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder="Qaytarish sababi..." />
+        <Input label={t("Sabab")} value={form.reason}
+          onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={t("Qaytarish sababi...")} />
         <Button variant="success" loading={mutation.isPending} onClick={() => {
           if (!form.warehouseId || !form.productId || !form.quantity) {
-            toast.error("Barcha maydonlarni to'ldiring"); return;
+            toast.error(getT()("Barcha maydonlarni to'ldiring")); return;
           }
           mutation.mutate();
         }}>
           <PackagePlus className="w-4 h-4" />
-          Qaytarish
+          {t("Qaytarish")}
         </Button>
       </div>
     </div>
@@ -836,6 +842,7 @@ function ReturnTab() {
 // ===== Inventory Tab =====
 function InventoryTab() {
   const queryClient = useQueryClient();
+  const t = useT();
   const [warehouseId, setWarehouseId] = useState("");
   const [items, setItems] = useState<Array<{ productId: number; productName: string; expected: number; actual: string; unit: string }>>([]);
   const [notes, setNotes] = useState("");
@@ -869,7 +876,7 @@ function InventoryTab() {
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
       setItems([]);
       setNotes("");
-      toast.success("Inventarizatsiya yaratildi");
+      toast.success(getT()("Inventarizatsiya yaratildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -878,7 +885,7 @@ function InventoryTab() {
     mutationFn: (id: number) => trpc.warehouse.applyInventoryCheck.mutate({ id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
-      toast.success("Inventarizatsiya qo'llanildi — qoldiqlar yangilandi");
+      toast.success(getT()("Inventarizatsiya qo'llanildi — qoldiqlar yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -904,10 +911,10 @@ function InventoryTab() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <ClipboardCheck className="w-5 h-5 text-brand-600" />
-          <h3 className="text-base font-semibold">Inventarizatsiya</h3>
+          <h3 className="text-base font-semibold">{t("Inventarizatsiya")}</h3>
         </div>
         <Button variant="ghost" size="sm" onClick={() => setShowHistory(!showHistory)}>
-          {showHistory ? "Yangi yaratish" : "Tarix"}
+          {showHistory ? t("Yangi yaratish") : t("Tarix")}
         </Button>
       </div>
 
@@ -916,16 +923,16 @@ function InventoryTab() {
         <Table>
           <TableHead>
             <tr>
-              <th>Hujjat</th>
-              <th>Sana</th>
-              <th>Holat</th>
-              <th>Mahsulotlar</th>
-              <th>Amallar</th>
+              <th>{t("Hujjat")}</th>
+              <th>{t("Sana")}</th>
+              <th>{t("Holat")}</th>
+              <th>{t("Mahsulotlar")}</th>
+              <th>{t("Amallar")}</th>
             </tr>
           </TableHead>
           <TableBody>
             {(historyQuery.data ?? []).length === 0 ? (
-              <TableEmpty colSpan={5} message="Inventarizatsiyalar topilmadi" />
+              <TableEmpty colSpan={5} message={t("Inventarizatsiyalar topilmadi")} />
             ) : (
               (historyQuery.data ?? []).map((check) => (
                 <TableRow key={check.id}>
@@ -933,14 +940,14 @@ function InventoryTab() {
                   <td className="text-sm">{new Date(check.createdAt).toLocaleDateString("uz")}</td>
                   <td>
                     <Badge variant={check.status === "COMPLETED" ? "success" : check.status === "IN_PROGRESS" ? "warning" : "danger"}>
-                      {check.status === "COMPLETED" ? "Yakunlangan" : check.status === "IN_PROGRESS" ? "Jarayonda" : "Bekor qilingan"}
+                      {check.status === "COMPLETED" ? t("Yakunlangan") : check.status === "IN_PROGRESS" ? t("Jarayonda") : t("Bekor qilingan")}
                     </Badge>
                   </td>
-                  <td className="text-sm">{check.items.length} ta</td>
+                  <td className="text-sm">{check.items.length} {t("ta")}</td>
                   <td>
                     {check.status === "IN_PROGRESS" && (
                       <Button size="sm" onClick={() => applyMutation.mutate(check.id)} loading={applyMutation.isPending}>
-                        Qo'llash
+                        {t("Qo'llash")}
                       </Button>
                     )}
                   </td>
@@ -954,12 +961,12 @@ function InventoryTab() {
         <div className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="w-48">
-              <Select label="Ombor" options={warehouseOptions} value={warehouseId}
-                onChange={(e) => { setWarehouseId(e.target.value); setItems([]); }} placeholder="Ombor tanlang" />
+              <Select label={t("Ombor")} options={warehouseOptions} value={warehouseId}
+                onChange={(e) => { setWarehouseId(e.target.value); setItems([]); }} placeholder={t("Ombor tanlang")} />
             </div>
             {warehouseId && (
               <Button variant="secondary" size="sm" onClick={loadStockForInventory} className="mt-6">
-                Mahsulotlarni yuklash
+                {t("Mahsulotlarni yuklash")}
               </Button>
             )}
           </div>
@@ -969,10 +976,10 @@ function InventoryTab() {
               <Table>
                 <TableHead>
                   <tr>
-                    <th>Mahsulot</th>
-                    <th>Kutilgan</th>
-                    <th>Haqiqiy</th>
-                    <th>Farq</th>
+                    <th>{t("Mahsulot")}</th>
+                    <th>{t("Kutilgan")}</th>
+                    <th>{t("Haqiqiy")}</th>
+                    <th>{t("Farq")}</th>
                   </tr>
                 </TableHead>
                 <TableBody>
@@ -1004,10 +1011,10 @@ function InventoryTab() {
                   })}
                 </TableBody>
               </Table>
-              <Input label="Izoh" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Inventarizatsiya izohi..." />
+              <Input label={t("Izoh")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("Inventarizatsiya izohi...")} />
               <Button loading={createMutation.isPending} onClick={() => createMutation.mutate()}>
                 <ClipboardCheck className="w-4 h-4" />
-                Inventarizatsiya yaratish
+                {t("Inventarizatsiya yaratish")}
               </Button>
             </>
           )}
@@ -1020,6 +1027,7 @@ function InventoryTab() {
 // ===== Revalue Tab =====
 function RevalueTab() {
   const queryClient = useQueryClient();
+  const t = useT();
   const [form, setForm] = useState({ productId: "", newPriceUzs: "", newPriceUsd: "", reason: "" });
   const [showHistory, setShowHistory] = useState(false);
 
@@ -1046,7 +1054,7 @@ function RevalueTab() {
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
       queryClient.invalidateQueries({ queryKey: ["product"] });
       setForm({ productId: "", newPriceUzs: "", newPriceUsd: "", reason: "" });
-      toast.success("Qayta baholash amalga oshirildi");
+      toast.success(getT()("Qayta baholash amalga oshirildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -1064,10 +1072,10 @@ function RevalueTab() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <RotateCcw className="w-5 h-5 text-amber-600" />
-          <h3 className="text-base font-semibold">Qayta baholash (tannarx o'zgartirish)</h3>
+          <h3 className="text-base font-semibold">{t("Qayta baholash (tannarx o'zgartirish)")}</h3>
         </div>
         <Button variant="ghost" size="sm" onClick={() => setShowHistory(!showHistory)}>
-          {showHistory ? "Yangi yaratish" : "Tarix"}
+          {showHistory ? t("Yangi yaratish") : t("Tarix")}
         </Button>
       </div>
 
@@ -1075,16 +1083,16 @@ function RevalueTab() {
         <Table>
           <TableHead>
             <tr>
-              <th>Hujjat</th>
-              <th>Sana</th>
-              <th>Eski narx</th>
-              <th>Yangi narx</th>
-              <th>Sabab</th>
+              <th>{t("Hujjat")}</th>
+              <th>{t("Sana")}</th>
+              <th>{t("Eski narx")}</th>
+              <th>{t("Yangi narx")}</th>
+              <th>{t("Sabab")}</th>
             </tr>
           </TableHead>
           <TableBody>
             {(historyQuery.data ?? []).length === 0 ? (
-              <TableEmpty colSpan={5} message="Qayta baholashlar topilmadi" />
+              <TableEmpty colSpan={5} message={t("Qayta baholashlar topilmadi")} />
             ) : (
               (historyQuery.data ?? []).map((r) => (
                 <TableRow key={r.id}>
@@ -1101,7 +1109,7 @@ function RevalueTab() {
       ) : (
         <div className="card card-body max-w-xl">
           <div className="space-y-4">
-            <Select label="Mahsulot" options={productOptions} value={form.productId}
+            <Select label={t("Mahsulot")} options={productOptions} value={form.productId}
               onChange={(e) => {
                 const p = (productsQuery.data?.items ?? []).find((pr) => String(pr.id) === e.target.value);
                 setForm({
@@ -1111,27 +1119,27 @@ function RevalueTab() {
                   reason: "",
                 });
               }}
-              placeholder="Mahsulot tanlang"
+              placeholder={t("Mahsulot tanlang")}
             />
             {selectedProduct && (
               <div className="p-3 bg-gray-50 rounded-lg text-sm">
-                <p>Joriy tannarx: <strong>{formatUzs(Number(selectedProduct.costPriceUzs))}</strong></p>
+                <p>{t("Joriy tannarx")}: <strong>{formatUzs(Number(selectedProduct.costPriceUzs))}</strong></p>
               </div>
             )}
-            <Input label="Yangi tannarx (UZS)" type="number" value={form.newPriceUzs}
+            <Input label={t("Yangi tannarx (UZS)")} type="number" value={form.newPriceUzs}
               onChange={(e) => setForm((f) => ({ ...f, newPriceUzs: e.target.value }))} />
-            <Input label="Yangi tannarx (USD)" type="number" value={form.newPriceUsd}
+            <Input label={t("Yangi tannarx (USD)")} type="number" value={form.newPriceUsd}
               onChange={(e) => setForm((f) => ({ ...f, newPriceUsd: e.target.value }))} />
-            <Input label="Sabab" value={form.reason}
-              onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder="Qayta baholash sababi..." />
+            <Input label={t("Sabab")} value={form.reason}
+              onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={t("Qayta baholash sababi...")} />
             <Button loading={mutation.isPending} onClick={() => {
               if (!form.productId || !form.newPriceUzs) {
-                toast.error("Mahsulot va narxni kiriting"); return;
+                toast.error(getT()("Mahsulot va narxni kiriting")); return;
               }
               mutation.mutate();
             }}>
               <RotateCcw className="w-4 h-4" />
-              Qayta baholash
+              {t("Qayta baholash")}
             </Button>
           </div>
         </div>

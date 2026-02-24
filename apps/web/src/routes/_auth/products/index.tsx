@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button, SearchInput, Modal, Input, CurrencyPairInput, Select, Badge, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, SlideOver } from "@/components/ui";
 import { CurrencyDisplay } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
+import { useT, getT } from "@/hooks/useT";
 import { uploadProductImage } from "@/lib/upload";
 import QRCode from "qrcode";
 import toast from "react-hot-toast";
@@ -35,6 +36,7 @@ function CategoryTree({
   onDelete: (id: number) => void;
   isBoss: boolean;
 }) {
+  const t = useT();
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   function toggleExpand(id: number) {
@@ -107,7 +109,7 @@ function CategoryTree({
         onClick={() => onSelect(null)}
       >
         <Package className="w-4 h-4 text-gray-500" />
-        <span className="flex-1">Barcha mahsulotlar</span>
+        <span className="flex-1">{t("Barcha mahsulotlar")}</span>
       </div>
       {categories.map((cat) => renderNode(cat))}
     </div>
@@ -154,6 +156,7 @@ const unitOptions = [
 // ===== Main Page =====
 export function ProductsPage() {
   const { isBoss } = useAuth();
+  const t = useT();
   const queryClient = useQueryClient();
 
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -234,7 +237,7 @@ export function ProductsPage() {
       queryClient.invalidateQueries({ queryKey: ["category"] });
       setProductModalOpen(false);
       setForm(defaultForm);
-      toast.success("Mahsulot qo'shildi");
+      toast.success(getT()("Mahsulot qo'shildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -258,7 +261,7 @@ export function ProductsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product"] });
       setSelectedProductId(null);
-      toast.success("Mahsulot yangilandi");
+      toast.success(getT()("Mahsulot yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -268,7 +271,7 @@ export function ProductsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product"] });
       queryClient.invalidateQueries({ queryKey: ["category"] });
-      toast.success("Mahsulot o'chirildi");
+      toast.success(getT()("Mahsulot o'chirildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -280,7 +283,7 @@ export function ProductsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product", "detail", selectedProductId] });
-      toast.success("Rasm qo'shildi");
+      toast.success(getT()("Rasm qo'shildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -289,7 +292,7 @@ export function ProductsPage() {
     mutationFn: (id: number) => trpc.product.removeImage.mutate({ id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product", "detail", selectedProductId] });
-      toast.success("Rasm o'chirildi");
+      toast.success(getT()("Rasm o'chirildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -300,7 +303,7 @@ export function ProductsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product"] });
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
-      toast.success("Qoldiq yangilandi");
+      toast.success(getT()("Qoldiq yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -313,7 +316,7 @@ export function ProductsPage() {
       setCategoryModalOpen(false);
       setEditingCategory(null);
       setCatForm({ name: "", parentId: "" });
-      toast.success("Guruh qo'shildi");
+      toast.success(getT()("Guruh qo'shildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -326,7 +329,7 @@ export function ProductsPage() {
       setCategoryModalOpen(false);
       setEditingCategory(null);
       setCatForm({ name: "", parentId: "" });
-      toast.success("Guruh yangilandi");
+      toast.success(getT()("Guruh yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -335,7 +338,7 @@ export function ProductsPage() {
     mutationFn: (id: number) => trpc.category.delete.mutate({ id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["category"] });
-      toast.success("Guruh o'chirildi");
+      toast.success(getT()("Guruh o'chirildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -343,7 +346,7 @@ export function ProductsPage() {
   // Handlers
   function handleProductSubmit() {
     if (!form.name || !form.categoryId) {
-      toast.error("Nom va guruhni tanlang");
+      toast.error(getT()("Nom va guruhni tanlang"));
       return;
     }
     createProduct.mutate(form);
@@ -351,7 +354,7 @@ export function ProductsPage() {
 
   function handleSlideFormSave() {
     if (!slideForm.name || !slideForm.categoryId) {
-      toast.error("Nom va guruhni tanlang");
+      toast.error(getT()("Nom va guruhni tanlang"));
       return;
     }
     if (selectedProductId) {
@@ -378,6 +381,7 @@ export function ProductsPage() {
 
     const priceUzs = Number(detail.sellPriceUzs).toLocaleString("uz-UZ");
     const priceUsd = Number(detail.sellPriceUsd).toFixed(2);
+    const _t = getT();
 
     const printWindow = window.open("", "_blank", "width=400,height=400");
     if (!printWindow) return;
@@ -386,7 +390,7 @@ export function ProductsPage() {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Yorliq - ${detail.name}</title>
+  <title>${_t("Yorliq")} - ${detail.name}</title>
   <style>
     @page { size: 58mm 40mm; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -404,7 +408,7 @@ export function ProductsPage() {
   <div class="name">${detail.name}</div>
   <div class="qr"><img src="${qrDataUrl}" /></div>
   <div class="price">
-    <div class="price-uzs">${priceUzs} so'm</div>
+    <div class="price-uzs">${priceUzs} ${_t("so'm")}</div>
     <div class="price-usd">$${priceUsd}</div>
   </div>
   <div class="code">${detail.code}</div>
@@ -419,7 +423,7 @@ export function ProductsPage() {
 
   function handleCategorySubmit() {
     if (!catForm.name) {
-      toast.error("Guruh nomini kiriting");
+      toast.error(getT()("Guruh nomini kiriting"));
       return;
     }
     if (editingCategory) {
@@ -492,8 +496,8 @@ export function ProductsPage() {
   return (
     <>
       <PageHeader
-        title="Mahsulotlar"
-        subtitle={`Sahifa ${currentPage} (${products.length} ta)`}
+        title={t("Mahsulotlar")}
+        subtitle={`${t("Sahifa")} ${currentPage} (${products.length} ${t("ta")})`}
         actions={
           isBoss() && (
             <div className="flex items-center gap-2">
@@ -507,7 +511,7 @@ export function ProductsPage() {
                 }}
               >
                 <Plus className="w-4 h-4" />
-                Guruh
+                {t("Guruh")}
               </Button>
               <Button
                 size="sm"
@@ -517,7 +521,7 @@ export function ProductsPage() {
                 }}
               >
                 <Plus className="w-4 h-4" />
-                Mahsulot
+                {t("Mahsulot")}
               </Button>
             </div>
           )
@@ -530,11 +534,11 @@ export function ProductsPage() {
           <div className="hidden lg:block w-64 shrink-0">
             <div className="card">
               <div className="card-header">
-                <h3 className="text-sm font-semibold text-gray-700">Guruhlar</h3>
+                <h3 className="text-sm font-semibold text-gray-700">{t("Guruhlar")}</h3>
               </div>
               <div className="p-2 overflow-y-auto">
                 {categoriesQuery.isLoading ? (
-                  <div className="p-4 text-center text-gray-400 text-sm">Yuklanmoqda...</div>
+                  <div className="p-4 text-center text-gray-400 text-sm">{t("Yuklanmoqda...")}</div>
                 ) : (
                   <CategoryTree
                     categories={(categoriesQuery.data ?? []) as CategoryNode[]}
@@ -546,7 +550,7 @@ export function ProductsPage() {
                       setCategoryModalOpen(true);
                     }}
                     onDelete={(id) => {
-                      if (confirm("Bu guruhni o'chirmoqchimisiz?")) {
+                      if (confirm(getT()("Bu guruhni o'chirmoqchimisiz?"))) {
                         deleteCategory.mutate(id);
                       }
                     }}
@@ -562,7 +566,7 @@ export function ProductsPage() {
             <div className="lg:hidden fixed inset-0 z-30 bg-black/50" onClick={() => setShowCategories(false)}>
               <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="px-4 py-3 border-b flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-700">Guruhlar</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">{t("Guruhlar")}</h3>
                   <button onClick={() => setShowCategories(false)} className="p-1 text-gray-400 hover:text-gray-600">
                     <X className="w-5 h-5" />
                   </button>
@@ -579,7 +583,7 @@ export function ProductsPage() {
                       setShowCategories(false);
                     }}
                     onDelete={(id) => {
-                      if (confirm("Bu guruhni o'chirmoqchimisiz?")) {
+                      if (confirm(getT()("Bu guruhni o'chirmoqchimisiz?"))) {
                         deleteCategory.mutate(id);
                       }
                     }}
@@ -601,7 +605,7 @@ export function ProductsPage() {
               </button>
               <div className="flex-1">
                 <SearchInput
-                  placeholder="Mahsulot qidirish (nom, kod, SKU)..."
+                  placeholder={t("Mahsulot qidirish (nom, kod, SKU)...")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onClear={() => setSearch("")}
@@ -616,38 +620,38 @@ export function ProductsPage() {
                   <th className="w-12"></th>
                   <th className="whitespace-nowrap max-w-[200px]">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("code")}>
-                      Mahsulot
+                      {t("Mahsulot")}
                       {sortKey === "code" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("category")}>
                       <FolderOpen className="w-3.5 h-3.5" />
-                      Guruh
+                      {t("Guruh")}
                       {sortKey === "category" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-32 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("sellPrice")}>
-                      Sotish
+                      {t("Sotish")}
                       {sortKey === "sellPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-32 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("minPrice")}>
-                      Min
+                      {t("Min")}
                       {sortKey === "minPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-32 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("costPrice")}>
-                      Tan
+                      {t("Tan")}
                       {sortKey === "costPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-20 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("stock")}>
-                      Qoldiq
+                      {t("Qoldiq")}
                       {sortKey === "stock" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
@@ -658,7 +662,7 @@ export function ProductsPage() {
                 {productsQuery.isLoading ? (
                   <TableLoading colSpan={8} />
                 ) : products.length === 0 ? (
-                  <TableEmpty colSpan={8} message="Mahsulot topilmadi" />
+                  <TableEmpty colSpan={8} message={t("Mahsulot topilmadi")} />
                 ) : (
                   products.map((product) => {
                     const stock = getStockTotal(product);
@@ -710,7 +714,7 @@ export function ProductsPage() {
                           <div className="flex items-center gap-0.5">
                             <button
                               className="p-2 sm:p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-                              title="QR yorliq chop etish"
+                              title={t("QR yorliq chop etish")}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handlePrintLabel(product);
@@ -722,7 +726,7 @@ export function ProductsPage() {
                               <>
                                 <button
                                   className="p-2 sm:p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
-                                  title="Tahrirlash"
+                                  title={t("Tahrirlash")}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedProductId(product.id);
@@ -732,10 +736,10 @@ export function ProductsPage() {
                                 </button>
                                 <button
                                   className="p-2 sm:p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="O'chirish"
+                                  title={t("O'chirish")}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    if (confirm(`"${product.name}" mahsulotini o'chirmoqchimisiz?`)) {
+                                    if (confirm(getT()(`"${product.name}" mahsulotini o'chirmoqchimisiz?`))) {
                                       deleteProduct.mutate(product.id);
                                     }
                                   }}
@@ -768,9 +772,9 @@ export function ProductsPage() {
                     setCursor(prevCursor);
                   }}
                 >
-                  Oldingi
+                  {t("Oldingi")}
                 </Button>
-                <span className="text-sm text-gray-500">Sahifa {currentPage}</span>
+                <span className="text-sm text-gray-500">{t("Sahifa")} {currentPage}</span>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -782,7 +786,7 @@ export function ProductsPage() {
                     }
                   }}
                 >
-                  Keyingi
+                  {t("Keyingi")}
                 </Button>
               </div>
             )}
@@ -797,68 +801,68 @@ export function ProductsPage() {
           setProductModalOpen(false);
           setForm(defaultForm);
         }}
-        title="Yangi mahsulot"
+        title={t("Yangi mahsulot")}
         size="lg"
         footer={
           <>
             <Button variant="secondary" onClick={() => setProductModalOpen(false)}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button
               loading={createProduct.isPending}
               onClick={handleProductSubmit}
             >
-              Qo'shish
+              {t("Qo'shish")}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Input
-            label="Mahsulot nomi"
+            label={t("Mahsulot nomi")}
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             placeholder="MDF list 18mm Shimo svetliy"
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
-              label="Guruh"
+              label={t("Guruh")}
               options={categoryOptions}
               value={form.categoryId}
               onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
-              placeholder="Tanlang..."
+              placeholder={t("Tanlang...")}
             />
             <Select
-              label="O'lchov birligi"
+              label={t("O'lchov birligi")}
               options={unitOptions}
               value={form.unit}
               onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))}
             />
           </div>
           <Input
-            label="SKU (ixtiyoriy)"
+            label={t("SKU (ixtiyoriy)")}
             value={form.sku}
             onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
           />
 
           <div className="border-t pt-4 space-y-3">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Narxlar</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-3">{t("Narxlar")}</h4>
             <CurrencyPairInput
-              label="Sotish narxi"
+              label={t("Sotish narxi")}
               valueUzs={form.sellPriceUzs}
               valueUsd={form.sellPriceUsd}
               onChangeUzs={(v) => setForm((f) => ({ ...f, sellPriceUzs: v }))}
               onChangeUsd={(v) => setForm((f) => ({ ...f, sellPriceUsd: v }))}
             />
             <CurrencyPairInput
-              label="Minimal narx"
+              label={t("Minimal narx")}
               valueUzs={form.minPriceUzs}
               valueUsd={form.minPriceUsd}
               onChangeUzs={(v) => setForm((f) => ({ ...f, minPriceUzs: v }))}
               onChangeUsd={(v) => setForm((f) => ({ ...f, minPriceUsd: v }))}
             />
             <CurrencyPairInput
-              label="Tan narxi"
+              label={t("Tan narxi")}
               valueUzs={form.costPriceUzs}
               valueUsd={form.costPriceUsd}
               onChangeUzs={(v) => setForm((f) => ({ ...f, costPriceUzs: v }))}
@@ -867,7 +871,7 @@ export function ProductsPage() {
           </div>
 
           <Input
-            label="Tavsif (ixtiyoriy)"
+            label={t("Tavsif (ixtiyoriy)")}
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
           />
@@ -882,33 +886,33 @@ export function ProductsPage() {
           setEditingCategory(null);
           setCatForm({ name: "", parentId: "" });
         }}
-        title={editingCategory ? "Guruhni tahrirlash" : "Yangi guruh"}
+        title={editingCategory ? t("Guruhni tahrirlash") : t("Yangi guruh")}
         size="sm"
         footer={
           <>
             <Button variant="secondary" onClick={() => setCategoryModalOpen(false)}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button
               loading={createCategory.isPending || updateCategory.isPending}
               onClick={handleCategorySubmit}
             >
-              {editingCategory ? "Saqlash" : "Qo'shish"}
+              {editingCategory ? t("Saqlash") : t("Qo'shish")}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Input
-            label="Guruh nomi"
+            label={t("Guruh nomi")}
             value={catForm.name}
             onChange={(e) => setCatForm((f) => ({ ...f, name: e.target.value }))}
-            placeholder="Masalan: MDF LAR"
+            placeholder={t("Masalan: MDF LAR")}
           />
           {!editingCategory && (
             <Select
-              label="Ota guruh (ixtiyoriy)"
-              options={[{ value: "", label: "Asosiy guruh" }, ...categoryOptions]}
+              label={t("Ota guruh (ixtiyoriy)")}
+              options={[{ value: "", label: t("Asosiy guruh") }, ...categoryOptions]}
               value={catForm.parentId}
               onChange={(e) => setCatForm((f) => ({ ...f, parentId: e.target.value }))}
             />
@@ -934,25 +938,25 @@ export function ProductsPage() {
                 variant="danger"
                 size="sm"
                 onClick={() => {
-                  if (selectedProductId && confirm("Bu mahsulotni o'chirmoqchimisiz?")) {
+                  if (selectedProductId && confirm(getT()("Bu mahsulotni o'chirmoqchimisiz?"))) {
                     deleteProduct.mutate(selectedProductId);
                     setSelectedProductId(null);
                   }
                 }}
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                O'chirish
+                {t("O'chirish")}
               </Button>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={() => handlePrintLabel()}>
                   <Printer className="w-3.5 h-3.5" />
-                  Yorliq
+                  {t("Yorliq")}
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => setSelectedProductId(null)}>
-                  Bekor qilish
+                  {t("Bekor qilish")}
                 </Button>
                 <Button size="sm" loading={updateProduct.isPending} onClick={handleSlideFormSave}>
-                  Saqlash
+                  {t("Saqlash")}
                 </Button>
               </div>
             </div>
@@ -962,21 +966,21 @@ export function ProductsPage() {
         {productDetailQuery.data && (
           <div className="p-6 space-y-4">
             <Input
-              label="Mahsulot nomi"
+              label={t("Mahsulot nomi")}
               value={slideForm.name}
               onChange={(e) => setSlideForm((f) => ({ ...f, name: e.target.value }))}
               disabled={!isBoss()}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select
-                label="Guruh"
+                label={t("Guruh")}
                 options={categoryOptions}
                 value={slideForm.categoryId}
                 onChange={(e) => setSlideForm((f) => ({ ...f, categoryId: e.target.value }))}
                 disabled={!isBoss()}
               />
               <Select
-                label="O'lchov birligi"
+                label={t("O'lchov birligi")}
                 options={unitOptions}
                 value={slideForm.unit}
                 onChange={(e) => setSlideForm((f) => ({ ...f, unit: e.target.value }))}
@@ -984,30 +988,30 @@ export function ProductsPage() {
               />
             </div>
             <Input
-              label="SKU"
+              label={t("SKU")}
               value={slideForm.sku}
               onChange={(e) => setSlideForm((f) => ({ ...f, sku: e.target.value }))}
               disabled={!isBoss()}
             />
 
             <div className="border-t pt-4 space-y-3">
-              <h4 className="text-sm font-medium text-gray-700">Narxlar</h4>
+              <h4 className="text-sm font-medium text-gray-700">{t("Narxlar")}</h4>
               <CurrencyPairInput
-                label="Sotish narxi"
+                label={t("Sotish narxi")}
                 valueUzs={slideForm.sellPriceUzs}
                 valueUsd={slideForm.sellPriceUsd}
                 onChangeUzs={(v) => setSlideForm((f) => ({ ...f, sellPriceUzs: v }))}
                 onChangeUsd={(v) => setSlideForm((f) => ({ ...f, sellPriceUsd: v }))}
               />
               <CurrencyPairInput
-                label="Minimal narx"
+                label={t("Minimal narx")}
                 valueUzs={slideForm.minPriceUzs}
                 valueUsd={slideForm.minPriceUsd}
                 onChangeUzs={(v) => setSlideForm((f) => ({ ...f, minPriceUzs: v }))}
                 onChangeUsd={(v) => setSlideForm((f) => ({ ...f, minPriceUsd: v }))}
               />
               <CurrencyPairInput
-                label="Tan narxi"
+                label={t("Tan narxi")}
                 valueUzs={slideForm.costPriceUzs}
                 valueUsd={slideForm.costPriceUsd}
                 onChangeUzs={(v) => setSlideForm((f) => ({ ...f, costPriceUzs: v }))}
@@ -1016,7 +1020,7 @@ export function ProductsPage() {
             </div>
 
             <Input
-              label="Tavsif"
+              label={t("Tavsif")}
               value={slideForm.description}
               onChange={(e) => setSlideForm((f) => ({ ...f, description: e.target.value }))}
               disabled={!isBoss()}
@@ -1024,7 +1028,7 @@ export function ProductsPage() {
 
             {/* Product images */}
             <div className="border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Rasmlar</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">{t("Rasmlar")}</h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {productDetailQuery.data.images.map((img) => (
                   <div key={img.id} className="relative group rounded-lg overflow-hidden aspect-square bg-gray-100">
@@ -1046,7 +1050,7 @@ export function ProductsPage() {
                 {isBoss() && (
                   <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition-colors">
                     <ImagePlus className="w-6 h-6 text-gray-400" />
-                    <span className="text-xs text-gray-400 mt-1">Qo'shish</span>
+                    <span className="text-xs text-gray-400 mt-1">{t("Qo'shish")}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1061,7 +1065,7 @@ export function ProductsPage() {
 
             {/* Stock edit */}
             <div className="border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Ombor qoldiqlari</h4>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">{t("Ombor qoldiqlari")}</h4>
               <div className="space-y-1.5">
                 {productDetailQuery.data.stockItems.map((si) => (
                   <div key={si.id} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded">
@@ -1097,7 +1101,7 @@ export function ProductsPage() {
                       id="newStockWarehouse"
                       defaultValue=""
                     >
-                      <option value="" disabled>Ombor qo'shish...</option>
+                      <option value="" disabled>{t("Ombor qo'shish...")}</option>
                       {(warehousesQuery.data ?? [])
                         .filter((w) => !productDetailQuery.data!.stockItems.some((si) => si.warehouseId === w.id))
                         .map((w) => (
@@ -1118,7 +1122,7 @@ export function ProductsPage() {
                         const qtyInput = document.getElementById("newStockQty") as HTMLInputElement;
                         const wId = Number(wSelect.value);
                         const qty = Number(qtyInput.value);
-                        if (!wId) { toast.error("Ombor tanlang"); return; }
+                        if (!wId) { toast.error(getT()("Ombor tanlang")); return; }
                         updateStock.mutate({
                           productId: selectedProductId!,
                           warehouseId: wId,

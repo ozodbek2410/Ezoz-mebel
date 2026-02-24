@@ -14,6 +14,7 @@ import {
 } from "@/components/ui";
 import { CurrencyDisplay, StatusBadge } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
+import { useT, getT } from "@/hooks/useT";
 import { formatUzs, formatUsd } from "@ezoz/shared";
 import toast from "react-hot-toast";
 
@@ -34,6 +35,7 @@ export function SalesPage() {
 
 function SalesPageInner() {
   const { user, isBoss } = useAuth();
+  const t = useT();
   const queryClient = useQueryClient();
   const location = useLocation();
 
@@ -137,7 +139,7 @@ function SalesPageInner() {
       setCart([]);
       setSelectedCustomer(null);
       setSaleNotes("");
-      toast.success(`Sotuv #${sale.documentNo} yaratildi`);
+      toast.success(getT()(`Sotuv #${sale.documentNo} yaratildi`));
       setPaymentSaleId(sale.id);
       setPaymentForm({ paymentType: "CASH_UZS", amountUzs: String(sale.totalUzs), amountUsd: "0", notes: "" });
       setPaymentOpen(true);
@@ -150,7 +152,7 @@ function SalesPageInner() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sale"] });
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
-      toast.success("Sotuv yakunlandi");
+      toast.success(getT()("Sotuv yakunlandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -159,7 +161,7 @@ function SalesPageInner() {
     mutationFn: (id: number) => trpc.sale.cancel.mutate({ id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sale"] });
-      toast.success("Sotuv bekor qilindi");
+      toast.success(getT()("Sotuv bekor qilindi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -180,7 +182,7 @@ function SalesPageInner() {
       setPaymentOpen(false);
       setPaymentSaleId(null);
       if (paymentSaleId) completeSale.mutate(paymentSaleId);
-      toast.success("To'lov qabul qilindi");
+      toast.success(getT()("To'lov qabul qilindi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -265,10 +267,10 @@ function SalesPageInner() {
   return (
     <>
       <PageHeader
-        title={isServiceMode ? "Xizmat kassasi" : "Savdo kassasi"}
+        title={isServiceMode ? t("Xizmat kassasi") : t("Savdo kassasi")}
         actions={
           <Tabs
-            tabs={[{ id: "pos", label: "Kassa" }, { id: "history", label: "Tarix" }]}
+            tabs={[{ id: "pos", label: t("Kassa") }, { id: "history", label: t("Tarix") }]}
             activeTab={activeTab}
             onChange={setActiveTab}
           />
@@ -294,7 +296,7 @@ function SalesPageInner() {
                     }`}
                   >
                     <Wrench className="w-4 h-4" />
-                    Xizmatlar
+                    {t("Xizmatlar")}
                   </button>
                   <button
                     onClick={() => setServicePanel("products")}
@@ -303,7 +305,7 @@ function SalesPageInner() {
                     }`}
                   >
                     <Package className="w-4 h-4" />
-                    Mahsulotlar ({availableProducts.length})
+                    {t("Mahsulotlar")} ({availableProducts.length})
                   </button>
                 </div>
 
@@ -336,14 +338,14 @@ function SalesPageInner() {
                       className="pos-product-card border-dashed !border-gray-300 flex flex-col items-center justify-center gap-1 min-h-[72px]"
                     >
                       <Plus className="w-5 h-5 text-gray-400" />
-                      <span className="text-xs text-gray-500 font-medium">Boshqa xizmat</span>
+                      <span className="text-xs text-gray-500 font-medium">{t("Boshqa xizmat")}</span>
                     </button>
                   </div>
                 ) : (
                   <>
                     <div className="mb-4">
                       <SearchInput
-                        placeholder="Mahsulot qidirish..."
+                        placeholder={t("Mahsulot qidirish...")}
                         value={productSearch}
                         onChange={(e) => setProductSearch(e.target.value)}
                         onClear={() => setProductSearch("")}
@@ -361,7 +363,7 @@ function SalesPageInner() {
                     ) : availableProducts.length === 0 ? (
                       <div className="text-center py-12 text-gray-400">
                         <Package className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        <p className="text-sm">Mahsulotlar topilmadi</p>
+                        <p className="text-sm">{t("Mahsulotlar topilmadi")}</p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -399,11 +401,11 @@ function SalesPageInner() {
                   <div className="card-header">
                     <div className="flex items-center gap-2">
                       <ShoppingCart className="w-5 h-5 text-brand-600" />
-                      <h3 className="font-semibold">Savat ({cart.length})</h3>
+                      <h3 className="font-semibold">{t("Savat")} ({cart.length})</h3>
                     </div>
                     {cart.length > 0 && (
                       <button onClick={() => setCart([])} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
-                        Tozalash
+                        {t("Tozalash")}
                       </button>
                     )}
                   </div>
@@ -411,7 +413,7 @@ function SalesPageInner() {
                   <div className="px-4 py-3 border-b border-gray-100">
                     <div className="relative">
                       <SearchInput
-                        placeholder="Mijoz tanlash (ixtiyoriy)..."
+                        placeholder={t("Mijoz tanlash (ixtiyoriy)...")}
                         value={selectedCustomer ? selectedCustomer.fullName : customerSearch}
                         onChange={(e) => { setCustomerSearch(e.target.value); setSelectedCustomer(null); }}
                         onClear={() => { setCustomerSearch(""); setSelectedCustomer(null); }}
@@ -438,7 +440,7 @@ function SalesPageInner() {
                     {cart.length === 0 ? (
                       <div className="text-center py-10 text-gray-400 text-sm">
                         <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        Xizmat yoki mahsulot tanlang
+                        {t("Xizmat yoki mahsulot tanlang")}
                       </div>
                     ) : (
                       cart.map((item, idx) => (
@@ -471,7 +473,7 @@ function SalesPageInner() {
                                     : "border-gray-200 text-gray-700 focus:border-brand-400 focus:ring-1 focus:ring-brand-200"
                                 }`}
                               >
-                                <option value="">Usta tanlang *</option>
+                                <option value="">{t("Usta tanlang")} *</option>
                                 {masters.map((m) => (
                                   <option key={m.id} value={m.id}>{m.fullName}</option>
                                 ))}
@@ -508,30 +510,30 @@ function SalesPageInner() {
                     {hasUnassignedService && (
                       <div className="flex items-center gap-2 text-xs text-red-600 font-medium mb-3 bg-red-50 px-3 py-1.5 rounded-lg">
                         <UserCheck className="w-3.5 h-3.5" />
-                        Barcha xizmatlarga usta tanlang
+                        {t("Barcha xizmatlarga usta tanlang")}
                       </div>
                     )}
                     {hasWorkshopItems && (
                       <div className="flex items-center gap-2 text-xs text-amber-700 font-medium mb-3 bg-amber-50 px-3 py-1.5 rounded-lg">
                         <Wrench className="w-3.5 h-3.5" />
-                        Ustaxonaga yuboriladi
+                        {t("Ustaxonaga yuboriladi")}
                       </div>
                     )}
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm text-gray-500">Jami:</span>
+                      <span className="text-sm text-gray-500">{t("Jami")}:</span>
                       <div className="text-right">
                         <p className="text-2xl font-bold currency-uzs">{formatUzs(cartTotal.uzs)}</p>
                         {cartTotal.usd > 0 && <p className="text-sm currency-usd mt-0.5">{formatUsd(cartTotal.usd)}</p>}
                       </div>
                     </div>
-                    <Input placeholder="Izoh..." value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} className="mb-3" />
+                    <Input placeholder={t("Izoh...")} value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} className="mb-3" />
                     <button
                       className="btn-pos-sell"
                       disabled={cart.length === 0 || hasUnassignedService || createSale.isPending}
                       onClick={() => createSale.mutate()}
                     >
                       {createSale.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Banknote className="w-6 h-6" />}
-                      XIZMAT SOTISH
+                      {t("XIZMAT SOTISH")}
                     </button>
                   </div>
                 </div>
@@ -546,7 +548,7 @@ function SalesPageInner() {
               <div className="flex-1 min-w-0">
                 <div className="mb-4">
                   <SearchInput
-                    placeholder="Mahsulot qidirish..."
+                    placeholder={t("Mahsulot qidirish...")}
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
                     onClear={() => setProductSearch("")}
@@ -598,11 +600,11 @@ function SalesPageInner() {
                   <div className="card-header">
                     <div className="flex items-center gap-2">
                       <ShoppingCart className="w-5 h-5 text-brand-600" />
-                      <h3 className="font-semibold">Savat ({cart.length})</h3>
+                      <h3 className="font-semibold">{t("Savat")} ({cart.length})</h3>
                     </div>
                     {cart.length > 0 && (
                       <button onClick={() => setCart([])} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
-                        Tozalash
+                        {t("Tozalash")}
                       </button>
                     )}
                   </div>
@@ -610,7 +612,7 @@ function SalesPageInner() {
                   <div className="px-4 py-3 border-b border-gray-100">
                     <div className="relative">
                       <SearchInput
-                        placeholder="Mijoz tanlash (ixtiyoriy)..."
+                        placeholder={t("Mijoz tanlash (ixtiyoriy)...")}
                         value={selectedCustomer ? selectedCustomer.fullName : customerSearch}
                         onChange={(e) => { setCustomerSearch(e.target.value); setSelectedCustomer(null); }}
                         onClear={() => { setCustomerSearch(""); setSelectedCustomer(null); }}
@@ -637,7 +639,7 @@ function SalesPageInner() {
                     {cart.length === 0 ? (
                       <div className="text-center py-10 text-gray-400 text-sm">
                         <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        Savat bo'sh
+                        {t("Savat bo'sh")}
                       </div>
                     ) : (
                       cart.map((item, idx) => (
@@ -682,20 +684,20 @@ function SalesPageInner() {
 
                   <div className="pos-cart-total">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm text-gray-500">Jami:</span>
+                      <span className="text-sm text-gray-500">{t("Jami")}:</span>
                       <div className="text-right">
                         <p className="text-2xl font-bold currency-uzs">{formatUzs(cartTotal.uzs)}</p>
                         {cartTotal.usd > 0 && <p className="text-sm currency-usd mt-0.5">{formatUsd(cartTotal.usd)}</p>}
                       </div>
                     </div>
-                    <Input placeholder="Izoh..." value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} className="mb-3" />
+                    <Input placeholder={t("Izoh...")} value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} className="mb-3" />
                     <button
                       className="btn-pos-sell"
                       disabled={cart.length === 0 || createSale.isPending}
                       onClick={() => createSale.mutate()}
                     >
                       {createSale.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Banknote className="w-6 h-6" />}
-                      SOTISH
+                      {t("SOTISH")}
                     </button>
                   </div>
                 </div>
@@ -708,20 +710,20 @@ function SalesPageInner() {
           <Table>
             <TableHead>
               <tr>
-                <th>Hujjat</th>
-                <th className="hidden sm:table-cell">Sana</th>
-                <th className="hidden md:table-cell">Mijoz</th>
-                <th className="hidden sm:table-cell">Turi</th>
-                <th>Summa</th>
-                <th>Holat</th>
-                <th className="w-28">Amallar</th>
+                <th>{t("Hujjat")}</th>
+                <th className="hidden sm:table-cell">{t("Sana")}</th>
+                <th className="hidden md:table-cell">{t("Mijoz")}</th>
+                <th className="hidden sm:table-cell">{t("Turi")}</th>
+                <th>{t("Summa")}</th>
+                <th>{t("Holat")}</th>
+                <th className="w-28">{t("Amallar")}</th>
               </tr>
             </TableHead>
             <TableBody>
               {salesQuery.isLoading ? (
                 <TableLoading colSpan={7} />
               ) : sales.length === 0 ? (
-                <TableEmpty colSpan={7} message="Sotuvlar yo'q" />
+                <TableEmpty colSpan={7} message={t("Sotuvlar yo'q")} />
               ) : (
                 sales.map((sale) => (
                   <TableRow key={sale.id}>
@@ -730,7 +732,7 @@ function SalesPageInner() {
                     <td className="hidden md:table-cell">{sale.customer?.fullName || "-"}</td>
                     <td className="hidden sm:table-cell">
                       <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
-                        {sale.saleType === "PRODUCT" ? "Savdo" : "Xizmat"}
+                        {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}
                       </Badge>
                     </td>
                     <td><CurrencyDisplay amountUzs={sale.totalUzs} amountUsd={sale.totalUsd} size="sm" /></td>
@@ -741,7 +743,7 @@ function SalesPageInner() {
                           <>
                             <button
                               className="p-1.5 hover:bg-green-50 rounded-lg"
-                              title="Yakunlash"
+                              title={t("Yakunlash")}
                               onClick={() => {
                                 setPaymentSaleId(sale.id);
                                 setPaymentForm({ paymentType: "CASH_UZS", amountUzs: String(sale.totalUzs), amountUsd: "0", notes: "" });
@@ -752,8 +754,8 @@ function SalesPageInner() {
                             </button>
                             <button
                               className="p-1.5 hover:bg-red-50 rounded-lg"
-                              title="Bekor qilish"
-                              onClick={() => { if (confirm("Bu sotuvni bekor qilmoqchimisiz?")) cancelSale.mutate(sale.id); }}
+                              title={t("Bekor qilish")}
+                              onClick={() => { if (confirm(getT()("Bu sotuvni bekor qilmoqchimisiz?"))) cancelSale.mutate(sale.id); }}
                             >
                               <X className="w-4 h-4 text-red-500" />
                             </button>
@@ -774,44 +776,44 @@ function SalesPageInner() {
       <Modal
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
-        title="To'lov qabul qilish"
+        title={t("To'lov qabul qilish")}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setPaymentOpen(false)}>Keyinroq</Button>
+            <Button variant="secondary" onClick={() => setPaymentOpen(false)}>{t("Keyinroq")}</Button>
             <Button
               variant="success"
               loading={createPayment.isPending}
               onClick={() => {
-                if (Number(paymentForm.amountUzs) <= 0 && Number(paymentForm.amountUsd) <= 0) { toast.error("Summani kiriting"); return; }
+                if (Number(paymentForm.amountUzs) <= 0 && Number(paymentForm.amountUsd) <= 0) { toast.error(getT()("Summani kiriting")); return; }
                 createPayment.mutate();
               }}
             >
-              <Check className="w-4 h-4" /> To'lovni tasdiqlash
+              <Check className="w-4 h-4" /> {t("To'lovni tasdiqlash")}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Select
-            label="To'lov turi"
+            label={t("To'lov turi")}
             options={[
-              { value: "CASH_UZS", label: "Naqd (UZS)" },
-              { value: "CASH_USD", label: "Naqd (USD)" },
-              { value: "CARD", label: "Karta" },
-              { value: "TRANSFER", label: "O'tkazma" },
-              { value: "DEBT", label: "Qarzga" },
+              { value: "CASH_UZS", label: t("Naqd (UZS)") },
+              { value: "CASH_USD", label: t("Naqd (USD)") },
+              { value: "CARD", label: t("Karta") },
+              { value: "TRANSFER", label: t("O'tkazma") },
+              { value: "DEBT", label: t("Qarzga") },
             ]}
             value={paymentForm.paymentType}
             onChange={(e) => setPaymentForm((f) => ({ ...f, paymentType: e.target.value }))}
           />
           <CurrencyPairInput
-            label="Summa"
+            label={t("Summa")}
             valueUzs={paymentForm.amountUzs}
             valueUsd={paymentForm.amountUsd}
             onChangeUzs={(v) => setPaymentForm((f) => ({ ...f, amountUzs: v }))}
             onChangeUsd={(v) => setPaymentForm((f) => ({ ...f, amountUsd: v }))}
           />
-          <Input label="Izoh" value={paymentForm.notes} onChange={(e) => setPaymentForm((f) => ({ ...f, notes: e.target.value }))} />
+          <Input label={t("Izoh")} value={paymentForm.notes} onChange={(e) => setPaymentForm((f) => ({ ...f, notes: e.target.value }))} />
         </div>
       </Modal>
 
@@ -819,25 +821,25 @@ function SalesPageInner() {
       <Modal
         open={customServiceOpen}
         onClose={() => setCustomServiceOpen(false)}
-        title="Boshqa xizmat qo'shish"
+        title={t("Boshqa xizmat qo'shish")}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setCustomServiceOpen(false)}>Bekor</Button>
+            <Button variant="secondary" onClick={() => setCustomServiceOpen(false)}>{t("Bekor")}</Button>
             <Button onClick={() => {
-              if (!customServiceForm.name.trim()) { toast.error("Xizmat nomini kiriting"); return; }
-              if (!Number(customServiceForm.price)) { toast.error("Narxni kiriting"); return; }
+              if (!customServiceForm.name.trim()) { toast.error(getT()("Xizmat nomini kiriting")); return; }
+              if (!Number(customServiceForm.price)) { toast.error(getT()("Narxni kiriting")); return; }
               addServiceToCart(customServiceForm.name, Number(customServiceForm.price), 0);
               setCustomServiceForm({ name: "", price: "" });
               setCustomServiceOpen(false);
             }}>
-              <Plus className="w-4 h-4" /> Qo'shish
+              <Plus className="w-4 h-4" /> {t("Qo'shish")}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          <Input label="Xizmat nomi" value={customServiceForm.name} onChange={(e) => setCustomServiceForm((f) => ({ ...f, name: e.target.value }))} placeholder="Masalan: Maxsus kesish" />
-          <Input label="Narx (UZS)" type="number" value={customServiceForm.price} onChange={(e) => setCustomServiceForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" />
+          <Input label={t("Xizmat nomi")} value={customServiceForm.name} onChange={(e) => setCustomServiceForm((f) => ({ ...f, name: e.target.value }))} placeholder={t("Masalan: Maxsus kesish")} />
+          <Input label={t("Narx (UZS)")} type="number" value={customServiceForm.price} onChange={(e) => setCustomServiceForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" />
         </div>
       </Modal>
     </>

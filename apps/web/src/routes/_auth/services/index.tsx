@@ -10,8 +10,10 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { formatUzs, formatUsd } from "@ezoz/shared";
 import toast from "react-hot-toast";
+import { useT, getT } from "@/hooks/useT";
 
 export function ServicesPage() {
+  const t = useT();
   const { isBoss } = useAuth();
   const boss = isBoss();
   const queryClient = useQueryClient();
@@ -36,7 +38,7 @@ export function ServicesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["serviceType"] });
       closeModal();
-      toast.success("Xizmat yaratildi");
+      toast.success(getT()("Xizmat yaratildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -53,7 +55,7 @@ export function ServicesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["serviceType"] });
       closeModal();
-      toast.success("Xizmat yangilandi");
+      toast.success(getT()("Xizmat yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -62,7 +64,7 @@ export function ServicesPage() {
     mutationFn: (id: number) => trpc.serviceType.delete.mutate({ id }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["serviceType"] });
-      toast.success("Xizmat o'chirildi");
+      toast.success(getT()("Xizmat o'chirildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -91,7 +93,7 @@ export function ServicesPage() {
 
   function handleSave() {
     if (!form.name.trim()) {
-      toast.error("Xizmat nomini kiriting");
+      toast.error(getT()("Xizmat nomini kiriting"));
       return;
     }
     if (editingId) {
@@ -106,12 +108,12 @@ export function ServicesPage() {
   return (
     <>
       <PageHeader
-        title="Xizmatlar"
+        title={t("Xizmatlar")}
         actions={
           boss ? (
             <Button onClick={openCreate}>
               <Plus className="w-4 h-4" />
-              Yangi xizmat
+              {t("Yangi xizmat")}
             </Button>
           ) : undefined
         }
@@ -123,18 +125,18 @@ export function ServicesPage() {
           <TableHead>
             <tr>
               <th className="w-12">#</th>
-              <th>Nomi</th>
-              <th>Narx (UZS)</th>
-              <th className="hidden sm:table-cell">Narx (USD)</th>
-              <th className="w-16 hidden sm:table-cell">Tartib</th>
-              {boss && <th className="w-28">Amallar</th>}
+              <th>{t("Nomi")}</th>
+              <th>{t("Narx")} (UZS)</th>
+              <th className="hidden sm:table-cell">{t("Narx")} (USD)</th>
+              <th className="w-16 hidden sm:table-cell">{t("Tartib")}</th>
+              {boss && <th className="w-28">{t("Amallar")}</th>}
             </tr>
           </TableHead>
           <TableBody>
             {servicesQuery.isLoading ? (
               <TableLoading colSpan={boss ? 6 : 5} />
             ) : services.length === 0 ? (
-              <TableEmpty colSpan={boss ? 6 : 5} message="Xizmatlar yo'q" />
+              <TableEmpty colSpan={boss ? 6 : 5} message={t("Xizmatlar yo'q")} />
             ) : (
               services.map((service, idx) => (
                 <TableRow key={service.id}>
@@ -160,7 +162,7 @@ export function ServicesPage() {
                         <button
                           className="p-1.5 hover:bg-red-50 rounded-lg"
                           onClick={() => {
-                            if (confirm("Bu xizmatni o'chirmoqchimisiz?")) {
+                            if (confirm(getT()("Bu xizmatni o'chirmoqchimisiz?"))) {
                               deleteService.mutate(service.id);
                             }
                           }}
@@ -181,35 +183,35 @@ export function ServicesPage() {
       <Modal
         open={modalOpen}
         onClose={closeModal}
-        title={editingId ? "Xizmatni tahrirlash" : "Yangi xizmat"}
+        title={editingId ? t("Xizmatni tahrirlash") : t("Yangi xizmat")}
         footer={
           <>
-            <Button variant="secondary" onClick={closeModal}>Bekor qilish</Button>
+            <Button variant="secondary" onClick={closeModal}>{t("Bekor qilish")}</Button>
             <Button
               loading={createService.isPending || updateService.isPending}
               onClick={handleSave}
             >
-              Saqlash
+              {t("Saqlash")}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Input
-            label="Xizmat nomi"
+            label={t("Xizmat nomi")}
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            placeholder="Masalan: Kesish"
+            placeholder={t("Masalan: Kesish")}
           />
           <CurrencyPairInput
-            label="Narx"
+            label={t("Narx")}
             valueUzs={form.priceUzs}
             valueUsd={form.priceUsd}
             onChangeUzs={(v) => setForm((f) => ({ ...f, priceUzs: v }))}
             onChangeUsd={(v) => setForm((f) => ({ ...f, priceUsd: v }))}
           />
           <Input
-            label="Tartib raqami"
+            label={t("Tartib raqami")}
             type="number"
             value={form.sortOrder}
             onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))}

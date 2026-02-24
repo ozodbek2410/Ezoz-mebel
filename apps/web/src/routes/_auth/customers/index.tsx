@@ -7,6 +7,7 @@ import { Button, SearchInput, Modal, Input, Select, Table, TableHead, TableBody,
 import { CurrencyDisplay, EmptyState } from "@/components/shared";
 import { formatUzs, formatUsd } from "@ezoz/shared";
 import toast from "react-hot-toast";
+import { useT, getT } from "@/hooks/useT";
 
 interface CustomerFormData {
   fullName: string;
@@ -33,6 +34,7 @@ const defaultForm: CustomerFormData = {
 };
 
 export function CustomersPage() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -84,7 +86,7 @@ export function CustomersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customer"] });
       closeModal();
-      toast.success("Mijoz qo'shildi");
+      toast.success(getT()("Mijoz qo'shildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -104,7 +106,7 @@ export function CustomersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customer"] });
       setDetailId(null);
-      toast.success("Mijoz yangilandi");
+      toast.success(getT()("Mijoz yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -114,7 +116,7 @@ export function CustomersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customer"] });
       setDetailId(null);
-      toast.success("Mijoz o'chirildi");
+      toast.success(getT()("Mijoz o'chirildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -143,7 +145,7 @@ export function CustomersPage() {
 
   function handleSubmit() {
     if (!form.fullName) {
-      toast.error("Ism kiritilmadi");
+      toast.error(getT()("Ism kiritilmadi"));
       return;
     }
     if (editing) {
@@ -155,7 +157,7 @@ export function CustomersPage() {
 
   function handleSlideFormSave() {
     if (!slideForm.fullName) {
-      toast.error("Ism kiritilmadi");
+      toast.error(getT()("Ism kiritilmadi"));
       return;
     }
     if (detailId) {
@@ -188,8 +190,8 @@ export function CustomersPage() {
   return (
     <>
       <PageHeader
-        title="Mijozlar"
-        subtitle={`${listQuery.data?.total ?? 0} ta mijoz`}
+        title={t("Mijozlar")}
+        subtitle={`${listQuery.data?.total ?? 0} ${t("ta mijoz")}`}
         actions={
           <Button
             size="sm"
@@ -200,7 +202,7 @@ export function CustomersPage() {
             }}
           >
             <Plus className="w-4 h-4" />
-            Yangi mijoz
+            {t("Yangi mijoz")}
           </Button>
         }
       />
@@ -211,7 +213,7 @@ export function CustomersPage() {
           <div className="w-full">
             <div className="mb-4">
               <SearchInput
-                placeholder="Mijoz qidirish (ism yoki telefon)..."
+                placeholder={t("Mijoz qidirish (ism yoki telefon)...")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onClear={() => setSearch("")}
@@ -222,17 +224,17 @@ export function CustomersPage() {
             <Table>
               <TableHead>
                 <tr>
-                  <th>Ism</th>
-                  <th className="hidden sm:table-cell">Telefon</th>
-                  <th className="hidden md:table-cell">Kategoriya</th>
-                  <th className="w-20">Amallar</th>
+                  <th>{t("Ism")}</th>
+                  <th className="hidden sm:table-cell">{t("Telefon")}</th>
+                  <th className="hidden md:table-cell">{t("Kategoriya")}</th>
+                  <th className="w-20">{t("Amallar")}</th>
                 </tr>
               </TableHead>
               <TableBody>
                 {listQuery.isLoading ? (
                   <TableLoading colSpan={5} />
                 ) : customers.length === 0 ? (
-                  <TableEmpty colSpan={5} message="Mijoz topilmadi" />
+                  <TableEmpty colSpan={5} message={t("Mijoz topilmadi")} />
                 ) : (
                   customers.map((c) => (
                     <TableRow
@@ -246,7 +248,7 @@ export function CustomersPage() {
                       <td className="text-gray-500 hidden sm:table-cell">{c.phone || "-"}</td>
                       <td className="hidden md:table-cell">
                         <Badge variant={c.category === "MASTER" ? "info" : "neutral"}>
-                          {c.category === "MASTER" ? "Usta" : "Oddiy"}
+                          {c.category === "MASTER" ? t("Usta") : t("Oddiy")}
                         </Badge>
                       </td>
                       <td>
@@ -261,7 +263,7 @@ export function CustomersPage() {
                             className="p-1.5 hover:bg-red-50 rounded-lg"
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (confirm(`"${c.fullName}" ni o'chirmoqchimisiz?`)) {
+                              if (confirm(getT()(`"${c.fullName}" ni o'chirmoqchimisiz?`))) {
                                 deleteMutation.mutate(c.id);
                               }
                             }}
@@ -290,67 +292,67 @@ export function CustomersPage() {
       <Modal
         open={modalOpen}
         onClose={closeModal}
-        title={editing ? "Mijozni tahrirlash" : "Yangi mijoz"}
+        title={editing ? t("Mijozni tahrirlash") : t("Yangi mijoz")}
         size="lg"
         footer={
           <>
             <Button variant="secondary" onClick={closeModal}>
-              Bekor qilish
+              {t("Bekor qilish")}
             </Button>
             <Button
               loading={createMutation.isPending || updateMutation.isPending}
               onClick={handleSubmit}
             >
-              {editing ? "Saqlash" : "Qo'shish"}
+              {editing ? t("Saqlash") : t("Qo'shish")}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <Input
-            label="To'liq ism"
+            label={t("To'liq ism")}
             value={form.fullName}
             onChange={(e) => setForm((f) => ({ ...f, fullName: e.target.value }))}
-            placeholder="Ism Familiya"
+            placeholder={t("Ism Familiya")}
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <PhoneInput
-              label="Telefon"
+              label={t("Telefon")}
               value={form.phone}
               onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
             />
             <PhoneInput
-              label="Telefon 2 (ixtiyoriy)"
+              label={t("Telefon 2 (ixtiyoriy)")}
               value={form.phone2}
               onChange={(v) => setForm((f) => ({ ...f, phone2: v }))}
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Tug'ilgan sana"
+              label={t("Tug'ilgan sana")}
               type="date"
               value={form.birthday}
               onChange={(e) => setForm((f) => ({ ...f, birthday: e.target.value }))}
             />
             <Select
-              label="Kategoriya"
+              label={t("Kategoriya")}
               options={[
-                { value: "REGULAR", label: "Oddiy mijoz" },
-                { value: "MASTER", label: "Usta" },
+                { value: "REGULAR", label: t("Oddiy mijoz") },
+                { value: "MASTER", label: t("Usta") },
               ]}
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as "REGULAR" | "MASTER" }))}
             />
           </div>
           <Input
-            label="Manzil"
+            label={t("Manzil")}
             value={form.address}
             onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
           />
           {!editing && (
             <div className="border-t pt-4">
               <CurrencyPairInput
-                label="Boshlang'ich qarz"
+                label={t("Boshlang'ich qarz")}
                 valueUzs={form.initialDebtUzs}
                 valueUsd={form.initialDebtUsd}
                 onChangeUzs={(v) => setForm((f) => ({ ...f, initialDebtUzs: v }))}
@@ -359,7 +361,7 @@ export function CustomersPage() {
             </div>
           )}
           <Input
-            label="Izoh"
+            label={t("Izoh")}
             value={form.notes}
             onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
           />
@@ -382,20 +384,20 @@ export function CustomersPage() {
               variant="danger"
               size="sm"
               onClick={() => {
-                if (detailId && confirm("Bu mijozni o'chirmoqchimisiz?")) {
+                if (detailId && confirm(getT()("Bu mijozni o'chirmoqchimisiz?"))) {
                   deleteMutation.mutate(detailId);
                 }
               }}
             >
               <Trash2 className="w-3.5 h-3.5" />
-              O'chirish
+              {t("O'chirish")}
             </Button>
             <div className="flex items-center gap-2">
               <Button variant="secondary" size="sm" onClick={() => setDetailId(null)}>
-                Bekor qilish
+                {t("Bekor qilish")}
               </Button>
               <Button size="sm" loading={updateMutation.isPending} onClick={handleSlideFormSave}>
-                Saqlash
+                {t("Saqlash")}
               </Button>
             </div>
           </div>
@@ -405,9 +407,9 @@ export function CustomersPage() {
           <div>
             <Tabs
               tabs={[
-                { id: "info", label: "Ma'lumot" },
-                { id: "debt", label: "Qarz" },
-                { id: "sales", label: "Sotuvlar", count: detail.sales.length },
+                { id: "info", label: t("Ma'lumot") },
+                { id: "debt", label: t("Qarz") },
+                { id: "sales", label: t("Sotuvlar"), count: detail.sales.length },
               ]}
               activeTab={detailTab}
               onChange={setDetailTab}
@@ -417,46 +419,46 @@ export function CustomersPage() {
               {detailTab === "info" && (
                 <div className="space-y-4">
                   <Input
-                    label="To'liq ism"
+                    label={t("To'liq ism")}
                     value={slideForm.fullName}
                     onChange={(e) => setSlideForm((f) => ({ ...f, fullName: e.target.value }))}
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <PhoneInput
-                      label="Telefon"
+                      label={t("Telefon")}
                       value={slideForm.phone}
                       onChange={(v) => setSlideForm((f) => ({ ...f, phone: v }))}
                     />
                     <PhoneInput
-                      label="Telefon 2"
+                      label={t("Telefon 2")}
                       value={slideForm.phone2}
                       onChange={(v) => setSlideForm((f) => ({ ...f, phone2: v }))}
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <Input
-                      label="Tug'ilgan sana"
+                      label={t("Tug'ilgan sana")}
                       type="date"
                       value={slideForm.birthday}
                       onChange={(e) => setSlideForm((f) => ({ ...f, birthday: e.target.value }))}
                     />
                     <Select
-                      label="Kategoriya"
+                      label={t("Kategoriya")}
                       options={[
-                        { value: "REGULAR", label: "Oddiy mijoz" },
-                        { value: "MASTER", label: "Usta" },
+                        { value: "REGULAR", label: t("Oddiy mijoz") },
+                        { value: "MASTER", label: t("Usta") },
                       ]}
                       value={slideForm.category}
                       onChange={(e) => setSlideForm((f) => ({ ...f, category: e.target.value as "REGULAR" | "MASTER" }))}
                     />
                   </div>
                   <Input
-                    label="Manzil"
+                    label={t("Manzil")}
                     value={slideForm.address}
                     onChange={(e) => setSlideForm((f) => ({ ...f, address: e.target.value }))}
                   />
                   <Input
-                    label="Izoh"
+                    label={t("Izoh")}
                     value={slideForm.notes}
                     onChange={(e) => setSlideForm((f) => ({ ...f, notes: e.target.value }))}
                   />
@@ -467,25 +469,25 @@ export function CustomersPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 bg-red-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">Jami qarz (UZS)</p>
+                      <p className="text-xs text-gray-500 mb-1">{t("Jami qarz (UZS)")}</p>
                       <p className="text-lg font-bold text-red-600">{formatUzs(debt.totalDebtUzs)}</p>
                     </div>
                     <div className="p-3 bg-blue-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">Jami qarz (USD)</p>
+                      <p className="text-xs text-gray-500 mb-1">{t("Jami qarz (USD)")}</p>
                       <p className="text-lg font-bold text-blue-600">{formatUsd(debt.totalDebtUsd)}</p>
                     </div>
                   </div>
                   <div className="text-xs text-gray-500 space-y-1">
                     <div className="flex justify-between">
-                      <span>Boshlang'ich qarz:</span>
+                      <span>{t("Boshlang'ich qarz:")}</span>
                       <span>{formatUzs(debt.initialDebtUzs)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Jami sotuvlar:</span>
+                      <span>{t("Jami sotuvlar:")}</span>
                       <span>{formatUzs(debt.totalSalesUzs)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Jami to'langan:</span>
+                      <span>{t("Jami to'langan:")}</span>
                       <span className="text-green-600">-{formatUzs(debt.totalPaidUzs)}</span>
                     </div>
                   </div>
@@ -495,7 +497,7 @@ export function CustomersPage() {
               {detailTab === "sales" && (
                 <div className="space-y-2">
                   {detail.sales.length === 0 ? (
-                    <EmptyState title="Sotuvlar yo'q" description="Bu mijoz hali xarid qilmagan" />
+                    <EmptyState title={t("Sotuvlar yo'q")} description={t("Bu mijoz hali xarid qilmagan")} />
                   ) : (
                     detail.sales.map((sale) => (
                       <div key={sale.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

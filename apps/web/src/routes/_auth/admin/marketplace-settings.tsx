@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useT, getT } from "@/hooks/useT";
 import {
   Eye, EyeOff, DollarSign, ToggleLeft, ToggleRight,
   Clock, Check, XCircle, ChevronDown, Image, Trash2, Upload, ExternalLink,
@@ -18,6 +19,7 @@ import { useAuthStore } from "@/store/auth.store";
 type TabId = "products" | "banners" | "orders";
 
 export function MarketplaceSettingsPage() {
+  const t = useT();
   const [activeTab, setActiveTab] = useState<TabId>("products");
 
   const ordersQuery = useQuery({
@@ -32,7 +34,7 @@ export function MarketplaceSettingsPage() {
     <>
       <PageHeader
         title="Marketplace"
-        subtitle="Mahsulotlar, reklama va buyurtmalarni boshqarish"
+        subtitle={t("Mahsulotlar, reklama va buyurtmalarni boshqarish")}
         actions={
           <a
             href="/marketplace"
@@ -41,7 +43,7 @@ export function MarketplaceSettingsPage() {
             className="flex items-center gap-1.5 px-3 py-2 bg-brand-50 text-brand-600 text-sm font-medium rounded-lg hover:bg-brand-100 transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
-            Marketplace'ni ko'rish
+            {t("Marketplace'ni ko'rish")}
           </a>
         }
       />
@@ -49,9 +51,9 @@ export function MarketplaceSettingsPage() {
       <div className="page-body">
         <Tabs
           tabs={[
-            { id: "products", label: "Mahsulotlar" },
-            { id: "banners", label: "Reklama" },
-            { id: "orders", label: "Buyurtmalar", count: pendingCount > 0 ? pendingCount : undefined },
+            { id: "products", label: t("Mahsulotlar") },
+            { id: "banners", label: t("Reklama") },
+            { id: "orders", label: t("Buyurtmalar"), count: pendingCount > 0 ? pendingCount : undefined },
           ]}
           activeTab={activeTab}
           onChange={(id) => setActiveTab(id as TabId)}
@@ -69,6 +71,7 @@ export function MarketplaceSettingsPage() {
 
 // ==================== PRODUCTS TAB ====================
 function ProductsTab() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
 
@@ -85,7 +88,7 @@ function ProductsTab() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product"] });
-      toast.success("Yangilandi");
+      toast.success(getT()("Yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -98,7 +101,7 @@ function ProductsTab() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product"] });
-      toast.success("Yangilandi");
+      toast.success(getT()("Yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -117,7 +120,7 @@ function ProductsTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product"] });
-      toast.success("Barcha mahsulotlar yangilandi");
+      toast.success(getT()("Barcha mahsulotlar yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -130,13 +133,13 @@ function ProductsTab() {
       <div className="flex items-center gap-3 mb-4">
         <div className="flex-1">
           <SearchInput
-            placeholder="Mahsulot qidirish..."
+            placeholder={t("Mahsulot qidirish...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onClear={() => setSearch("")}
           />
         </div>
-        <Badge variant="neutral">{visibleCount} / {products.length} ko'rinadi</Badge>
+        <Badge variant="neutral">{visibleCount} / {products.length} {t("ko'rinadi")}</Badge>
         <Button
           onClick={() => toggleAll.mutate(!allVisible)}
           disabled={toggleAll.isPending || products.length === 0}
@@ -144,25 +147,25 @@ function ProductsTab() {
           className="shrink-0"
         >
           {allVisible ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-          {allVisible ? "Barchasini yashirish" : "Barchasini ko'rsatish"}
+          {allVisible ? t("Barchasini yashirish") : t("Barchasini ko'rsatish")}
         </Button>
       </div>
 
       <Table>
         <TableHead>
           <tr>
-            <th>Mahsulot</th>
-            <th>Guruh</th>
-            <th>Narx</th>
-            <th>Marketplace da ko'rinsin</th>
-            <th>Narx ko'rsatilsin</th>
+            <th>{t("Mahsulot")}</th>
+            <th>{t("Guruh")}</th>
+            <th>{t("Narx")}</th>
+            <th>{t("Marketplace da ko'rinsin")}</th>
+            <th>{t("Narx ko'rsatilsin")}</th>
           </tr>
         </TableHead>
         <TableBody>
           {productsQuery.isLoading ? (
             <TableLoading colSpan={5} />
           ) : filtered.length === 0 ? (
-            <TableEmpty colSpan={5} message="Mahsulot topilmadi" />
+            <TableEmpty colSpan={5} message={t("Mahsulot topilmadi")} />
           ) : (
             filtered.map((product) => (
               <TableRow key={product.id}>
@@ -208,6 +211,7 @@ function ProductsTab() {
 const BANNER_FILES = ["reklama.webp", "reklama1.webp", "reklama2.webp", "reklama3.webp"];
 
 function BannersTab() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState<string | null>(null);
   const [bannerKeys, setBannerKeys] = useState(() => Date.now());
@@ -232,7 +236,7 @@ function BannersTab() {
       queryClient.invalidateQueries({ queryKey: ["banner-links"] });
       setSelectingProduct(null);
       setProductSearch("");
-      toast.success("Banner mahsuloti yangilandi");
+      toast.success(getT()("Banner mahsuloti yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -258,13 +262,13 @@ function BannersTab() {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Upload xatosi");
+        throw new Error(data.error || getT()("Upload xatosi"));
       }
 
-      toast.success(`${targetName} yangilandi`);
+      toast.success(`${targetName} ${getT()("yangilandi")}`);
       setBannerKeys(Date.now());
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload xatosi");
+      toast.error(err instanceof Error ? err.message : getT()("Upload xatosi"));
     } finally {
       setUploading(null);
     }
@@ -281,7 +285,7 @@ function BannersTab() {
   return (
     <div>
       <p className="text-sm text-gray-500 mb-4">
-        Reklama bannerlarini boshqaring. Har bir bannerga mahsulot biriktirsangiz, foydalanuvchi bosganda o'sha mahsulotga o'tadi.
+        {t("Reklama bannerlarini boshqaring. Har bir bannerga mahsulot biriktirsangiz, foydalanuvchi bosganda o'sha mahsulotga o'tadi.")}
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -318,7 +322,7 @@ function BannersTab() {
                     className="opacity-0 group-hover:opacity-100 transition-opacity px-4 py-2 bg-white/90 text-gray-800 text-sm font-medium rounded-lg hover:bg-white flex items-center gap-2"
                   >
                     <Upload className="w-4 h-4" />
-                    {uploading === name ? "Yuklanmoqda..." : "Rasm almashtirish"}
+                    {uploading === name ? t("Yuklanmoqda...") : t("Rasm almashtirish")}
                   </button>
                 </div>
               </div>
@@ -347,13 +351,13 @@ function BannersTab() {
                       </button>
                     </div>
                   ) : (
-                    <span className="text-xs text-gray-400 flex-1">Mahsulot biriktirilmagan</span>
+                    <span className="text-xs text-gray-400 flex-1">{t("Mahsulot biriktirilmagan")}</span>
                   )}
                   <button
                     onClick={() => setSelectingProduct(name)}
                     className="text-xs text-brand-600 font-medium hover:text-brand-700 shrink-0"
                   >
-                    {linkedId ? "O'zgartirish" : "Mahsulot tanlash"}
+                    {linkedId ? t("O'zgartirish") : t("Mahsulot tanlash")}
                   </button>
                 </div>
               </div>
@@ -364,7 +368,7 @@ function BannersTab() {
 
       <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-lg">
         <p className="text-xs text-amber-700">
-          Tavsiya: Banner rasmlari 1200x500px o'lchamda, WebP formatida bo'lsin.
+          {t("Tavsiya: Banner rasmlari 1200x500px o'lchamda, WebP formatida bo'lsin.")}
         </p>
       </div>
 
@@ -373,7 +377,7 @@ function BannersTab() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setSelectingProduct(null); setProductSearch(""); }}>
           <div className="bg-white rounded-xl shadow-2xl w-full sm:w-[500px] max-h-[80vh] mx-4 flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 py-3 border-b flex items-center justify-between shrink-0">
-              <h3 className="font-semibold text-gray-900 text-sm">Mahsulot tanlash — Banner {BANNER_FILES.indexOf(selectingProduct) + 1}</h3>
+              <h3 className="font-semibold text-gray-900 text-sm">{t("Mahsulot tanlash")} — Banner {BANNER_FILES.indexOf(selectingProduct) + 1}</h3>
               <button onClick={() => { setSelectingProduct(null); setProductSearch(""); }} className="text-gray-400 hover:text-gray-600">
                 <XCircle className="w-5 h-5" />
               </button>
@@ -381,7 +385,7 @@ function BannersTab() {
             <div className="px-4 py-2 border-b shrink-0">
               <input
                 type="text"
-                placeholder="Mahsulot qidirish..."
+                placeholder={t("Mahsulot qidirish...")}
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
@@ -390,9 +394,9 @@ function BannersTab() {
             </div>
             <div className="overflow-y-auto flex-1">
               {productsQuery.isLoading ? (
-                <div className="p-4 text-center text-sm text-gray-400">Yuklanmoqda...</div>
+                <div className="p-4 text-center text-sm text-gray-400">{t("Yuklanmoqda...")}</div>
               ) : filteredProducts.length === 0 ? (
-                <div className="p-4 text-center text-sm text-gray-400">Topilmadi</div>
+                <div className="p-4 text-center text-sm text-gray-400">{t("Topilmadi")}</div>
               ) : (
                 filteredProducts.map((product) => (
                   <button
@@ -429,6 +433,7 @@ function BannersTab() {
 
 // ==================== ORDERS TAB ====================
 function OrdersTab() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [expandedOrder, setExpandedOrder] = useState<number | null>(null);
@@ -443,7 +448,7 @@ function OrdersTab() {
       trpc.marketplaceOrder.updateStatus.mutate(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["marketplace-orders"] });
-      toast.success("Status yangilandi");
+      toast.success(getT()("Status yangilandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -454,9 +459,9 @@ function OrdersTab() {
     : orders.filter((o) => o.status === statusFilter);
 
   const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
-    PENDING: { label: "Kutilmoqda", color: "bg-amber-100 text-amber-700", icon: Clock },
-    CONFIRMED: { label: "Tasdiqlangan", color: "bg-emerald-100 text-emerald-700", icon: Check },
-    CANCELLED: { label: "Bekor qilingan", color: "bg-red-100 text-red-600", icon: XCircle },
+    PENDING: { label: t("Kutilmoqda"), color: "bg-amber-100 text-amber-700", icon: Clock },
+    CONFIRMED: { label: t("Tasdiqlangan"), color: "bg-emerald-100 text-emerald-700", icon: Check },
+    CANCELLED: { label: t("Bekor qilingan"), color: "bg-red-100 text-red-600", icon: XCircle },
   };
 
   const counts = {
@@ -471,10 +476,10 @@ function OrdersTab() {
       {/* Status filters */}
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         {([
-          { id: "all", label: "Barchasi" },
-          { id: "PENDING", label: "Kutilmoqda" },
-          { id: "CONFIRMED", label: "Tasdiqlangan" },
-          { id: "CANCELLED", label: "Bekor qilingan" },
+          { id: "all", label: t("Barchasi") },
+          { id: "PENDING", label: t("Kutilmoqda") },
+          { id: "CONFIRMED", label: t("Tasdiqlangan") },
+          { id: "CANCELLED", label: t("Bekor qilingan") },
         ] as const).map((f) => (
           <button
             key={f.id}
@@ -502,7 +507,7 @@ function OrdersTab() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-gray-400 text-sm">
-          Buyurtmalar topilmadi
+          {t("Buyurtmalar topilmadi")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -558,8 +563,8 @@ function OrdersTab() {
 
                     {/* Info */}
                     <div className="mt-3 pt-3 border-t border-gray-100 space-y-1 text-xs text-gray-500">
-                      {order.address && <p>Manzil: <span className="text-gray-700">{order.address}</span></p>}
-                      {order.notes && <p>Izoh: <span className="text-gray-700">{order.notes}</span></p>}
+                      {order.address && <p>{t("Manzil")}: <span className="text-gray-700">{order.address}</span></p>}
+                      {order.notes && <p>{t("Izoh")}: <span className="text-gray-700">{order.notes}</span></p>}
                     </div>
 
                     {/* Actions */}
@@ -571,7 +576,7 @@ function OrdersTab() {
                           className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
                         >
                           <Check className="w-3.5 h-3.5" />
-                          Tasdiqlash
+                          {t("Tasdiqlash")}
                         </button>
                         <button
                           onClick={() => updateStatus.mutate({ id: order.id, status: "CANCELLED" })}
@@ -579,7 +584,7 @@ function OrdersTab() {
                           className="flex items-center gap-1.5 px-4 py-2 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
                         >
                           <XCircle className="w-3.5 h-3.5" />
-                          Bekor qilish
+                          {t("Bekor qilish")}
                         </button>
                       </div>
                     )}

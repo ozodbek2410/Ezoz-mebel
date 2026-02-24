@@ -1,4 +1,5 @@
 import { MapPin, Phone, Clock, MessageCircle, ExternalLink, Info } from "lucide-react";
+import { useT } from "@/hooks/useT";
 
 interface ProfilePageProps {
   companyName: string;
@@ -8,12 +9,13 @@ interface ProfilePageProps {
 }
 
 export function ProfilePage({ companyName, companyPhone, companyAddress, companyWorkHours }: ProfilePageProps) {
+  const t = useT();
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center gap-2">
           <Info className="w-5 h-5 text-brand-600" />
-          <span className="text-sm font-semibold text-gray-800">Biz haqimizda</span>
+          <span className="text-sm font-semibold text-gray-800">{t("Biz haqimizda")}</span>
         </div>
       </header>
 
@@ -25,7 +27,7 @@ export function ProfilePage({ companyName, companyPhone, companyAddress, company
               <span className="text-white font-bold text-xl">EZ</span>
             </div>
             <h2 className="text-xl font-bold text-white">{companyName}</h2>
-            <p className="text-sm text-white/60 mt-1">Mebel do'koni</p>
+            <p className="text-sm text-white/60 mt-1">{t("Mebel do'koni")}</p>
           </div>
 
           <div className="p-4 space-y-3">
@@ -38,7 +40,7 @@ export function ProfilePage({ companyName, companyPhone, companyAddress, company
                   <Phone className="w-5 h-5 text-brand-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Telefon</p>
+                  <p className="text-xs text-gray-400">{t("Telefon")}</p>
                   <p className="text-sm font-medium text-gray-800">{companyPhone}</p>
                 </div>
               </a>
@@ -50,7 +52,7 @@ export function ProfilePage({ companyName, companyPhone, companyAddress, company
                   <MapPin className="w-5 h-5 text-brand-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Manzil</p>
+                  <p className="text-xs text-gray-400">{t("Manzil")}</p>
                   <p className="text-sm font-medium text-gray-800">{companyAddress}</p>
                 </div>
               </div>
@@ -62,7 +64,7 @@ export function ProfilePage({ companyName, companyPhone, companyAddress, company
                   <Clock className="w-5 h-5 text-brand-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Ish vaqti</p>
+                  <p className="text-xs text-gray-400">{t("Ish vaqti")}</p>
                   <p className="text-sm font-medium text-gray-800">{companyWorkHours}</p>
                 </div>
               </div>
@@ -72,14 +74,14 @@ export function ProfilePage({ companyName, companyPhone, companyAddress, company
 
         {/* Features */}
         <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Xizmatlarimiz</h3>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{t("Xizmatlarimiz")}</h3>
           <div className="space-y-3">
             {[
-              { title: "Mebel ishlab chiqarish", desc: "Buyurtma asosida sifatli mebel" },
-              { title: "Bepul yetkazib berish", desc: "Shahar bo'ylab bepul yetkazamiz" },
-              { title: "O'rnatish xizmati", desc: "Professional o'rnatish xizmati" },
-              { title: "Kafolat", desc: "1 yillik kafolat beramiz" },
-              { title: "Nasiya", desc: "12 oygacha bo'lib to'lash imkoniyati" },
+              { title: t("Mebel ishlab chiqarish"), desc: t("Buyurtma asosida sifatli mebel") },
+              { title: t("Bepul yetkazib berish"), desc: t("Shahar bo'ylab bepul yetkazamiz") },
+              { title: t("O'rnatish xizmati"), desc: t("Professional o'rnatish xizmati") },
+              { title: t("Kafolat"), desc: t("1 yillik kafolat beramiz") },
+              { title: t("Nasiya"), desc: t("12 oygacha bo'lib to'lash imkoniyati") },
             ].map((service, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div className="w-6 h-6 bg-emerald-50 rounded-full flex items-center justify-center shrink-0 mt-0.5">
@@ -102,7 +104,7 @@ export function ProfilePage({ companyName, companyPhone, companyAddress, company
               className="flex items-center justify-center gap-2 w-full py-3 bg-brand-600 text-white rounded-xl text-sm font-semibold"
             >
               <Phone className="w-4 h-4" />
-              Qo'ng'iroq qilish
+              {t("Qo'ng'iroq qilish")}
             </a>
           )}
           {companyPhone && (
@@ -113,7 +115,7 @@ export function ProfilePage({ companyName, companyPhone, companyAddress, company
               className="flex items-center justify-center gap-2 w-full py-3 bg-[#0088cc] text-white rounded-xl text-sm font-semibold"
             >
               <MessageCircle className="w-4 h-4" />
-              Telegram orqali yozish
+              {t("Telegram orqali yozish")}
             </a>
           )}
         </div>

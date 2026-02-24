@@ -4,20 +4,22 @@ import { Save, Building2, StickyNote } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button, Input, Tabs } from "@/components/ui";
+import { useT, getT } from "@/hooks/useT";
 import toast from "react-hot-toast";
 
 export function AdminSettingsPage() {
+  const t = useT();
   const [activeTab, setActiveTab] = useState("company");
 
   return (
     <>
-      <PageHeader title="Sozlamalar" />
+      <PageHeader title={t("Sozlamalar")} />
 
       <div className="page-body">
         <Tabs
           tabs={[
-            { id: "company", label: "Kompaniya" },
-            { id: "notes", label: "Eslatmalar" },
+            { id: "company", label: t("Kompaniya") },
+            { id: "notes", label: t("Eslatmalar") },
           ]}
           activeTab={activeTab}
           onChange={setActiveTab}
@@ -34,6 +36,7 @@ export function AdminSettingsPage() {
 
 // ===== Company Info =====
 function CompanyInfoTab() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [form, setForm] = useState({
     name: "",
@@ -66,7 +69,7 @@ function CompanyInfoTab() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
-      toast.success("Saqlandi");
+      toast.success(getT()("Saqlandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -75,16 +78,16 @@ function CompanyInfoTab() {
     <div className="card card-body max-w-xl">
       <div className="flex items-center gap-2 mb-4">
         <Building2 className="w-5 h-5 text-brand-600" />
-        <h3 className="text-base font-semibold">Kompaniya ma'lumotlari</h3>
+        <h3 className="text-base font-semibold">{t("Kompaniya ma'lumotlari")}</h3>
       </div>
       <div className="space-y-4">
-        <Input label="Kompaniya nomi" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="EZOZ MEBEL" />
-        <Input label="Manzil" value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
-        <Input label="Telefon" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
-        <Input label="Ish vaqti" value={form.workHours} onChange={(e) => setForm((f) => ({ ...f, workHours: e.target.value }))} placeholder="09:00 - 18:00" />
+        <Input label={t("Kompaniya nomi")} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="EZOZ MEBEL" />
+        <Input label={t("Manzil")} value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
+        <Input label={t("Telefon")} value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+        <Input label={t("Ish vaqti")} value={form.workHours} onChange={(e) => setForm((f) => ({ ...f, workHours: e.target.value }))} placeholder="09:00 - 18:00" />
         <Button loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
           <Save className="w-4 h-4" />
-          Saqlash
+          {t("Saqlash")}
         </Button>
       </div>
     </div>
@@ -93,6 +96,7 @@ function CompanyInfoTab() {
 
 // ===== Notes =====
 function NotesTab() {
+  const t = useT();
   const queryClient = useQueryClient();
   const [content, setContent] = useState("");
 
@@ -111,7 +115,7 @@ function NotesTab() {
     mutationFn: () => trpc.settings.saveNote.mutate({ content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings", "notes"] });
-      toast.success("Saqlandi");
+      toast.success(getT()("Saqlandi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -130,7 +134,7 @@ function NotesTab() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <StickyNote className="w-5 h-5 text-amber-500" />
-          <h3 className="text-base font-semibold">Eslatmalar</h3>
+          <h3 className="text-base font-semibold">{t("Eslatmalar")}</h3>
         </div>
         <span className="text-xs text-gray-400">{content.length}/800</span>
       </div>
@@ -140,13 +144,13 @@ function NotesTab() {
         onChange={(e) => {
           if (e.target.value.length <= 800) setContent(e.target.value);
         }}
-        placeholder="Bu yerga eslatmalar yozing..."
+        placeholder={t("Bu yerga eslatmalar yozing...")}
       />
       <div className="mt-3 flex items-center justify-between">
-        <span className="text-xs text-gray-400">Avtomatik saqlanadi (60s)</span>
+        <span className="text-xs text-gray-400">{t("Avtomatik saqlanadi (60s)")}</span>
         <Button size="sm" loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
           <Save className="w-3.5 h-3.5" />
-          Saqlash
+          {t("Saqlash")}
         </Button>
       </div>
     </div>

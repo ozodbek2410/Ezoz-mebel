@@ -9,6 +9,8 @@ import { useMutation } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc";
 import { useAuthStore } from "@/store/auth.store";
 import toast from "react-hot-toast";
+import { useT, getT } from "@/hooks/useT";
+import { LocaleToggle } from "@/components/ui";
 import {
   LayoutDashboard,
   Users,
@@ -108,6 +110,7 @@ function CollapsibleSection({
   onToggle: () => void;
   collapsed: boolean;
 }) {
+  const t = useT();
   const isItemActive = (item: NavItem): boolean => {
     const cleanPath = pathname.replace(/\/+$/, "");
     const cleanHref = item.href.replace(/\/+$/, "");
@@ -142,7 +145,7 @@ function CollapsibleSection({
                   ? "bg-sidebar-active text-white shadow-sm shadow-brand-500/20"
                   : "text-gray-400 hover:bg-sidebar-hover hover:text-white"
               }`}
-              title={item.label}
+              title={t(item.label)}
             >
               <item.icon size={18} strokeWidth={1.8} />
             </Link>
@@ -159,7 +162,7 @@ function CollapsibleSection({
       <button onClick={onToggle} className="sidebar-section-header">
         <section.icon size={16} className={hasActiveItem ? "text-brand-400" : "text-gray-300"} />
         <span className={`flex-1 text-left ${hasActiveItem ? "!text-brand-400" : ""}`}>
-          {section.title}
+          {t(section.title)}
         </span>
         <ChevronDown
           size={14}
@@ -184,7 +187,7 @@ function CollapsibleSection({
                 className={`sidebar-link ${isActive ? "active" : ""}`}
               >
                 <item.icon size={18} strokeWidth={1.8} />
-                <span>{item.label}</span>
+                <span>{t(item.label)}</span>
               </Link>
             );
           })}
@@ -196,6 +199,7 @@ function CollapsibleSection({
 
 // ===== Edit Profile Modal =====
 function EditProfileModal({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const [fullName, setFullName] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -210,7 +214,7 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
     mutationFn: () => trpc.auth.updateProfile.mutate({ fullName }),
     onSuccess: () => {
       useAuthStore.getState().updateProfile({ fullName });
-      toast.success("Profil yangilandi");
+      toast.success(getT()("Profil yangilandi"));
       onClose();
     },
     onError: (err) => toast.error(err.message),
@@ -219,7 +223,7 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
   const changePassword = useMutation({
     mutationFn: () => trpc.auth.changePassword.mutate({ currentPassword, newPassword }),
     onSuccess: () => {
-      toast.success("Parol o'zgartirildi");
+      toast.success(getT()("Parol o'zgartirildi"));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -228,8 +232,8 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
   });
 
   function handlePasswordChange() {
-    if (newPassword.length < 4) { toast.error("Parol kamida 4 belgi"); return; }
-    if (newPassword !== confirmPassword) { toast.error("Parollar mos kelmadi"); return; }
+    if (newPassword.length < 4) { toast.error(getT()("Parol kamida 4 belgi")); return; }
+    if (newPassword !== confirmPassword) { toast.error(getT()("Parollar mos kelmadi")); return; }
     changePassword.mutate();
   }
 
@@ -237,7 +241,7 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl w-full sm:w-[400px] max-h-[90vh] mx-4 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h3 className="font-semibold text-gray-900">Profilni tahrirlash</h3>
+          <h3 className="font-semibold text-gray-900">{t("Profilni tahrirlash")}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
             <X size={18} />
           </button>
@@ -246,7 +250,7 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
         <div className="px-5 py-4 space-y-5">
           {/* Profile section */}
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">To'liq ism</label>
+            <label className="block text-sm font-medium text-gray-700">{t("To'liq ism")}</label>
             <input
               type="text"
               className="input-field"
@@ -259,7 +263,7 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
               onClick={() => updateProfile.mutate()}
             >
               <Save size={14} />
-              {updateProfile.isPending ? "Saqlanmoqda..." : "Saqlash"}
+              {updateProfile.isPending ? t("Saqlanmoqda...") : t("Saqlash")}
             </button>
           </div>
 
@@ -267,26 +271,26 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
           <div className="border-t pt-4 space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <Lock size={14} className="text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Parolni o'zgartirish</span>
+              <span className="text-sm font-medium text-gray-700">{t("Parolni o'zgartirish")}</span>
             </div>
             <input
               type="password"
               className="input-field"
-              placeholder="Joriy parol"
+              placeholder={t("Joriy parol")}
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
             />
             <input
               type="password"
               className="input-field"
-              placeholder="Yangi parol"
+              placeholder={t("Yangi parol")}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
             />
             <input
               type="password"
               className="input-field"
-              placeholder="Yangi parolni tasdiqlash"
+              placeholder={t("Yangi parolni tasdiqlash")}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
@@ -296,7 +300,7 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
               onClick={handlePasswordChange}
             >
               <Lock size={14} />
-              {changePassword.isPending ? "O'zgartirilmoqda..." : "Parolni o'zgartirish"}
+              {changePassword.isPending ? t("O'zgartirilmoqda...") : t("Parolni o'zgartirish")}
             </button>
           </div>
         </div>
@@ -320,6 +324,7 @@ export function MobileMenuButton() {
 
 // ===== Main Sidebar =====
 export function Sidebar() {
+  const t = useT();
   const { user, logout, can } = useAuth();
   const { canInstall, install } = usePWA();
   const location = useLocation();
@@ -378,7 +383,7 @@ export function Sidebar() {
               <button
                 onClick={toggleSidebarCollapsed}
                 className="hidden lg:flex text-gray-500 hover:text-white p-1 transition-colors"
-                title="Yig'ish"
+                title={t("Yig'ish")}
               >
                 <ChevronLeft size={18} />
               </button>
@@ -394,7 +399,7 @@ export function Sidebar() {
             <button
               onClick={toggleSidebarCollapsed}
               className="hidden lg:flex absolute right-1 top-5 text-gray-500 hover:text-white p-1 transition-colors"
-              title="Kengaytirish"
+              title={t("Kengaytirish")}
             >
               <ChevronRight size={16} />
             </button>
@@ -437,10 +442,15 @@ export function Sidebar() {
               className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-lg transition-colors"
             >
               <Download size={14} />
-              Ilovani o'rnatish
+              {t("Ilovani o'rnatish")}
             </button>
           </div>
         )}
+
+        {/* Locale toggle */}
+        <div className={`px-3 pb-2 ${sidebarCollapsed ? "flex justify-center" : ""}`}>
+          <LocaleToggle collapsed={sidebarCollapsed} />
+        </div>
 
         {/* User section */}
         <div className={`sidebar-user ${sidebarCollapsed ? "flex-col gap-2 px-2" : ""}`}>
@@ -456,7 +466,7 @@ export function Sidebar() {
               <button
                 onClick={() => setEditProfileOpen(true)}
                 className="text-gray-500 hover:text-brand-400 transition-colors p-1"
-                title="Tahrirlash"
+                title={t("Tahrirlash")}
               >
                 <Edit2 size={14} />
               </button>
@@ -465,7 +475,7 @@ export function Sidebar() {
           <button
             onClick={logout}
             className="text-gray-500 hover:text-red-400 transition-colors p-1"
-            title="Chiqish"
+            title={t("Chiqish")}
           >
             <LogOut size={16} />
           </button>

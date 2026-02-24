@@ -6,8 +6,10 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { SearchInput, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, Badge, Modal, Button, Select } from "@/components/ui";
 import { CurrencyDisplay } from "@/components/shared";
 import { formatUzs, formatUsd } from "@ezoz/shared";
+import { useT } from "@/hooks/useT";
 
 export function ReceiptsPage() {
+  const t = useT();
   const [search, setSearch] = useState("");
   const [previewSaleId, setPreviewSaleId] = useState<number | null>(null);
   const [printerSize, setPrinterSize] = useState("80mm");
@@ -62,12 +64,12 @@ export function ReceiptsPage() {
 
   return (
     <>
-      <PageHeader title="Cheklar" subtitle={`${filtered.length} ta chek`} />
+      <PageHeader title={t("Cheklar")} subtitle={`${filtered.length} ${t("ta chek")}`} />
 
       <div className="page-body">
         <div className="mb-4">
           <SearchInput
-            placeholder="Hujjat raqami yoki mijoz nomi..."
+            placeholder={t("Hujjat raqami yoki mijoz nomi...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onClear={() => setSearch("")}
@@ -78,19 +80,19 @@ export function ReceiptsPage() {
         <Table>
           <TableHead>
             <tr>
-              <th>Hujjat</th>
-              <th className="hidden sm:table-cell">Sana</th>
-              <th className="hidden md:table-cell">Mijoz</th>
-              <th className="hidden sm:table-cell">Turi</th>
-              <th>Summa</th>
-              <th className="w-20">Chop etish</th>
+              <th>{t("Hujjat")}</th>
+              <th className="hidden sm:table-cell">{t("Sana")}</th>
+              <th className="hidden md:table-cell">{t("Mijoz")}</th>
+              <th className="hidden sm:table-cell">{t("Turi")}</th>
+              <th>{t("Summa")}</th>
+              <th className="w-20">{t("Chop etish")}</th>
             </tr>
           </TableHead>
           <TableBody>
             {salesQuery.isLoading ? (
               <TableLoading colSpan={6} />
             ) : filtered.length === 0 ? (
-              <TableEmpty colSpan={6} message="Cheklar topilmadi" />
+              <TableEmpty colSpan={6} message={t("Cheklar topilmadi")} />
             ) : (
               filtered.map((sale) => (
                 <TableRow key={sale.id}>
@@ -101,7 +103,7 @@ export function ReceiptsPage() {
                   <td className="hidden md:table-cell">{sale.customer?.fullName || "-"}</td>
                   <td className="hidden sm:table-cell">
                     <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
-                      {sale.saleType === "PRODUCT" ? "Savdo" : "Xizmat"}
+                      {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}
                     </Badge>
                   </td>
                   <td>
@@ -127,7 +129,7 @@ export function ReceiptsPage() {
       <Modal
         open={previewSaleId !== null}
         onClose={() => setPreviewSaleId(null)}
-        title="Chek ko'rish"
+        title={t("Chek ko'rish")}
         size="sm"
         footer={
           <div className="flex items-center justify-between w-full">
@@ -141,7 +143,7 @@ export function ReceiptsPage() {
             />
             <Button onClick={handlePrint}>
               <Printer className="w-4 h-4" />
-              Chop etish
+              {t("Chop etish")}
             </Button>
           </div>
         }
@@ -156,10 +158,10 @@ export function ReceiptsPage() {
             </div>
 
             <div className="mb-2 space-y-0.5">
-              <div className="flex justify-between"><span>Chek:</span><span className="font-bold">{detail.documentNo}</span></div>
-              <div className="flex justify-between"><span>Sana:</span><span>{new Date(detail.createdAt).toLocaleString("uz")}</span></div>
-              {detail.customer && <div className="flex justify-between"><span>Mijoz:</span><span>{detail.customer.fullName}</span></div>}
-              <div className="flex justify-between"><span>Kassir:</span><span>{detail.cashier.fullName}</span></div>
+              <div className="flex justify-between"><span>{t("Chek:")} </span><span className="font-bold">{detail.documentNo}</span></div>
+              <div className="flex justify-between"><span>{t("Sana:")} </span><span>{new Date(detail.createdAt).toLocaleString("uz")}</span></div>
+              {detail.customer && <div className="flex justify-between"><span>{t("Mijoz:")} </span><span>{detail.customer.fullName}</span></div>}
+              <div className="flex justify-between"><span>{t("Kassir:")} </span><span>{detail.cashier.fullName}</span></div>
             </div>
 
             <div className="border-t border-dashed border-gray-400 my-2" />
@@ -179,7 +181,7 @@ export function ReceiptsPage() {
             <div className="border-t border-dashed border-gray-400 my-2" />
 
             <div className="flex justify-between text-sm font-bold">
-              <span>JAMI:</span>
+              <span>{t("JAMI:")}</span>
               <span>{formatUzs(Number(detail.totalUzs))}</span>
             </div>
             {Number(detail.totalUsd) > 0 && (
@@ -202,7 +204,7 @@ export function ReceiptsPage() {
             )}
 
             <div className="border-t border-dashed border-gray-400 my-2" />
-            <p className="text-center text-gray-500" style={{ fontSize: "10px" }}>Xaridingiz uchun rahmat!</p>
+            <p className="text-center text-gray-500" style={{ fontSize: "10px" }}>{t("Xaridingiz uchun rahmat!")}</p>
           </div>
         )}
       </Modal>

@@ -5,6 +5,7 @@ import { PhoneInput } from "@/components/ui";
 import { formatUzs } from "@ezoz/shared";
 import { useMarketplaceStore } from "@/store/marketplace.store";
 import { trpc } from "@/lib/trpc";
+import { useT } from "@/hooks/useT";
 
 interface CartPageProps {
   companyName: string;
@@ -14,6 +15,7 @@ interface CartPageProps {
 }
 
 export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }: CartPageProps) {
+  const t = useT();
   const { cart, removeFromCart, updateQuantity, clearCart, getCartTotal } = useMarketplaceStore();
   const [showCheckout, setShowCheckout] = useState(false);
   const [name, setName] = useState("");
@@ -58,23 +60,23 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
             <div className="w-16 h-16 lg:w-20 lg:h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 lg:w-10 lg:h-10 text-emerald-600" />
             </div>
-            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2">Buyurtma qabul qilindi!</h2>
-            <p className="text-sm lg:text-base text-gray-500 mb-1">Buyurtma raqami: <span className="font-semibold text-gray-800">#{orderId}</span></p>
+            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2">{t("Buyurtma qabul qilindi!")}</h2>
+            <p className="text-sm lg:text-base text-gray-500 mb-1">{t("Buyurtma raqami:")} <span className="font-semibold text-gray-800">#{orderId}</span></p>
             <p className="text-xs lg:text-sm text-gray-400 mb-6">
-              Tez orada operatorimiz siz bilan bog'lanadi
+              {t("Tez orada operatorimiz siz bilan bog'lanadi")}
             </p>
             <div className="space-y-2">
               <button
                 onClick={onOrderSuccess}
                 className="w-full py-3 bg-brand-600 text-white rounded-xl text-sm font-semibold hover:bg-brand-700 transition-colors"
               >
-                Buyurtmalarni ko'rish
+                {t("Buyurtmalarni ko'rish")}
               </button>
               <button
                 onClick={onGoHome}
                 className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-200 transition-colors"
               >
-                Xarid davom ettirish
+                {t("Xarid davom ettirish")}
               </button>
             </div>
           </div>
@@ -92,7 +94,7 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
             <button onClick={() => setShowCheckout(false)} className="p-1.5 -ml-1.5 rounded-lg hover:bg-gray-100">
               <ArrowLeft className="w-5 h-5 text-gray-700" />
             </button>
-            <span className="text-sm lg:text-base font-semibold text-gray-800">Buyurtma berish</span>
+            <span className="text-sm lg:text-base font-semibold text-gray-800">{t("Buyurtma berish")}</span>
           </div>
         </header>
 
@@ -102,39 +104,39 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
             <div className="space-y-4">
               {/* Customer info form */}
               <div className="bg-white rounded-2xl border border-gray-200 p-5 lg:p-6 space-y-4">
-                <h3 className="text-sm font-semibold text-gray-800">Ma'lumotlaringiz</h3>
+                <h3 className="text-sm font-semibold text-gray-800">{t("Ma'lumotlaringiz")}</h3>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Ism *</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">{t("Ism *")}</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Ismingiz"
+                    placeholder={t("Ismingiz")}
                     className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                   />
                 </div>
                 <PhoneInput
-                  label="Telefon raqam *"
+                  label={t("Telefon raqam *")}
                   value={phone}
                   onChange={setPhone}
                   className="!bg-gray-50 !border-gray-200 !rounded-xl"
                 />
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Manzil</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">{t("Manzil")}</label>
                   <input
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Yetkazib berish manzili"
+                    placeholder={t("Yetkazib berish manzili")}
                     className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Izoh</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">{t("Izoh")}</label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Qo'shimcha izoh..."
+                    placeholder={t("Qo'shimcha izoh...")}
                     rows={3}
                     className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 resize-none transition-all"
                   />
@@ -151,7 +153,7 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
             {/* RIGHT — order summary + submit */}
             <div className="mt-4 lg:mt-0">
               <div className="bg-white rounded-2xl border border-gray-200 p-5 lg:p-6 lg:sticky lg:top-24">
-                <h3 className="text-sm font-semibold text-gray-800 mb-4">Buyurtma</h3>
+                <h3 className="text-sm font-semibold text-gray-800 mb-4">{t("Buyurtma")}</h3>
                 <div className="space-y-2.5 max-h-[300px] overflow-y-auto">
                   {cart.map((item) => (
                     <div key={item.productId} className="flex justify-between text-sm">
@@ -161,7 +163,7 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
                   ))}
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between">
-                  <span className="text-sm font-semibold text-gray-800">Jami:</span>
+                  <span className="text-sm font-semibold text-gray-800">{t("Jami:")}</span>
                   <span className="text-lg font-bold text-gray-900">{formatUzs(total)}</span>
                 </div>
 
@@ -171,7 +173,7 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
                   disabled={!name.trim() || !phone.trim() || createOrder.isPending}
                   className="w-full mt-5 py-3.5 bg-brand-600 text-white rounded-xl font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-brand-700 transition-colors"
                 >
-                  {createOrder.isPending ? "Yuborilmoqda..." : `Buyurtma berish — ${formatUzs(total)}`}
+                  {createOrder.isPending ? t("Yuborilmoqda...") : `${t("Buyurtma berish")} — ${formatUzs(total)}`}
                 </button>
               </div>
             </div>
@@ -186,7 +188,7 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
               disabled={!name.trim() || !phone.trim() || createOrder.isPending}
               className="w-full py-3 bg-brand-600 text-white rounded-xl font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-brand-700 transition-colors"
             >
-              {createOrder.isPending ? "Yuborilmoqda..." : `Buyurtma berish — ${formatUzs(total)}`}
+              {createOrder.isPending ? t("Yuborilmoqda...") : `${t("Buyurtma berish")} — ${formatUzs(total)}`}
             </button>
           </div>
         </div>
@@ -202,7 +204,7 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
         <div className="max-w-7xl mx-auto px-4 h-14 lg:h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShoppingBag className="w-5 h-5 text-brand-600" />
-            <span className="text-sm lg:text-base font-semibold text-gray-800">Savatcha</span>
+            <span className="text-sm lg:text-base font-semibold text-gray-800">{t("Savatcha")}</span>
             {cart.length > 0 && (
               <span className="text-xs text-gray-400">({cart.length} ta)</span>
             )}
@@ -213,7 +215,7 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
               className="text-xs text-red-500 font-medium flex items-center gap-1 hover:text-red-600 transition-colors"
             >
               <Trash2 className="w-3 h-3" />
-              Tozalash
+              {t("Tozalash")}
             </button>
           )}
         </div>
@@ -223,13 +225,13 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
         {cart.length === 0 ? (
           <div className="text-center py-20">
             <ShoppingBag className="w-14 h-14 text-gray-200 mx-auto mb-3" />
-            <p className="text-gray-400 text-sm mb-1">Savatcha bo'sh</p>
-            <p className="text-xs text-gray-300 mb-4">Mahsulotlarni savatga qo'shing</p>
+            <p className="text-gray-400 text-sm mb-1">{t("Savatcha bo'sh")}</p>
+            <p className="text-xs text-gray-300 mb-4">{t("Mahsulotlarni savatga qo'shing")}</p>
             <button
               onClick={onGoHome}
               className="px-6 py-2.5 bg-brand-600 text-white rounded-xl text-sm font-semibold hover:bg-brand-700 transition-colors"
             >
-              Xarid qilish
+              {t("Xarid qilish")}
             </button>
           </div>
         ) : (
@@ -290,26 +292,26 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
             {/* RIGHT — Summary + checkout button (desktop) */}
             <div className="hidden lg:block mt-0">
               <div className="bg-white rounded-2xl border border-gray-200 p-6 sticky top-24">
-                <h3 className="text-sm font-semibold text-gray-800 mb-4">Buyurtma xulosasi</h3>
+                <h3 className="text-sm font-semibold text-gray-800 mb-4">{t("Buyurtma xulosasi")}</h3>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Mahsulotlar ({cart.length} ta)</span>
+                    <span className="text-gray-500">{t("Mahsulotlar")} ({cart.length} {t("ta")})</span>
                     <span className="font-medium text-gray-700">{formatUzs(total)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Yetkazish</span>
-                    <span className="font-medium text-emerald-600">Bepul</span>
+                    <span className="text-gray-500">{t("Yetkazish")}</span>
+                    <span className="font-medium text-emerald-600">{t("Bepul")}</span>
                   </div>
                 </div>
                 <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between">
-                  <span className="text-base font-semibold text-gray-800">Jami:</span>
+                  <span className="text-base font-semibold text-gray-800">{t("Jami:")}</span>
                   <span className="text-xl font-bold text-gray-900">{formatUzs(total)}</span>
                 </div>
                 <button
                   onClick={() => setShowCheckout(true)}
                   className="w-full mt-5 py-3.5 bg-brand-600 text-white rounded-xl font-semibold text-sm hover:bg-brand-700 transition-colors"
                 >
-                  Buyurtma berish
+                  {t("Buyurtma berish")}
                 </button>
               </div>
             </div>
@@ -322,14 +324,14 @@ export function CartPage({ companyName, companyPhone, onGoHome, onOrderSuccess }
         <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 px-4 py-3 z-40 lg:hidden">
           <div className="max-w-3xl mx-auto">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs text-gray-500">{cart.length} ta mahsulot</span>
+              <span className="text-xs text-gray-500">{cart.length} {t("ta mahsulot")}</span>
               <span className="text-sm font-bold text-gray-900">{formatUzs(total)}</span>
             </div>
             <button
               onClick={() => setShowCheckout(true)}
               className="w-full py-3 bg-brand-600 text-white rounded-xl font-semibold text-sm hover:bg-brand-700 transition-colors"
             >
-              Buyurtma berish
+              {t("Buyurtma berish")}
             </button>
           </div>
         </div>
