@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -208,6 +208,7 @@ export function ProductsPage() {
         search: search || undefined,
         page,
       }),
+    placeholderData: keepPreviousData,
   });
 
   const productDetailQuery = useQuery({
@@ -633,7 +634,7 @@ export function ProductsPage() {
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className={`overflow-x-auto transition-opacity${productsQuery.isFetching && productsQuery.isPlaceholderData ? " opacity-60 pointer-events-none" : ""}`}>
             <Table>
               <TableHead>
                 <tr>

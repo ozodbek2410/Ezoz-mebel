@@ -146,4 +146,45 @@ export const customerRouter = router({
         totalPaidUsd: Number(paymentsTotal._sum.amountUsd ?? 0),
       };
     }),
+
+  // Returns completed/open sales with outstanding (unpaid) balance, oldest first
+  getUnpaidSales: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const sales = await ctx.db.sale.findMany({
+        where: { customerId: input.id, status: { not: "CANCELLED" } },
+        include: {
+          payments: { select: { amountUzs: true, amountUsd: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+      return sales
+        .map((sale) => {
+          const paidUzs = sale.payments.reduce((s, p) => s + Number(p.amountUzs), 0);
+          const debtUzs = Number(sale.totalUzs) - paidUzs;
+          return {
+            id: sale.id,
+            createdAt: sale.createdAt,
+            totalUzs: Number(sale.totalUzs),
+            paidUzs,
+            debtUzs,
+          };
+        })
+        .filter((s) => s.debtUzs > 0.01);
+    }),
+
+  // Increases initialDebtUzs for manual debt entry (e.g. borrowed outside system)
+  addManualDebt: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      amountUzs: z.number().positive(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const customer = await ctx.db.customer.findUniqueOrThrow({ where: { id: input.id } });
+      return ctx.db.customer.update({
+        where: { id: input.id },
+        data: { initialDebtUzs: Number(customer.initialDebtUzs) + input.amountUzs },
+      });
+    }),
 });

@@ -150,7 +150,6 @@ function RecentSalesCard({ sales }: { sales: RecentSale[] }) {
               <div key={sale.id} className="px-5 py-3 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-gray-500">{sale.documentNo}</span>
                     <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
                       {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}
                     </Badge>

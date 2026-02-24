@@ -8,7 +8,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
-  Button, Modal, Input, Select, CurrencyPairInput, SearchInput,
+  Button, Modal, Input, Select, SearchInput,
   Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading,
   Badge, Tabs,
 } from "@/components/ui";
@@ -55,11 +55,12 @@ function SalesPageInner() {
   // Payment
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentSaleId, setPaymentSaleId] = useState<number | null>(null);
+  const [paymentSaleTotal, setPaymentSaleTotal] = useState(0);
+  const [paymentCustomerId, setPaymentCustomerId] = useState<number | undefined>(undefined);
   const [paymentForm, setPaymentForm] = useState({
-    paymentType: "CASH_UZS",
-    amountUzs: "0",
-    amountUsd: "0",
-    notes: "",
+    cashUzs: "0",
+    cardUzs: "0",
+    transferUzs: "0",
   });
 
   // Warehouse auto-detect
@@ -141,7 +142,9 @@ function SalesPageInner() {
       setSaleNotes("");
       toast.success(getT()(`Sotuv #${sale.documentNo} yaratildi`));
       setPaymentSaleId(sale.id);
-      setPaymentForm({ paymentType: "CASH_UZS", amountUzs: String(sale.totalUzs), amountUsd: "0", notes: "" });
+      setPaymentSaleTotal(Number(sale.totalUzs));
+      setPaymentCustomerId(selectedCustomer?.id);
+      setPaymentForm({ cashUzs: String(sale.totalUzs), cardUzs: "0", transferUzs: "0" });
       setPaymentOpen(true);
     },
     onError: (err) => toast.error(err.message),
@@ -166,22 +169,29 @@ function SalesPageInner() {
     onError: (err) => toast.error(err.message),
   });
 
-  const createPayment = useMutation({
-    mutationFn: () =>
-      trpc.payment.create.mutate({
-        saleId: paymentSaleId ?? undefined,
-        customerId: selectedCustomer?.id,
-        amountUzs: Number(paymentForm.amountUzs),
-        amountUsd: Number(paymentForm.amountUsd),
-        paymentType: paymentForm.paymentType as "CASH_UZS" | "CASH_USD" | "CARD" | "TRANSFER" | "DEBT",
-        source: "NEW_SALE",
-        notes: paymentForm.notes || undefined,
-      }),
+  const createPayments = useMutation({
+    mutationFn: async () => {
+      const saleId = paymentSaleId ?? undefined;
+      const customerId = paymentCustomerId;
+      const cash = Number(paymentForm.cashUzs);
+      const card = Number(paymentForm.cardUzs);
+      const transfer = Number(paymentForm.transferUzs);
+      if (cash > 0) {
+        await trpc.payment.create.mutate({ saleId, customerId, amountUzs: cash, amountUsd: 0, paymentType: "CASH_UZS", source: "NEW_SALE" });
+      }
+      if (card > 0) {
+        await trpc.payment.create.mutate({ saleId, customerId, amountUzs: card, amountUsd: 0, paymentType: "CARD", source: "NEW_SALE" });
+      }
+      if (transfer > 0) {
+        await trpc.payment.create.mutate({ saleId, customerId, amountUzs: transfer, amountUsd: 0, paymentType: "TRANSFER", source: "NEW_SALE" });
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sale"] });
       setPaymentOpen(false);
+      const sid = paymentSaleId;
       setPaymentSaleId(null);
-      if (paymentSaleId) completeSale.mutate(paymentSaleId);
+      if (sid) completeSale.mutate(sid);
       toast.success(getT()("To'lov qabul qilindi"));
     },
     onError: (err) => toast.error(err.message),
@@ -782,10 +792,17 @@ function SalesPageInner() {
             <Button variant="secondary" onClick={() => setPaymentOpen(false)}>{t("Keyinroq")}</Button>
             <Button
               variant="success"
-              loading={createPayment.isPending}
+              loading={createPayments.isPending || completeSale.isPending}
               onClick={() => {
-                if (Number(paymentForm.amountUzs) <= 0 && Number(paymentForm.amountUsd) <= 0) { toast.error(getT()("Summani kiriting")); return; }
-                createPayment.mutate();
+                const cash = Number(paymentForm.cashUzs);
+                const card = Number(paymentForm.cardUzs);
+                const transfer = Number(paymentForm.transferUzs);
+                const debtUzs = Math.max(0, paymentSaleTotal - cash - card - transfer);
+                if (debtUzs > 0 && !paymentCustomerId) {
+                  toast.error(getT()("Mijoz tanlanmagan — summa to'liq bo'lishi kerak"));
+                  return;
+                }
+                createPayments.mutate();
               }}
             >
               <Check className="w-4 h-4" /> {t("To'lovni tasdiqlash")}
@@ -793,28 +810,53 @@ function SalesPageInner() {
           </>
         }
       >
-        <div className="space-y-4">
-          <Select
-            label={t("To'lov turi")}
-            options={[
-              { value: "CASH_UZS", label: t("Naqd (UZS)") },
-              { value: "CASH_USD", label: t("Naqd (USD)") },
-              { value: "CARD", label: t("Karta") },
-              { value: "TRANSFER", label: t("O'tkazma") },
-              { value: "DEBT", label: t("Qarzga") },
-            ]}
-            value={paymentForm.paymentType}
-            onChange={(e) => setPaymentForm((f) => ({ ...f, paymentType: e.target.value }))}
-          />
-          <CurrencyPairInput
-            label={t("Summa")}
-            valueUzs={paymentForm.amountUzs}
-            valueUsd={paymentForm.amountUsd}
-            onChangeUzs={(v) => setPaymentForm((f) => ({ ...f, amountUzs: v }))}
-            onChangeUsd={(v) => setPaymentForm((f) => ({ ...f, amountUsd: v }))}
-          />
-          <Input label={t("Izoh")} value={paymentForm.notes} onChange={(e) => setPaymentForm((f) => ({ ...f, notes: e.target.value }))} />
-        </div>
+        {(() => {
+          const cash = Number(paymentForm.cashUzs);
+          const card = Number(paymentForm.cardUzs);
+          const transfer = Number(paymentForm.transferUzs);
+          const debtUzs = Math.max(0, paymentSaleTotal - cash - card - transfer);
+          return (
+            <div className="space-y-3">
+              <div className="bg-gray-50 rounded-lg px-4 py-3 flex justify-between items-center">
+                <span className="text-sm text-gray-500">{t("Jami summa")}</span>
+                <span className="font-bold text-base">{formatUzs(paymentSaleTotal)}</span>
+              </div>
+              <Input
+                label={t("Naqd (UZS)")}
+                type="number"
+                min="0"
+                value={paymentForm.cashUzs}
+                onChange={(e) => setPaymentForm((f) => ({ ...f, cashUzs: e.target.value }))}
+                rightIcon={<span className="text-xs">so'm</span>}
+              />
+              <Input
+                label={t("Karta")}
+                type="number"
+                min="0"
+                value={paymentForm.cardUzs}
+                onChange={(e) => setPaymentForm((f) => ({ ...f, cardUzs: e.target.value }))}
+                rightIcon={<span className="text-xs">so'm</span>}
+              />
+              <Input
+                label={t("O'tkazma")}
+                type="number"
+                min="0"
+                value={paymentForm.transferUzs}
+                onChange={(e) => setPaymentForm((f) => ({ ...f, transferUzs: e.target.value }))}
+                rightIcon={<span className="text-xs">so'm</span>}
+              />
+              {debtUzs > 0 && (
+                <div className={`flex justify-between items-center px-4 py-3 rounded-lg border ${paymentCustomerId ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200"}`}>
+                  <span className={`text-sm font-medium ${paymentCustomerId ? "text-amber-700" : "text-red-700"}`}>
+                    {t("Qarzga")}
+                    {!paymentCustomerId && <span className="ml-2 text-xs font-normal">{t("(mijoz tanlanmagan!)")}</span>}
+                  </span>
+                  <span className={`font-bold ${paymentCustomerId ? "text-amber-600" : "text-red-600"}`}>{formatUzs(debtUzs)}</span>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </Modal>
 
       {/* Custom service modal */}

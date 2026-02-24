@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, Banknote, Briefcase, Calculator, DollarSign,
-  TrendingUp, TrendingDown, FileText,
-  Save, Key, UserX, Shield, Check, Edit2,
+  Plus, Save, Key, UserX, Shield, Check, Edit2,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -21,9 +19,6 @@ import {
   type UserRole,
 } from "@ezoz/shared";
 import toast from "react-hot-toast";
-
-const CURRENT_MONTH = new Date().getMonth() + 1;
-const CURRENT_YEAR = new Date().getFullYear();
 
 type UserRole_T = "CASHIER_SALES" | "CASHIER_SERVICE" | "MASTER";
 
@@ -45,11 +40,6 @@ function getRoleDefaults(role: string): string[] {
   return [...(RolePermissions[r] || [])];
 }
 
-const monthNames = [
-  "Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun",
-  "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr",
-];
-
 // ===== Main Page =====
 export function EmployeesPage() {
   const { isBoss } = useAuth();
@@ -61,19 +51,7 @@ export function EmployeesPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [advanceOpen, setAdvanceOpen] = useState(false);
-  const [jobOpen, setJobOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
-
-  // Salary
-  const [salaryMonth, setSalaryMonth] = useState(CURRENT_MONTH);
-  const [salaryYear, setSalaryYear] = useState(CURRENT_YEAR);
-  const [salaryResult, setSalaryResult] = useState<{
-    baseSalary: number;
-    totalBonus: number;
-    totalAdvance: number;
-    netPayment: number;
-  } | null>(null);
 
   // Forms
   const [createForm, setCreateForm] = useState({
@@ -89,31 +67,12 @@ export function EmployeesPage() {
   });
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
 
-  const [advanceForm, setAdvanceForm] = useState({
-    userId: "",
-    amountUzs: "0",
-    cashRegister: "SALES" as "SALES" | "SERVICE",
-    notes: "",
-  });
-
-  const [jobForm, setJobForm] = useState({
-    userId: "",
-    description: "",
-    bonusUzs: "0",
-  });
-
   const [passwords, setPasswords] = useState({ newPassword: "", confirmPassword: "" });
 
   // ===== Queries =====
   const listQuery = useQuery({
     queryKey: ["employee", "list"],
     queryFn: () => trpc.employee.list.query(),
-  });
-
-  const detailQuery = useQuery({
-    queryKey: ["employee", "detail", selectedId],
-    queryFn: () => trpc.employee.getById.query({ id: selectedId! }),
-    enabled: selectedId !== null,
   });
 
   // ===== Mutations =====
@@ -174,68 +133,6 @@ export function EmployeesPage() {
     onError: (err) => toast.error(err.message),
   });
 
-  const addAdvance = useMutation({
-    mutationFn: () =>
-      trpc.employee.addAdvance.mutate({
-        userId: Number(advanceForm.userId),
-        amountUzs: Number(advanceForm.amountUzs),
-        cashRegister: advanceForm.cashRegister,
-        notes: advanceForm.notes || undefined,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["employee"] });
-      setAdvanceOpen(false);
-      setAdvanceForm({ userId: "", amountUzs: "0", cashRegister: "SALES", notes: "" });
-      toast.success(getT()("Avans berildi"));
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const addJob = useMutation({
-    mutationFn: () =>
-      trpc.employee.addJobRecord.mutate({
-        userId: Number(jobForm.userId),
-        description: jobForm.description,
-        bonusUzs: Number(jobForm.bonusUzs),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["employee"] });
-      setJobOpen(false);
-      setJobForm({ userId: "", description: "", bonusUzs: "0" });
-      toast.success(getT()("Ish qayd etildi"));
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const calculateSalary = useMutation({
-    mutationFn: () =>
-      trpc.employee.calculateSalary.query({
-        userId: selectedId!,
-        month: salaryMonth,
-        year: salaryYear,
-      }),
-    onSuccess: (data) => setSalaryResult(data),
-    onError: (err) => toast.error(err.message),
-  });
-
-  const paySalary = useMutation({
-    mutationFn: () => {
-      if (!salaryResult) throw new Error(getT()("Avval hisoblang"));
-      return trpc.employee.paySalary.mutate({
-        userId: selectedId!,
-        month: salaryMonth,
-        year: salaryYear,
-        ...salaryResult,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["employee"] });
-      setSalaryResult(null);
-      toast.success(getT()("Oylik to'landi"));
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
   const resetPassword = useMutation({
     mutationFn: () =>
       trpc.auth.resetPassword.mutate({ userId: selectedId!, newPassword: passwords.newPassword }),
@@ -249,10 +146,6 @@ export function EmployeesPage() {
 
   // ===== Helpers =====
   const employees = listQuery.data ?? [];
-  const empOptions = employees.map((e) => ({ value: String(e.id), label: e.fullName }));
-  const detail = detailQuery.data;
-  const totalAdvances = detail?.advances.reduce((s, a) => s + Number(a.amountUzs), 0) ?? 0;
-  const totalBonuses = detail?.jobRecords.reduce((s, j) => s + Number(j.bonusUzs), 0) ?? 0;
 
   function resetCreateForm() {
     setCreateForm({
@@ -291,14 +184,6 @@ export function EmployeesPage() {
         title={t("Xodimlar")}
         actions={isBoss() && (
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setAdvanceOpen(true)}>
-              <Banknote className="w-4 h-4" />
-              {t("Avans")}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => setJobOpen(true)}>
-              <Briefcase className="w-4 h-4" />
-              {t("Ish qayd")}
-            </Button>
             <Button size="sm" onClick={() => { resetCreateForm(); setCreateOpen(true); }}>
               <Plus className="w-4 h-4" />
               {t("Yangi xodim")}
@@ -330,14 +215,7 @@ export function EmployeesPage() {
                   <TableEmpty colSpan={isBoss() ? 6 : 5} message={t("Xodimlar yo'q")} />
                 ) : (
                   employees.map((emp) => (
-                    <TableRow
-                      key={emp.id}
-                      active={selectedId === emp.id}
-                      onClick={() => {
-                        setSelectedId(selectedId === emp.id ? null : emp.id);
-                        setSalaryResult(null);
-                      }}
-                    >
+                    <TableRow key={emp.id}>
                       <td>
                         <div>
                           <p className="font-medium text-gray-900">{emp.fullName}</p>
@@ -393,160 +271,53 @@ export function EmployeesPage() {
             </Table>
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* ===== DETAIL SLIDEOVER ===== */}
+      {/* ===== EDIT USER SLIDEOVER ===== */}
       <SlideOver
-        open={!!selectedId && !!detail}
-        onClose={() => { setSelectedId(null); setSalaryResult(null); }}
-        title={detail?.fullName ?? ""}
-        subtitle={detail ? `@${detail.username} · ${UserRoleLabels[detail.role as UserRole] || detail.role} · ${detail.phone || t("Telefon yo'q")}` : ""}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        title={t("Xodimni tahrirlash")}
         width="lg"
-      >
-        {detail && (
-          <div className="space-y-4">
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500">{t("Baza oylik")}</p>
-                      <p className="text-lg font-bold text-gray-900">{formatUzs(Number(detail.baseSalaryUzs))}</p>
-                    </div>
-                    <div className="p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-500">{t("Bonus/ish")}</p>
-                      <p className="text-lg font-bold text-gray-900">{formatUzs(Number(detail.bonusPerJob))}</p>
-                    </div>
-                    <div className="p-3 bg-red-50 rounded-lg">
-                      <div className="flex items-center gap-1">
-                        <TrendingDown className="w-3 h-3 text-red-500" />
-                        <p className="text-xs text-red-600">{t("Jami avanslar")}</p>
-                      </div>
-                      <p className="text-lg font-bold text-red-600">{formatUzs(totalAdvances)}</p>
-                    </div>
-                    <div className="p-3 bg-green-50 rounded-lg">
-                      <div className="flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3 text-green-500" />
-                        <p className="text-xs text-green-600">{t("Jami bonuslar")}</p>
-                      </div>
-                      <p className="text-lg font-bold text-green-600">{formatUzs(totalBonuses)}</p>
-                    </div>
-                  </div>
-
-                  {/* Salary calculation */}
-                  {isBoss() && (
-                    <div className="border border-brand-200 bg-brand-50/50 rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Calculator className="w-4 h-4 text-brand-600" />
-                        <h4 className="text-sm font-semibold text-brand-700">{t("Oylik hisoblash")}</h4>
-                      </div>
-                      <div className="flex items-end gap-2">
-                        <Select
-                          label={t("Oy")}
-                          options={monthNames.map((m, i) => ({ value: String(i + 1), label: t(m) }))}
-                          value={String(salaryMonth)}
-                          onChange={(e) => { setSalaryMonth(Number(e.target.value)); setSalaryResult(null); }}
-                        />
-                        <Input
-                          label={t("Yil")} type="number" value={String(salaryYear)} className="w-24"
-                          onChange={(e) => { setSalaryYear(Number(e.target.value)); setSalaryResult(null); }}
-                        />
-                        <Button size="sm" loading={calculateSalary.isPending} onClick={() => calculateSalary.mutate()}>
-                          <Calculator className="w-3.5 h-3.5" />
-                          {t("Hisoblash")}
-                        </Button>
-                      </div>
-
-                      {salaryResult && (
-                        <div className="mt-3 space-y-1.5 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">{t("Baza oylik")}:</span>
-                            <span className="font-medium">{formatUzs(salaryResult.baseSalary)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-green-600">+ {t("Bonuslar")}:</span>
-                            <span className="font-medium text-green-600">{formatUzs(salaryResult.totalBonus)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-red-600">- {t("Avanslar")}:</span>
-                            <span className="font-medium text-red-600">{formatUzs(salaryResult.totalAdvance)}</span>
-                          </div>
-                          <div className="border-t pt-1.5 flex justify-between">
-                            <span className="font-semibold text-gray-900">{t("To'lanadigan")}:</span>
-                            <span className="font-bold text-lg text-brand-600">{formatUzs(salaryResult.netPayment)}</span>
-                          </div>
-                          <Button
-                            size="sm" variant={salaryResult.netPayment > 0 ? "success" : "secondary"}
-                            className="w-full mt-2" disabled={salaryResult.netPayment <= 0}
-                            loading={paySalary.isPending} onClick={() => paySalary.mutate()}
-                          >
-                            <DollarSign className="w-3.5 h-3.5" />
-                            {t("Oylik to'lash")}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Salary history */}
-                  {detail.salaryPayments.length > 0 && (
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5">
-                        <FileText className="w-3.5 h-3.5" />
-                        {t("Oylik tarixi")}
-                      </h4>
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                        {detail.salaryPayments.map((sp) => (
-                          <div key={sp.id} className="flex justify-between text-sm p-2 bg-gray-50 rounded">
-                            <span className="text-gray-600">{t(monthNames[sp.month - 1] ?? "")} {sp.year}</span>
-                            <span className="currency-uzs font-medium">{formatUzs(Number(sp.netPayment))}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Recent advances */}
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">{t("So'nggi avanslar")}</h4>
-                    {detail.advances.length === 0 ? (
-                      <p className="text-sm text-gray-400">{t("Avanslar yo'q")}</p>
-                    ) : (
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                        {detail.advances.slice(0, 10).map((a) => (
-                          <div key={a.id} className="flex justify-between text-sm p-2 bg-gray-50 rounded">
-                            <div>
-                              <span className="text-gray-600">{new Date(a.givenAt).toLocaleDateString("uz")}</span>
-                              {a.notes && <span className="text-gray-400 ml-2 text-xs">{a.notes}</span>}
-                            </div>
-                            <span className="currency-uzs">{formatUzs(Number(a.amountUzs))}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Recent jobs */}
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">{t("So'nggi ishlar")}</h4>
-                    {detail.jobRecords.length === 0 ? (
-                      <p className="text-sm text-gray-400">{t("Ish qaydlari yo'q")}</p>
-                    ) : (
-                      <div className="space-y-1.5 max-h-32 overflow-y-auto">
-                        {detail.jobRecords.slice(0, 10).map((j) => (
-                          <div key={j.id} className="flex justify-between text-sm p-2 bg-gray-50 rounded">
-                            <div className="flex-1 min-w-0">
-                              <span className="text-gray-600 truncate block max-w-[200px]">{j.description}</span>
-                              <span className="text-xs text-gray-400">{new Date(j.date).toLocaleDateString("uz")}</span>
-                            </div>
-                            <span className="currency-uzs">{formatUzs(Number(j.bonusUzs))}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button variant="secondary" onClick={() => setEditOpen(false)}>{t("Bekor qilish")}</Button>
+            <Button loading={updateUser.isPending} onClick={() => updateUser.mutate()}>
+              <Save className="w-4 h-4" />
+              {t("Saqlash")}
+            </Button>
           </div>
-        )}
+        }
+      >
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input label={t("To'liq ism")} value={editForm.fullName}
+              onChange={(e) => setEditForm((f) => ({ ...f, fullName: e.target.value }))} />
+            <Select label={t("Lavozim")} options={roleOptions.map((o) => ({ ...o, label: t(o.label) }))} value={editForm.role}
+              onChange={(e) => {
+                const role = e.target.value as UserRole_T;
+                setEditForm((f) => ({ ...f, role }));
+                setEditPermissions(getRoleDefaults(role));
+              }} />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <PhoneInput label={t("Telefon")} value={editForm.phone}
+              onChange={(v) => setEditForm((f) => ({ ...f, phone: v }))} />
+            <CurrencyInput label={t("Baza oylik")} currency="UZS" value={editForm.baseSalaryUzs}
+              onValueChange={(v) => setEditForm((f) => ({ ...f, baseSalaryUzs: v }))} />
+            <CurrencyInput label={t("Bonus/ish")} currency="UZS" value={editForm.bonusPerJob}
+              onValueChange={(v) => setEditForm((f) => ({ ...f, bonusPerJob: v }))} />
+          </div>
+          <div className="border-t pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Shield className="w-4 h-4 text-brand-600" />
+              <h4 className="text-sm font-semibold text-gray-700">{t("Ruxsatlar")}</h4>
+              <span className="text-xs text-gray-400">({editPermissions.length} {t("ta tanlangan")})</span>
+            </div>
+            <PermissionsPanel selectedPermissions={editPermissions} onChange={setEditPermissions} />
+          </div>
+        </div>
       </SlideOver>
 
       {/* ===== CREATE USER MODAL ===== */}
@@ -598,89 +369,6 @@ export function EmployeesPage() {
             </div>
             <PermissionsPanel selectedPermissions={createPermissions} onChange={setCreatePermissions} />
           </div>
-        </div>
-      </Modal>
-
-      {/* ===== EDIT USER MODAL ===== */}
-      <Modal open={editOpen} onClose={() => setEditOpen(false)} title={t("Xodimni tahrirlash")} size="lg"
-        footer={<>
-          <Button variant="secondary" onClick={() => setEditOpen(false)}>{t("Bekor qilish")}</Button>
-          <Button loading={updateUser.isPending} onClick={() => updateUser.mutate()}>
-            <Save className="w-4 h-4" />
-            {t("Saqlash")}
-          </Button>
-        </>}
-      >
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label={t("To'liq ism")} value={editForm.fullName}
-              onChange={(e) => setEditForm((f) => ({ ...f, fullName: e.target.value }))} />
-            <Select label={t("Lavozim")} options={roleOptions.map((o) => ({ ...o, label: t(o.label) }))} value={editForm.role}
-              onChange={(e) => {
-                const role = e.target.value as UserRole_T;
-                setEditForm((f) => ({ ...f, role }));
-                setEditPermissions(getRoleDefaults(role));
-              }} />
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <PhoneInput label={t("Telefon")} value={editForm.phone}
-              onChange={(v) => setEditForm((f) => ({ ...f, phone: v }))} />
-            <CurrencyInput label={t("Baza oylik")} currency="UZS" value={editForm.baseSalaryUzs}
-              onValueChange={(v) => setEditForm((f) => ({ ...f, baseSalaryUzs: v }))} />
-            <CurrencyInput label={t("Bonus/ish")} currency="UZS" value={editForm.bonusPerJob}
-              onValueChange={(v) => setEditForm((f) => ({ ...f, bonusPerJob: v }))} />
-          </div>
-          <div className="border-t pt-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Shield className="w-4 h-4 text-brand-600" />
-              <h4 className="text-sm font-semibold text-gray-700">{t("Ruxsatlar")}</h4>
-              <span className="text-xs text-gray-400">({editPermissions.length} {t("ta tanlangan")})</span>
-            </div>
-            <PermissionsPanel selectedPermissions={editPermissions} onChange={setEditPermissions} />
-          </div>
-        </div>
-      </Modal>
-
-      {/* ===== ADVANCE MODAL ===== */}
-      <Modal open={advanceOpen} onClose={() => setAdvanceOpen(false)} title={t("Avans berish")} size="sm"
-        footer={<>
-          <Button variant="secondary" onClick={() => setAdvanceOpen(false)}>{t("Bekor qilish")}</Button>
-          <Button loading={addAdvance.isPending} onClick={() => {
-            if (!advanceForm.userId || Number(advanceForm.amountUzs) <= 0) { toast.error(getT()("Xodim va summa kiriting")); return; }
-            addAdvance.mutate();
-          }}>{t("Berish")}</Button>
-        </>}
-      >
-        <div className="space-y-4">
-          <Select label={t("Xodim")} options={empOptions} value={advanceForm.userId}
-            onChange={(e) => setAdvanceForm((f) => ({ ...f, userId: e.target.value }))} placeholder={t("Tanlang...")} />
-          <CurrencyInput label={t("Summa")} currency="UZS" value={advanceForm.amountUzs}
-            onValueChange={(v) => setAdvanceForm((f) => ({ ...f, amountUzs: v }))} />
-          <Select label={t("Kassa")} options={[{ value: "SALES", label: t("Savdo") }, { value: "SERVICE", label: t("Xizmat") }]}
-            value={advanceForm.cashRegister}
-            onChange={(e) => setAdvanceForm((f) => ({ ...f, cashRegister: e.target.value as "SALES" | "SERVICE" }))} />
-          <Input label={t("Izoh")} value={advanceForm.notes}
-            onChange={(e) => setAdvanceForm((f) => ({ ...f, notes: e.target.value }))} />
-        </div>
-      </Modal>
-
-      {/* ===== JOB RECORD MODAL ===== */}
-      <Modal open={jobOpen} onClose={() => setJobOpen(false)} title={t("Ish qayd qilish")} size="sm"
-        footer={<>
-          <Button variant="secondary" onClick={() => setJobOpen(false)}>{t("Bekor qilish")}</Button>
-          <Button loading={addJob.isPending} onClick={() => {
-            if (!jobForm.userId || !jobForm.description) { toast.error(getT()("Xodim va tavsif kiriting")); return; }
-            addJob.mutate();
-          }}>{t("Saqlash")}</Button>
-        </>}
-      >
-        <div className="space-y-4">
-          <Select label={t("Xodim")} options={empOptions} value={jobForm.userId}
-            onChange={(e) => setJobForm((f) => ({ ...f, userId: e.target.value }))} placeholder={t("Tanlang...")} />
-          <Input label={t("Ish tavsifi")} value={jobForm.description}
-            onChange={(e) => setJobForm((f) => ({ ...f, description: e.target.value }))} placeholder={t("Nima ish qildi")} />
-          <CurrencyInput label={t("Bonus")} currency="UZS" value={jobForm.bonusUzs}
-            onValueChange={(v) => setJobForm((f) => ({ ...f, bonusUzs: v }))} />
         </div>
       </Modal>
 

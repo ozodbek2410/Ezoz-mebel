@@ -54,7 +54,6 @@ export function ReceiptsPage() {
   const sales = salesQuery.data?.sales ?? [];
   const filtered = search
     ? sales.filter((s) =>
-        s.documentNo.toLowerCase().includes(search.toLowerCase()) ||
         s.customer?.fullName.toLowerCase().includes(search.toLowerCase()),
       )
     : sales;
@@ -69,7 +68,7 @@ export function ReceiptsPage() {
       <div className="page-body">
         <div className="mb-4">
           <SearchInput
-            placeholder={t("Hujjat raqami yoki mijoz nomi...")}
+            placeholder={t("Mijoz nomi...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onClear={() => setSearch("")}
@@ -80,12 +79,12 @@ export function ReceiptsPage() {
         <Table>
           <TableHead>
             <tr>
-              <th>{t("Hujjat")}</th>
-              <th className="hidden sm:table-cell">{t("Sana")}</th>
-              <th className="hidden md:table-cell">{t("Mijoz")}</th>
+              <th>{t("Sana")}</th>
+              <th>{t("Mijoz")}</th>
+              <th className="hidden md:table-cell">{t("Kassir")}</th>
               <th className="hidden sm:table-cell">{t("Turi")}</th>
               <th>{t("Summa")}</th>
-              <th className="w-20">{t("Chop etish")}</th>
+              <th className="w-16">{t("Chop etish")}</th>
             </tr>
           </TableHead>
           <TableBody>
@@ -96,11 +95,11 @@ export function ReceiptsPage() {
             ) : (
               filtered.map((sale) => (
                 <TableRow key={sale.id}>
-                  <td className="font-mono text-xs">{sale.documentNo}</td>
-                  <td className="text-sm text-gray-500 hidden sm:table-cell">
+                  <td className="text-sm text-gray-500">
                     {new Date(sale.createdAt).toLocaleDateString("uz")}
                   </td>
-                  <td className="hidden md:table-cell">{sale.customer?.fullName || t("Oddiy mijoz")}</td>
+                  <td>{sale.customer?.fullName || t("Oddiy mijoz")}</td>
+                  <td className="text-sm text-gray-500 hidden md:table-cell">{sale.cashier.fullName}</td>
                   <td className="hidden sm:table-cell">
                     <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
                       {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}

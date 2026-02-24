@@ -46,6 +46,10 @@ export function CustomersPage() {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [detailTab, setDetailTab] = useState("info");
   const [slideForm, setSlideForm] = useState<CustomerFormData>(defaultForm);
+  const [debtPayOpen, setDebtPayOpen] = useState(false);
+  const [debtPayForm, setDebtPayForm] = useState({ amountUzs: "0", paymentType: "CASH_UZS" });
+  const [manualDebtOpen, setManualDebtOpen] = useState(false);
+  const [manualDebtAmount, setManualDebtAmount] = useState("0");
 
   // Queries
   const listQuery = useQuery({
@@ -69,6 +73,12 @@ export function CustomersPage() {
     queryKey: ["customer", "debt", detailId],
     queryFn: () => trpc.customer.getDebtSummary.query({ id: detailId! }),
     enabled: detailId !== null,
+  });
+
+  const unpaidSalesQuery = useQuery({
+    queryKey: ["customer", "unpaidSales", detailId],
+    queryFn: () => trpc.customer.getUnpaidSales.query({ id: detailId! }),
+    enabled: detailId !== null && detailTab === "debt",
   });
 
   // Mutations
@@ -119,6 +129,36 @@ export function CustomersPage() {
       queryClient.invalidateQueries({ queryKey: ["customer"] });
       setDetailId(null);
       toast.success(getT()("Mijoz o'chirildi"));
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const payDebtMutation = useMutation({
+    mutationFn: () =>
+      trpc.payment.create.mutate({
+        customerId: detailId!,
+        amountUzs: Number(debtPayForm.amountUzs),
+        amountUsd: 0,
+        paymentType: debtPayForm.paymentType as "CASH_UZS" | "CARD" | "TRANSFER",
+        source: "OLD_DEBT",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer"] });
+      setDebtPayOpen(false);
+      setDebtPayForm({ amountUzs: "0", paymentType: "CASH_UZS" });
+      toast.success(getT()("Qarz to'landi"));
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const addManualDebtMutation = useMutation({
+    mutationFn: () =>
+      trpc.customer.addManualDebt.mutate({ id: detailId!, amountUzs: Number(manualDebtAmount) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer"] });
+      setManualDebtOpen(false);
+      setManualDebtAmount("0");
+      toast.success(getT()("Qarz qo'shildi"));
     },
     onError: (err) => toast.error(err.message),
   });
@@ -479,30 +519,70 @@ export function CustomersPage() {
 
               {detailTab === "debt" && debt && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-red-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">{t("Jami qarz (UZS)")}</p>
-                      <p className="text-lg font-bold text-red-600">{formatUzs(debt.totalDebtUzs)}</p>
+                  {/* Summary */}
+                  <div className="bg-red-50 rounded-lg p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500">{t("Jami qarz")}</p>
+                      <p className="text-xl font-bold text-red-600">{formatUzs(debt.totalDebtUzs)}</p>
+                      {debt.totalDebtUsd > 0 && <p className="text-xs text-blue-600">{formatUsd(debt.totalDebtUsd)}</p>}
                     </div>
-                    <div className="p-3 bg-blue-50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">{t("Jami qarz (USD)")}</p>
-                      <p className="text-lg font-bold text-blue-600">{formatUsd(debt.totalDebtUsd)}</p>
+                    <div className="flex flex-col gap-1.5">
+                      <Button size="sm" onClick={() => { setDebtPayForm({ amountUzs: "0", paymentType: "CASH_UZS" }); setDebtPayOpen(true); }}>
+                        {t("Qarz to'lash")}
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => { setManualDebtAmount("0"); setManualDebtOpen(true); }}>
+                        {t("Qarz qo'shish")}
+                      </Button>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500 space-y-1">
+
+                  {/* Breakdown */}
+                  <div className="text-xs text-gray-500 space-y-1 border rounded-lg px-3 py-2">
                     <div className="flex justify-between">
                       <span>{t("Boshlang'ich qarz:")}</span>
                       <span>{formatUzs(debt.initialDebtUzs)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>{t("Jami sotuvlar:")}</span>
-                      <span>{formatUzs(debt.totalSalesUzs)}</span>
+                      <span>+{formatUzs(debt.totalSalesUzs)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>{t("Jami to'langan:")}</span>
                       <span className="text-green-600">-{formatUzs(debt.totalPaidUzs)}</span>
                     </div>
                   </div>
+
+                  {/* Unpaid sales */}
+                  {unpaidSalesQuery.data && unpaidSalesQuery.data.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-2">{t("Qarzli sotuvlar")}</p>
+                      <div className="space-y-1.5">
+                        {unpaidSalesQuery.data.map((sale) => (
+                          <div key={sale.id} className="flex justify-between items-center px-3 py-2 bg-amber-50 rounded-lg text-xs">
+                            <span className="text-gray-500">{new Date(sale.createdAt).toLocaleDateString("uz")}</span>
+                            <span className="text-gray-500">{t("Jami:")} {formatUzs(sale.totalUzs)}</span>
+                            <span className="font-bold text-amber-700">{t("Qarz:")} {formatUzs(sale.debtUzs)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Debt payment history */}
+                  {detail.payments.filter((p) => p.source === "OLD_DEBT").length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-600 mb-2">{t("Qarz to'lovlari")}</p>
+                      <div className="space-y-1.5">
+                        {detail.payments.filter((p) => p.source === "OLD_DEBT").map((p) => (
+                          <div key={p.id} className="flex justify-between items-center px-3 py-2 bg-green-50 rounded-lg text-xs">
+                            <span className="text-gray-500">{new Date(p.createdAt).toLocaleDateString("uz")}</span>
+                            <span className="text-gray-500">{p.paymentType === "CASH_UZS" ? t("Naqd") : p.paymentType === "CARD" ? t("Karta") : t("O'tkazma")}</span>
+                            <span className="font-bold text-green-700">{formatUzs(Number(p.amountUzs))}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -514,7 +594,9 @@ export function CustomersPage() {
                     detail.sales.map((sale) => (
                       <div key={sale.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <p className="text-sm font-medium">{sale.documentNo}</p>
+                          <p className="text-sm font-medium">
+                            {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}
+                          </p>
                           <p className="text-xs text-gray-400">
                             {new Date(sale.createdAt).toLocaleDateString("uz")}
                           </p>
@@ -529,6 +611,82 @@ export function CustomersPage() {
           </div>
         )}
       </SlideOver>
+
+      {/* Pay debt modal */}
+      <Modal
+        open={debtPayOpen}
+        onClose={() => setDebtPayOpen(false)}
+        title={t("Qarz to'lash")}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDebtPayOpen(false)}>{t("Bekor")}</Button>
+            <Button
+              variant="success"
+              loading={payDebtMutation.isPending}
+              onClick={() => {
+                if (Number(debtPayForm.amountUzs) <= 0) { toast.error(getT()("Summani kiriting")); return; }
+                payDebtMutation.mutate();
+              }}
+            >
+              {t("Tasdiqlash")}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input
+            label={t("Summa (UZS)")}
+            type="number"
+            min="0"
+            value={debtPayForm.amountUzs}
+            onChange={(e) => setDebtPayForm((f) => ({ ...f, amountUzs: e.target.value }))}
+            rightIcon={<span className="text-xs">so'm</span>}
+          />
+          <Select
+            label={t("To'lov turi")}
+            options={[
+              { value: "CASH_UZS", label: t("Naqd") },
+              { value: "CARD", label: t("Karta") },
+              { value: "TRANSFER", label: t("O'tkazma") },
+            ]}
+            value={debtPayForm.paymentType}
+            onChange={(e) => setDebtPayForm((f) => ({ ...f, paymentType: e.target.value }))}
+          />
+        </div>
+      </Modal>
+
+      {/* Add manual debt modal */}
+      <Modal
+        open={manualDebtOpen}
+        onClose={() => setManualDebtOpen(false)}
+        title={t("Qarz qo'shish")}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setManualDebtOpen(false)}>{t("Bekor")}</Button>
+            <Button
+              variant="danger"
+              loading={addManualDebtMutation.isPending}
+              onClick={() => {
+                if (Number(manualDebtAmount) <= 0) { toast.error(getT()("Summani kiriting")); return; }
+                addManualDebtMutation.mutate();
+              }}
+            >
+              {t("Qarz qo'shish")}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Input
+            label={t("Summa (UZS)")}
+            type="number"
+            min="0"
+            value={manualDebtAmount}
+            onChange={(e) => setManualDebtAmount(e.target.value)}
+            rightIcon={<span className="text-xs">so'm</span>}
+          />
+        </div>
+      </Modal>
     </>
   );
 }
