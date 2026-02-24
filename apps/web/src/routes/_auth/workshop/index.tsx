@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Play, CheckCircle, Clock, User, Wrench, Package,
+  Play, CheckCircle, Clock, User, Wrench,
   Calendar, UserCheck, MessageSquare,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -9,11 +9,10 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Button, Modal, Input, Tabs } from "@/components/ui";
 import { StatusBadge } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
-import { formatUzs } from "@ezoz/shared";
 import toast from "react-hot-toast";
 
 export function WorkshopPage() {
-  const { isMaster, isBoss } = useAuth();
+  const { isMaster, isBoss, user } = useAuth();
   const queryClient = useQueryClient();
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -21,13 +20,10 @@ export function WorkshopPage() {
   const [notesTaskId, setNotesTaskId] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
 
-  // Queries
+  // Fetch all tasks (no status filter — grouping is done on frontend)
   const tasksQuery = useQuery({
-    queryKey: ["workshop", "list", statusFilter],
-    queryFn: () =>
-      trpc.workshop.list.query(
-        statusFilter !== "all" ? { status: statusFilter as "PENDING" | "IN_PROGRESS" | "COMPLETED" } : undefined,
-      ),
+    queryKey: ["workshop", "list"],
+    queryFn: () => trpc.workshop.list.query(),
   });
 
   // Masters list for assignment
@@ -62,21 +58,41 @@ export function WorkshopPage() {
   });
 
   const tasks = tasksQuery.data ?? [];
-  const pendingCount = tasks.filter((t) => t.status === "PENDING").length;
-  const inProgressCount = tasks.filter((t) => t.status === "IN_PROGRESS").length;
-  const completedCount = tasks.filter((t) => t.status === "COMPLETED").length;
+
+  // Group tasks by saleId
+  const saleGroups = useMemo(() => {
+    const map = new Map<number, typeof tasks>();
+    for (const task of tasks) {
+      const group = map.get(task.saleId) ?? [];
+      group.push(task);
+      map.set(task.saleId, group);
+    }
+    return Array.from(map.values()).sort((a, b) => b[0]!.id - a[0]!.id);
+  }, [tasks]);
+
+  // Compute a group's overall status
+  function groupStatus(groupTasks: typeof tasks): "PENDING" | "IN_PROGRESS" | "COMPLETED" {
+    if (groupTasks.every((t) => t.status === "COMPLETED")) return "COMPLETED";
+    if (groupTasks.some((t) => t.status === "IN_PROGRESS")) return "IN_PROGRESS";
+    return "PENDING";
+  }
+
+  const filteredGroups = statusFilter === "all"
+    ? saleGroups
+    : saleGroups.filter((g) => groupStatus(g) === statusFilter);
+
+  const pendingCount = saleGroups.filter((g) => groupStatus(g) === "PENDING").length;
+  const inProgressCount = saleGroups.filter((g) => groupStatus(g) === "IN_PROGRESS").length;
+  const completedCount = saleGroups.filter((g) => groupStatus(g) === "COMPLETED").length;
 
   function formatDate(date: string | Date) {
     return new Date(date).toLocaleDateString("uz", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
     });
   }
 
-  function getStatusColor(status: string) {
+  function getGroupColor(status: string) {
     switch (status) {
       case "IN_PROGRESS": return "border-l-blue-500 bg-blue-50/30";
       case "COMPLETED": return "border-l-green-500 bg-green-50/20 opacity-75";
@@ -85,12 +101,11 @@ export function WorkshopPage() {
   }
 
   // Clean up old-format descriptions like "Sotuv #cuid - kesish/xizmat"
-  function getTaskServiceName(task: { description: string; sale: { items: Array<{ serviceName: string | null }> } | null }) {
-    if (task.description.startsWith("Sotuv #")) {
-      const serviceItem = task.sale?.items.find((i) => i.serviceName !== null);
-      return serviceItem?.serviceName ?? "Xizmat/kesish";
+  function getServiceName(description: string, saleItems: Array<{ serviceName: string | null }>) {
+    if (description.startsWith("Sotuv #")) {
+      return saleItems.find((i) => i.serviceName)?.serviceName ?? "Xizmat/kesish";
     }
-    return task.description;
+    return description;
   }
 
   return (
@@ -105,7 +120,7 @@ export function WorkshopPage() {
         <div className="mb-4">
           <Tabs
             tabs={[
-              { id: "all", label: "Barchasi", count: tasks.length },
+              { id: "all", label: "Barchasi", count: saleGroups.length },
               { id: "PENDING", label: "Kutilmoqda", count: pendingCount },
               { id: "IN_PROGRESS", label: "Bajarilmoqda", count: inProgressCount },
               { id: "COMPLETED", label: "Yakunlangan", count: completedCount },
@@ -115,7 +130,7 @@ export function WorkshopPage() {
           />
         </div>
 
-        {/* Task cards */}
+        {/* Sale group cards */}
         {tasksQuery.isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -126,152 +141,158 @@ export function WorkshopPage() {
               </div>
             ))}
           </div>
-        ) : tasks.length === 0 ? (
+        ) : filteredGroups.length === 0 ? (
           <div className="card card-body text-center py-12">
             <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-400">Vazifalar yo'q</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                className={`card overflow-hidden border-l-4 ${getStatusColor(task.status)}`}
-              >
-                {/* Header: Customer + Date */}
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-gray-400" />
-                      <span className="font-semibold text-sm text-gray-900">
-                        {task.sale?.customer?.fullName ?? "Oddiy mijoz"}
+            {filteredGroups.map((groupTasks) => {
+              const firstTask = groupTasks[0]!;
+              const sale = firstTask.sale;
+              const gStatus = groupStatus(groupTasks);
+
+              return (
+                <div
+                  key={firstTask.saleId}
+                  className={`card overflow-hidden border-l-4 ${getGroupColor(gStatus)}`}
+                >
+                  {/* Header */}
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="font-semibold text-sm text-gray-900">
+                          {sale?.customer?.fullName ?? "Oddiy mijoz"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 font-mono">#{firstTask.saleId}</span>
+                        <StatusBadge status={gStatus} />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {sale ? formatDate(sale.createdAt) : "—"}
                       </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400 font-mono">#{task.saleId}</span>
-                      <StatusBadge status={task.status} />
+                      {sale?.customer?.phone && <span>{sale.customer.phone}</span>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-400">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {task.sale ? formatDate(task.sale.createdAt) : "—"}
-                    </span>
-                    {task.sale?.customer?.phone && (
-                      <span>{task.sale.customer.phone}</span>
-                    )}
+
+                  {/* Tasks list */}
+                  <div className="divide-y divide-gray-100">
+                    {groupTasks.map((task) => {
+                      const isMyTask = isMaster() && task.assignedToId === user?.userId;
+                      const serviceName = getServiceName(task.description, sale?.items ?? []);
+
+                      return (
+                        <div key={task.id} className="p-4 space-y-2.5">
+                          {/* Service name + status */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              <span className="text-sm font-medium text-gray-900 truncate">{serviceName}</span>
+                            </div>
+                            <StatusBadge status={task.status} />
+                          </div>
+
+                          {/* Assigned master */}
+                          <div className="flex items-center gap-2">
+                            <UserCheck className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                            {task.assignedTo ? (
+                              isBoss() && task.status !== "COMPLETED" ? (
+                                <select
+                                  className="select-field text-xs py-0.5 flex-1"
+                                  value={task.assignedToId ?? ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value ? Number(e.target.value) : null;
+                                    assignTask.mutate({ taskId: task.id, assignedToId: val });
+                                  }}
+                                >
+                                  {masters.map((m) => (
+                                    <option key={m.id} value={m.id}>{m.fullName}</option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <span className="text-xs font-medium text-brand-700">{task.assignedTo.fullName}</span>
+                              )
+                            ) : isBoss() ? (
+                              <select
+                                className="select-field text-xs py-0.5 flex-1"
+                                value=""
+                                onChange={(e) => {
+                                  if (e.target.value) assignTask.mutate({ taskId: task.id, assignedToId: Number(e.target.value) });
+                                }}
+                              >
+                                <option value="">Usta tayinlash...</option>
+                                {masters.map((m) => (
+                                  <option key={m.id} value={m.id}>{m.fullName}</option>
+                                ))}
+                              </select>
+                            ) : (
+                              <span className="text-xs text-gray-400 italic">Tayinlanmagan</span>
+                            )}
+                          </div>
+
+                          {/* Time info */}
+                          {task.startedAt && (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                              <Clock className="w-3 h-3" />
+                              <span>Boshlangan: {formatDate(task.startedAt)}</span>
+                            </div>
+                          )}
+                          {task.completedAt && (
+                            <div className="flex items-center gap-1.5 text-xs text-green-600">
+                              <CheckCircle className="w-3 h-3" />
+                              <span>Yakunlangan: {formatDate(task.completedAt)}</span>
+                            </div>
+                          )}
+
+                          {/* Notes */}
+                          {task.notes && (
+                            <div className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg">
+                              <MessageSquare className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
+                              <p className="text-xs text-amber-700">{task.notes}</p>
+                            </div>
+                          )}
+
+                          {/* Action buttons — master only sees their own task */}
+                          {isMyTask && task.status !== "COMPLETED" && (
+                            <div className="flex gap-2 pt-1">
+                              {task.status === "PENDING" && (
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  className="flex-1"
+                                  loading={updateStatus.isPending}
+                                  onClick={() => updateStatus.mutate({ taskId: task.id, status: "IN_PROGRESS" })}
+                                >
+                                  <Play className="w-3.5 h-3.5" />
+                                  Boshlash
+                                </Button>
+                              )}
+                              {task.status === "IN_PROGRESS" && (
+                                <Button
+                                  variant="success"
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => { setNotesTaskId(task.id); setNotes(""); setNotesOpen(true); }}
+                                >
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  Yakunlash
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-
-                {/* Body */}
-                <div className="p-4 space-y-3">
-                  {/* Assigned master */}
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="w-4 h-4 text-brand-500" />
-                    {task.assignedTo ? (
-                      <span className="text-sm font-medium text-brand-700">{task.assignedTo.fullName}</span>
-                    ) : isBoss() ? (
-                      <select
-                        className="select-field text-sm py-1"
-                        value=""
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            assignTask.mutate({ taskId: task.id, assignedToId: Number(e.target.value) });
-                          }
-                        }}
-                      >
-                        <option value="">Usta tayinlash...</option>
-                        {masters.map((m) => (
-                          <option key={m.id} value={m.id}>{m.fullName}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="text-sm text-gray-400 italic">Tayinlanmagan</span>
-                    )}
-                  </div>
-
-                  {/* This task's service */}
-                  <div className="flex items-center gap-2 bg-amber-50 rounded-lg px-3 py-2">
-                    <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <span className="text-sm font-medium text-amber-900">{getTaskServiceName(task)}</span>
-                  </div>
-
-                  {/* Time info */}
-                  {task.startedAt && (
-                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                      <Clock className="w-3 h-3" />
-                      <span>Boshlangan: {formatDate(task.startedAt)}</span>
-                    </div>
-                  )}
-                  {task.completedAt && (
-                    <div className="flex items-center gap-1.5 text-xs text-green-600">
-                      <CheckCircle className="w-3 h-3" />
-                      <span>Yakunlangan: {formatDate(task.completedAt)}</span>
-                    </div>
-                  )}
-
-                  {/* Notes */}
-                  {task.notes && (
-                    <div className="flex items-start gap-2 p-2.5 bg-amber-50 rounded-lg">
-                      <MessageSquare className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
-                      <p className="text-xs text-amber-700">{task.notes}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Actions */}
-                {isMaster() && task.status !== "COMPLETED" && (
-                  <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50 flex gap-2">
-                    {task.status === "PENDING" && (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        className="flex-1"
-                        loading={updateStatus.isPending}
-                        onClick={() => updateStatus.mutate({ taskId: task.id, status: "IN_PROGRESS" })}
-                      >
-                        <Play className="w-3.5 h-3.5" />
-                        Boshlash
-                      </Button>
-                    )}
-                    {task.status === "IN_PROGRESS" && (
-                      <Button
-                        variant="success"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => {
-                          setNotesTaskId(task.id);
-                          setNotes("");
-                          setNotesOpen(true);
-                        }}
-                      >
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        Yakunlash
-                      </Button>
-                    )}
-                  </div>
-                )}
-
-                {/* Boss can reassign */}
-                {isBoss() && task.assignedTo && task.status !== "COMPLETED" && (
-                  <div className="px-4 py-2 border-t border-gray-100 bg-gray-50/30">
-                    <select
-                      className="select-field text-xs py-1"
-                      value={task.assignedToId ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value ? Number(e.target.value) : null;
-                        assignTask.mutate({ taskId: task.id, assignedToId: val });
-                      }}
-                    >
-                      <option value="">Ustani o'zgartirish...</option>
-                      {masters.map((m) => (
-                        <option key={m.id} value={m.id}>{m.fullName}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -284,20 +305,12 @@ export function WorkshopPage() {
         size="sm"
         footer={
           <>
-            <Button variant="secondary" onClick={() => setNotesOpen(false)}>
-              Bekor qilish
-            </Button>
+            <Button variant="secondary" onClick={() => setNotesOpen(false)}>Bekor qilish</Button>
             <Button
               variant="success"
               loading={updateStatus.isPending}
               onClick={() => {
-                if (notesTaskId) {
-                  updateStatus.mutate({
-                    taskId: notesTaskId,
-                    status: "COMPLETED",
-                    notes: notes || undefined,
-                  });
-                }
+                if (notesTaskId) updateStatus.mutate({ taskId: notesTaskId, status: "COMPLETED", notes: notes || undefined });
               }}
             >
               <CheckCircle className="w-4 h-4" />
