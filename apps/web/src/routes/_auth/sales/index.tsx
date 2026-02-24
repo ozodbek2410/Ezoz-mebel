@@ -606,7 +606,7 @@ function SalesPageInner() {
 
               {/* RIGHT: CART (product mode) */}
               <div className="w-full lg:w-[400px] shrink-0">
-                <div className="card sticky top-20">
+                <div className="card">
                   <div className="card-header">
                     <div className="flex items-center gap-2">
                       <ShoppingCart className="w-5 h-5 text-brand-600" />
