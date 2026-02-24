@@ -8,7 +8,7 @@ import {
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
-  Button, Modal, Input, CurrencyInput, Select,
+  Button, Modal, Input, CurrencyInput, Select, SlideOver,
   Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading,
   Badge, PhoneInput,
 } from "@/components/ui";
@@ -310,7 +310,7 @@ export function EmployeesPage() {
       <div className="page-body">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* ===== TABLE ===== */}
-          <div className={`${selectedId ? "w-full lg:w-1/2" : "w-full"} transition-all`}>
+          <div className="w-full">
             <div className="overflow-x-auto">
             <Table>
               <TableHead>
@@ -394,21 +394,19 @@ export function EmployeesPage() {
             </div>
           </div>
 
-          {/* ===== DETAIL PANEL ===== */}
-          {selectedId && detail && (
-            <div className="w-full lg:w-1/2">
-              <div className="card sticky top-20">
-                <div className="card-header">
-                  <div>
-                    <h3 className="font-semibold">{detail.fullName}</h3>
-                    <p className="text-xs text-gray-500">
-                      @{detail.username} | {UserRoleLabels[detail.role as UserRole] || detail.role} | {detail.phone || t("Telefon yo'q")}
-                    </p>
-                  </div>
-                  <button onClick={() => setSelectedId(null)} className="text-gray-400 hover:text-gray-600">&times;</button>
-                </div>
+        </div>
+      </div>
 
-                <div className="card-body space-y-4">
+      {/* ===== DETAIL SLIDEOVER ===== */}
+      <SlideOver
+        open={!!selectedId && !!detail}
+        onClose={() => { setSelectedId(null); setSalaryResult(null); }}
+        title={detail?.fullName ?? ""}
+        subtitle={detail ? `@${detail.username} · ${UserRoleLabels[detail.role as UserRole] || detail.role} · ${detail.phone || t("Telefon yo'q")}` : ""}
+        width="lg"
+      >
+        {detail && (
+          <div className="space-y-4">
                   {/* Stats */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="p-3 bg-gray-50 rounded-lg">
@@ -547,12 +545,9 @@ export function EmployeesPage() {
                       </div>
                     )}
                   </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </SlideOver>
 
       {/* ===== CREATE USER MODAL ===== */}
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t("Yangi xodim")} size="lg"
