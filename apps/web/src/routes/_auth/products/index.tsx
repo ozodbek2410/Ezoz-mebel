@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronLeft, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter } from "lucide-react";
+import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button, SearchInput, Modal, Input, CurrencyPairInput, Select, Badge, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, SlideOver } from "@/components/ui";
+import { Button, SearchInput, Modal, Input, CurrencyPairInput, Select, Badge, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, SlideOver, Pagination } from "@/components/ui";
 import { CurrencyDisplay } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
 import { useT, getT } from "@/hooks/useT";
@@ -155,7 +155,7 @@ const unitOptions = [
 
 // ===== Main Page =====
 export function ProductsPage() {
-  const { isBoss } = useAuth();
+  const { isBoss, can } = useAuth();
   const t = useT();
   const queryClient = useQueryClient();
 
@@ -171,8 +171,7 @@ export function ProductsPage() {
   const [sortKey, setSortKey] = useState<"name" | "code" | "category" | "sellPrice" | "minPrice" | "costPrice" | "stock">("code");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showCategories, setShowCategories] = useState(false);
-  const [cursor, setCursor] = useState<number | undefined>(undefined);
-  const [cursorHistory, setCursorHistory] = useState<(number | undefined)[]>([]);
+  const [page, setPage] = useState(1);
   const tableRef = useRef<HTMLDivElement>(null);
 
   function scrollToTable() {
@@ -190,8 +189,7 @@ export function ProductsPage() {
 
   // Reset pagination when filter changes
   useEffect(() => {
-    setCursor(undefined);
-    setCursorHistory([]);
+    setPage(1);
   }, [selectedCategory, search]);
 
   // Queries
@@ -201,12 +199,12 @@ export function ProductsPage() {
   });
 
   const productsQuery = useQuery({
-    queryKey: ["product", "list", selectedCategory, search, cursor],
+    queryKey: ["product", "list", selectedCategory, search, page],
     queryFn: () =>
       trpc.product.list.query({
         categoryId: selectedCategory ?? undefined,
         search: search || undefined,
-        cursor,
+        page,
       }),
   });
 
@@ -455,72 +453,8 @@ export function ProductsPage() {
 
   const categoryOptions = categoriesQuery.data ? flattenCategories(categoriesQuery.data as CategoryNode[]) : [];
   const rawProducts = productsQuery.data?.items ?? [];
-  const nextCursor = productsQuery.data?.nextCursor;
-  const currentPage = cursorHistory.length + 1;
-
-  function goToPage(n: number) {
-    if (n === currentPage) return;
-    if (n === 1) { setCursorHistory([]); setCursor(undefined); }
-    else { setCursor(cursorHistory[n - 1]); setCursorHistory(cursorHistory.slice(0, n - 1)); }
-    scrollToTable();
-  }
-  function goNext() {
-    if (nextCursor === undefined) return;
-    setCursorHistory((h) => [...h, cursor]);
-    setCursor(nextCursor);
-    scrollToTable();
-  }
-  function goPrev() {
-    const prev = [...cursorHistory];
-    const prevCursor = prev.pop();
-    setCursorHistory(prev);
-    setCursor(prevCursor);
-    scrollToTable();
-  }
-
-  // Pagination bar — shows visited page numbers + next indicator
-  const totalKnownPages = nextCursor !== undefined ? currentPage + 1 : currentPage;
-  function PaginationBar() {
-    if (currentPage === 1 && !nextCursor) return null;
-    return (
-      <div className="flex items-center gap-1">
-        <button
-          disabled={currentPage === 1}
-          onClick={goPrev}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          {t("Oldingi")}
-        </button>
-        <div className="flex items-center gap-0.5 mx-1">
-          {Array.from({ length: totalKnownPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => p <= currentPage ? goToPage(p) : undefined}
-              disabled={p === totalKnownPages && !!nextCursor && p > currentPage}
-              className={`w-8 h-8 rounded-lg text-sm font-semibold transition-colors ${
-                p === currentPage
-                  ? "bg-brand-600 text-white shadow-sm"
-                  : p < currentPage
-                  ? "text-gray-700 border border-gray-200 hover:bg-gray-50"
-                  : "text-gray-400 border border-dashed border-gray-300 cursor-not-allowed"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-        <button
-          disabled={!nextCursor}
-          onClick={goNext}
-          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-        >
-          {t("Keyingi")}
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-    );
-  }
+  const total = productsQuery.data?.total ?? 0;
+  const totalPages = Math.ceil(total / 50);
 
   type ProductItem = typeof rawProducts[number];
 
@@ -568,32 +502,36 @@ export function ProductsPage() {
         title={t("Mahsulotlar")}
         subtitle={undefined}
         actions={
-          isBoss() && (
+          (can("product:create") || can("category:manage")) ? (
             <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setEditingCategory(null);
-                  setCatForm({ name: "", parentId: "" });
-                  setCategoryModalOpen(true);
-                }}
-              >
-                <Plus className="w-4 h-4" />
-                {t("Guruh")}
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => {
-                  setForm({ ...defaultForm, categoryId: selectedCategory ? String(selectedCategory) : "" });
-                  setProductModalOpen(true);
-                }}
-              >
-                <Plus className="w-4 h-4" />
-                {t("Mahsulot")}
-              </Button>
+              {can("category:manage") && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setEditingCategory(null);
+                    setCatForm({ name: "", parentId: "" });
+                    setCategoryModalOpen(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  {t("Guruh")}
+                </Button>
+              )}
+              {can("product:create") && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setForm({ ...defaultForm, categoryId: selectedCategory ? String(selectedCategory) : "" });
+                    setProductModalOpen(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                  {t("Mahsulot")}
+                </Button>
+              )}
             </div>
-          )
+          ) : undefined
         }
       />
 
@@ -623,7 +561,7 @@ export function ProductsPage() {
                         deleteCategory.mutate(id);
                       }
                     }}
-                    isBoss={isBoss()}
+                    isBoss={can("category:manage")}
                   />
                 )}
               </div>
@@ -656,7 +594,7 @@ export function ProductsPage() {
                         deleteCategory.mutate(id);
                       }
                     }}
-                    isBoss={isBoss()}
+                    isBoss={can("category:manage")}
                   />
                 </div>
               </div>
@@ -667,10 +605,14 @@ export function ProductsPage() {
           <div className="flex-1 min-w-0" ref={tableRef}>
             {/* Top pagination */}
             <div className="mb-3 flex items-center justify-between">
-              <PaginationBar />
-              {currentPage > 1 || nextCursor ? (
-                <span className="text-xs text-gray-400">{products.length} {t("ta")}</span>
-              ) : null}
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                onPageChange={(p) => { setPage(p); scrollToTable(); }}
+              />
+              {total > 0 && (
+                <span className="text-xs text-gray-400">{total} {t("ta mahsulot")}</span>
+              )}
             </div>
             <div className="mb-4 flex items-center gap-2">
               <button
@@ -798,31 +740,31 @@ export function ProductsPage() {
                             >
                               <QrCode className="w-5 h-5 sm:w-4 sm:h-4 text-gray-400" />
                             </button>
-                            {isBoss() && (
-                              <>
-                                <button
-                                  className="p-2 sm:p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
-                                  title={t("Tahrirlash")}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedProductId(product.id);
-                                  }}
-                                >
-                                  <Edit2 className="w-5 h-5 sm:w-4 sm:h-4 text-gray-400" />
-                                </button>
-                                <button
-                                  className="p-2 sm:p-1.5 hover:bg-red-50 rounded-lg transition-colors"
-                                  title={t("O'chirish")}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (confirm(getT()(`"${product.name}" mahsulotini o'chirmoqchimisiz?`))) {
-                                      deleteProduct.mutate(product.id);
-                                    }
-                                  }}
-                                >
-                                  <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 text-gray-400" />
-                                </button>
-                              </>
+                            {can("product:update") && (
+                              <button
+                                className="p-2 sm:p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                                title={t("Tahrirlash")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedProductId(product.id);
+                                }}
+                              >
+                                <Edit2 className="w-5 h-5 sm:w-4 sm:h-4 text-gray-400" />
+                              </button>
+                            )}
+                            {can("product:delete") && (
+                              <button
+                                className="p-2 sm:p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                                title={t("O'chirish")}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm(getT()(`"${product.name}" mahsulotini o'chirmoqchimisiz?`))) {
+                                    deleteProduct.mutate(product.id);
+                                  }
+                                }}
+                              >
+                                <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 text-gray-400" />
+                              </button>
                             )}
                           </div>
                         </td>
@@ -834,10 +776,6 @@ export function ProductsPage() {
             </Table>
             </div>
 
-            {/* Bottom pagination */}
-            <div className="mt-3 flex justify-center">
-              <PaginationBar />
-            </div>
           </div>
         </div>
       </div>
@@ -980,8 +918,8 @@ export function ProductsPage() {
           </div>
         }
         footer={
-          isBoss() ? (
-            <div className="flex items-center justify-between w-full">
+          <div className="flex items-center justify-between w-full">
+            {can("product:delete") ? (
               <Button
                 variant="danger"
                 size="sm"
@@ -995,20 +933,22 @@ export function ProductsPage() {
                 <Trash2 className="w-3.5 h-3.5" />
                 {t("O'chirish")}
               </Button>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={() => handlePrintLabel()}>
-                  <Printer className="w-3.5 h-3.5" />
-                  {t("Yorliq")}
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => setSelectedProductId(null)}>
-                  {t("Bekor qilish")}
-                </Button>
+            ) : <span />}
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => handlePrintLabel()}>
+                <Printer className="w-3.5 h-3.5" />
+                {t("Yorliq")}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setSelectedProductId(null)}>
+                {t("Bekor qilish")}
+              </Button>
+              {can("product:update") && (
                 <Button size="sm" loading={updateProduct.isPending} onClick={handleSlideFormSave}>
                   {t("Saqlash")}
                 </Button>
-              </div>
+              )}
             </div>
-          ) : undefined
+          </div>
         }
       >
         {productDetailQuery.data && (
@@ -1017,7 +957,7 @@ export function ProductsPage() {
               label={t("Mahsulot nomi")}
               value={slideForm.name}
               onChange={(e) => setSlideForm((f) => ({ ...f, name: e.target.value }))}
-              disabled={!isBoss()}
+              disabled={!can("product:update")}
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select
@@ -1025,21 +965,21 @@ export function ProductsPage() {
                 options={categoryOptions}
                 value={slideForm.categoryId}
                 onChange={(e) => setSlideForm((f) => ({ ...f, categoryId: e.target.value }))}
-                disabled={!isBoss()}
+                disabled={!can("product:update")}
               />
               <Select
                 label={t("O'lchov birligi")}
                 options={unitOptions}
                 value={slideForm.unit}
                 onChange={(e) => setSlideForm((f) => ({ ...f, unit: e.target.value }))}
-                disabled={!isBoss()}
+                disabled={!can("product:update")}
               />
             </div>
             <Input
               label={t("SKU")}
               value={slideForm.sku}
               onChange={(e) => setSlideForm((f) => ({ ...f, sku: e.target.value }))}
-              disabled={!isBoss()}
+              disabled={!can("product:update")}
             />
 
             <div className="border-t pt-4 space-y-3">
@@ -1071,7 +1011,7 @@ export function ProductsPage() {
               label={t("Tavsif")}
               value={slideForm.description}
               onChange={(e) => setSlideForm((f) => ({ ...f, description: e.target.value }))}
-              disabled={!isBoss()}
+              disabled={!can("product:update")}
             />
 
             {/* Product images */}
@@ -1085,7 +1025,7 @@ export function ProductsPage() {
                       alt=""
                       className="w-full h-full object-cover"
                     />
-                    {isBoss() && (
+                    {can("product:update") && (
                       <button
                         className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => removeImage.mutate(img.id)}
@@ -1095,7 +1035,7 @@ export function ProductsPage() {
                     )}
                   </div>
                 ))}
-                {isBoss() && (
+                {can("product:update") && (
                   <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition-colors">
                     <ImagePlus className="w-6 h-6 text-gray-400" />
                     <span className="text-xs text-gray-400 mt-1">{t("Qo'shish")}</span>
@@ -1119,7 +1059,7 @@ export function ProductsPage() {
                   <div key={si.id} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded">
                     <Warehouse className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                     <span className="text-gray-600 flex-1">{si.warehouse.name}</span>
-                    {isBoss() ? (
+                    {can("product:update") ? (
                       <input
                         type="number"
                         className="input-field w-20 text-sm py-1 text-right"
@@ -1140,7 +1080,7 @@ export function ProductsPage() {
                     )}
                   </div>
                 ))}
-                {isBoss() && (warehousesQuery.data ?? []).filter(
+                {can("product:update") && (warehousesQuery.data ?? []).filter(
                   (w) => !productDetailQuery.data!.stockItems.some((si) => si.warehouseId === w.id)
                 ).length > 0 && (
                   <div className="flex items-center gap-2 mt-2">

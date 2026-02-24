@@ -13,41 +13,44 @@ export const productRouter = router({
       warehouseId: z.number().optional(),
       search: z.string().optional(),
       cursor: z.number().optional(),
+      page: z.number().min(1).default(1),
       limit: z.number().min(1).max(1000).default(50),
     }).optional())
     .query(async ({ ctx, input }) => {
       const limit = input?.limit ?? 50;
-      const items = await ctx.db.product.findMany({
-        where: {
-          isActive: true,
-          ...(input?.categoryId ? { categoryId: input.categoryId } : {}),
-          ...(input?.search ? {
-            OR: [
-              { name: { contains: input.search, mode: "insensitive" } },
-              { code: { contains: input.search, mode: "insensitive" } },
-              { sku: { contains: input.search, mode: "insensitive" } },
-            ],
-          } : {}),
-        },
-        include: {
-          category: true,
-          images: { orderBy: { sortOrder: "asc" }, take: 1 },
-          stockItems: input?.warehouseId
-            ? { where: { warehouseId: input.warehouseId } }
-            : true,
-        },
-        orderBy: { id: "asc" },
-        take: limit + 1,
-        ...(input?.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
-      });
+      const page = input?.page ?? 1;
+      const searchFilter = input?.search ? {
+        OR: [
+          { name: { contains: input.search, mode: "insensitive" as const } },
+          { code: { contains: input.search, mode: "insensitive" as const } },
+          { sku: { contains: input.search, mode: "insensitive" as const } },
+        ],
+      } : {};
 
-      let nextCursor: number | undefined;
-      if (items.length > limit) {
-        const nextItem = items.pop();
-        nextCursor = nextItem?.id;
-      }
+      const baseWhere = {
+        isActive: true,
+        ...(input?.categoryId ? { categoryId: input.categoryId } : {}),
+        ...searchFilter,
+      };
 
-      return { items, nextCursor };
+      const [items, total] = await Promise.all([
+        ctx.db.product.findMany({
+          where: baseWhere,
+          include: {
+            category: true,
+            images: { orderBy: { sortOrder: "asc" }, take: 1 },
+            stockItems: input?.warehouseId
+              ? { where: { warehouseId: input.warehouseId } }
+              : true,
+          },
+          orderBy: { id: "asc" },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        ctx.db.product.count({ where: baseWhere }),
+      ]);
+
+      return { items, total, nextCursor: undefined as number | undefined };
     }),
 
   getById: protectedProcedure
