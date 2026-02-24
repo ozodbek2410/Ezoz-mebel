@@ -93,6 +93,7 @@ function SalesPageInner() {
       trpc.product.list.query({
         search: productSearch || undefined,
         warehouseId: targetWarehouse?.id,
+        limit: 1000,
       }),
     enabled: activeTab === "pos" && !!targetWarehouse,
   });
@@ -187,7 +188,7 @@ function SalesPageInner() {
 
   // Cart
   const addToCart = useCallback(
-    (product: NonNullable<typeof productsQuery.data>[number]) => {
+    (product: NonNullable<typeof productsQuery.data>["items"][number]) => {
       setCart((prev) => {
         const existing = prev.find((i) => i.productId === product.id);
         if (existing) {
@@ -249,7 +250,7 @@ function SalesPageInner() {
     { uzs: 0, usd: 0 },
   );
 
-  const products = productsQuery.data ?? [];
+  const products = productsQuery.data?.items ?? [];
   const availableProducts = products.filter((p) => {
     const stock = p.stockItems[0] ? Number(p.stockItems[0].quantity) : 0;
     return stock > 0;

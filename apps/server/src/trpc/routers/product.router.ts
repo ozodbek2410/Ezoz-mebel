@@ -13,7 +13,7 @@ export const productRouter = router({
       warehouseId: z.number().optional(),
       search: z.string().optional(),
       cursor: z.number().optional(),
-      limit: z.number().min(1).max(100).default(50),
+      limit: z.number().min(1).max(1000).default(50),
     }).optional())
     .query(async ({ ctx, input }) => {
       const limit = input?.limit ?? 50;

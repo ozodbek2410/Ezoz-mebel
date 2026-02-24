@@ -239,7 +239,7 @@ function PurchaseTab() {
 
   const productsQuery = useQuery({
     queryKey: ["product", "list-purchase"],
-    queryFn: () => trpc.product.list.query({}),
+    queryFn: () => trpc.product.list.query({ limit: 1000 }),
   });
 
   const suppliersQuery = useQuery({
@@ -330,7 +330,7 @@ function PurchaseTab() {
   }
 
   const warehouseOptions = (warehousesQuery.data ?? []).map((w) => ({ value: String(w.id), label: w.name }));
-  const productOptions = (productsQuery.data ?? []).map((p) => ({
+  const productOptions = (productsQuery.data?.items ?? []).map((p) => ({
     value: String(p.id),
     label: `${p.code} — ${p.name} (${p.unit})`,
   }));
@@ -779,7 +779,7 @@ function ReturnTab() {
 
   const productsQuery = useQuery({
     queryKey: ["product", "list-return"],
-    queryFn: () => trpc.product.list.query({}),
+    queryFn: () => trpc.product.list.query({ limit: 1000 }),
   });
 
   const mutation = useMutation({
@@ -799,7 +799,7 @@ function ReturnTab() {
   });
 
   const warehouseOptions = (warehousesQuery.data ?? []).map((w) => ({ value: String(w.id), label: w.name }));
-  const productOptions = (productsQuery.data ?? []).map((p) => ({
+  const productOptions = (productsQuery.data?.items ?? []).map((p) => ({
     value: String(p.id),
     label: p.name,
   }));
@@ -1025,7 +1025,7 @@ function RevalueTab() {
 
   const productsQuery = useQuery({
     queryKey: ["product", "list-revalue"],
-    queryFn: () => trpc.product.list.query({}),
+    queryFn: () => trpc.product.list.query({ limit: 1000 }),
   });
 
   const historyQuery = useQuery({
@@ -1051,13 +1051,13 @@ function RevalueTab() {
     onError: (err) => toast.error(err.message),
   });
 
-  const productOptions = (productsQuery.data ?? []).map((p) => ({
+  const productOptions = (productsQuery.data?.items ?? []).map((p) => ({
     value: String(p.id),
     label: `${p.name} (tannarx: ${formatUzs(Number(p.costPriceUzs))})`,
   }));
 
   // Fill current price when product selected
-  const selectedProduct = (productsQuery.data ?? []).find((p) => String(p.id) === form.productId);
+  const selectedProduct = (productsQuery.data?.items ?? []).find((p) => String(p.id) === form.productId);
 
   return (
     <div>
@@ -1103,7 +1103,7 @@ function RevalueTab() {
           <div className="space-y-4">
             <Select label="Mahsulot" options={productOptions} value={form.productId}
               onChange={(e) => {
-                const p = (productsQuery.data ?? []).find((pr) => String(pr.id) === e.target.value);
+                const p = (productsQuery.data?.items ?? []).find((pr) => String(pr.id) === e.target.value);
                 setForm({
                   productId: e.target.value,
                   newPriceUzs: p ? String(Number(p.costPriceUzs)) : "",

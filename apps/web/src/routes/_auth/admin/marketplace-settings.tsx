@@ -74,7 +74,7 @@ function ProductsTab() {
 
   const productsQuery = useQuery({
     queryKey: ["product", "list-marketplace"],
-    queryFn: () => trpc.product.list.query({}),
+    queryFn: () => trpc.product.list.query({ limit: 1000 }),
   });
 
   const toggleVisibility = useMutation({
@@ -103,7 +103,7 @@ function ProductsTab() {
     onError: (err) => toast.error(err.message),
   });
 
-  const products = productsQuery.data ?? [];
+  const products = productsQuery.data?.items ?? [];
   const filtered = search
     ? products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
     : products;
@@ -221,7 +221,7 @@ function BannersTab() {
 
   const productsQuery = useQuery({
     queryKey: ["product", "list-for-banners"],
-    queryFn: () => trpc.product.list.query({}),
+    queryFn: () => trpc.product.list.query({ limit: 1000 }),
     enabled: selectingProduct !== null,
   });
 
@@ -238,7 +238,7 @@ function BannersTab() {
   });
 
   const bannerLinks = bannerLinksQuery.data ?? {};
-  const allProducts = productsQuery.data ?? [];
+  const allProducts = productsQuery.data?.items ?? [];
   const filteredProducts = productSearch
     ? allProducts.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
     : allProducts;
