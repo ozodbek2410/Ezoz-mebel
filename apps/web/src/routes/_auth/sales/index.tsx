@@ -756,7 +756,9 @@ function SalesPageInner() {
                               title={t("Yakunlash")}
                               onClick={() => {
                                 setPaymentSaleId(sale.id);
-                                setPaymentForm({ paymentType: "CASH_UZS", amountUzs: String(sale.totalUzs), amountUsd: "0", notes: "" });
+                                setPaymentSaleTotal(Number(sale.totalUzs));
+                                setPaymentCustomerId(sale.customerId ?? undefined);
+                                setPaymentForm({ cashUzs: String(sale.totalUzs), cardUzs: "0", transferUzs: "0" });
                                 setPaymentOpen(true);
                               }}
                             >
