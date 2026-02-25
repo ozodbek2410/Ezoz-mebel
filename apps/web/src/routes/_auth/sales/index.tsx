@@ -132,6 +132,37 @@ function SalesPageInner() {
   }
 
 
+  // Service mode: create sale immediately (no payment modal)
+  const createServiceSale = useMutation({
+    mutationFn: async () => {
+      await trpc.sale.create.mutate({
+        customerId: selectedCustomer?.id,
+        warehouseId: targetWarehouse?.id,
+        saleType: "SERVICE",
+        items: cart.map((item) => ({
+          productId: item.productId ?? undefined,
+          serviceName: item.serviceName ?? undefined,
+          quantity: item.quantity,
+          priceUzs: item.priceUzs,
+          priceUsd: item.priceUsd,
+          masterId: item.masterId ?? undefined,
+        })),
+        goesToWorkshop: hasWorkshopItems,
+        notes: saleNotes || undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sale"] });
+      queryClient.invalidateQueries({ queryKey: ["product"] });
+      queryClient.invalidateQueries({ queryKey: ["warehouse"] });
+      setCart([]);
+      setSelectedCustomer(null);
+      setSaleNotes("");
+      toast.success(getT()("Sotuv yaratildi"));
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const cancelSale = useMutation({
     mutationFn: (id: number) => trpc.sale.cancel.mutate({ id }),
     onSuccess: () => {
@@ -542,8 +573,8 @@ function SalesPageInner() {
                     <Input placeholder={t("Izoh...")} value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} className="mb-3" />
                     <button
                       className="btn-pos-sell"
-                      disabled={cart.length === 0 || hasUnassignedService}
-                      onClick={openPaymentModal}
+                      disabled={cart.length === 0 || hasUnassignedService || createServiceSale.isPending}
+                      onClick={() => createServiceSale.mutate()}
                     >
                       <Banknote className="w-6 h-6" />
                       {t("XIZMAT SOTISH")}
