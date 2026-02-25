@@ -21,7 +21,7 @@ export const workshopRouter = router({
           sale: {
             include: {
               customer: { select: { fullName: true, phone: true } },
-              items: true,
+              items: { include: { product: { select: { name: true } } } },
             },
           },
           photos: true,

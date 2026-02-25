@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, User } from "lucide-react";
+import { Plus, Edit2, Trash2, User, ChevronDown } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button, SearchInput, Modal, Input, Select, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, Pagination, Badge, CurrencyPairInput, Tabs, SlideOver, PhoneInput } from "@/components/ui";
@@ -50,6 +50,7 @@ export function CustomersPage() {
   const [debtPayForm, setDebtPayForm] = useState({ amountUzs: "0", paymentType: "CASH_UZS" });
   const [manualDebtOpen, setManualDebtOpen] = useState(false);
   const [manualDebtAmount, setManualDebtAmount] = useState("0");
+  const [expandedSaleId, setExpandedSaleId] = useState<number | null>(null);
 
   // Queries
   const listQuery = useQuery({
@@ -558,10 +559,31 @@ export function CustomersPage() {
                       <p className="text-xs font-medium text-gray-600 mb-2">{t("Qarzli sotuvlar")}</p>
                       <div className="space-y-1.5">
                         {unpaidSalesQuery.data.map((sale) => (
-                          <div key={sale.id} className="flex justify-between items-center px-3 py-2 bg-amber-50 rounded-lg text-xs">
-                            <span className="text-gray-500">{new Date(sale.createdAt).toLocaleDateString("uz")}</span>
-                            <span className="text-gray-500">{t("Jami:")} {formatUzs(sale.totalUzs)}</span>
-                            <span className="font-bold text-amber-700">{t("Qarz:")} {formatUzs(sale.debtUzs)}</span>
+                          <div key={sale.id}>
+                            <button
+                              type="button"
+                              className="w-full flex justify-between items-center px-3 py-2 bg-amber-50 hover:bg-amber-100 rounded-lg text-xs transition-colors cursor-pointer"
+                              onClick={() => setExpandedSaleId(expandedSaleId === sale.id ? null : sale.id)}
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expandedSaleId === sale.id ? "rotate-180" : ""}`} />
+                                <span className="text-gray-500">{new Date(sale.createdAt).toLocaleDateString("uz")}</span>
+                              </span>
+                              <span className="text-gray-500">{t("Jami:")} {formatUzs(sale.totalUzs)}</span>
+                              <span className="font-bold text-amber-700">{t("Qarz:")} {formatUzs(sale.debtUzs)}</span>
+                            </button>
+                            {expandedSaleId === sale.id && (
+                              <div className="ml-5 mt-1 mb-1 border-l-2 border-amber-200 pl-3 space-y-1">
+                                {(sale.items?.length ?? 0) > 0 ? sale.items.map((item, idx) => (
+                                  <div key={idx} className="flex justify-between text-xs text-gray-600">
+                                    <span>{item.name} <span className="text-gray-400">x{item.quantity}</span></span>
+                                    <span>{formatUzs(item.totalUzs)}</span>
+                                  </div>
+                                )) : (
+                                  <p className="text-xs text-gray-400 italic">{t("Batafsil ma'lumot yo'q")}</p>
+                                )}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -592,16 +614,50 @@ export function CustomersPage() {
                     <EmptyState title={t("Sotuvlar yo'q")} description={t("Bu mijoz hali xarid qilmagan")} />
                   ) : (
                     detail.sales.map((sale) => (
-                      <div key={sale.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="text-sm font-medium">
-                            {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {new Date(sale.createdAt).toLocaleDateString("uz")}
-                          </p>
-                        </div>
-                        <CurrencyDisplay amountUzs={sale.totalUzs} amountUsd={sale.totalUsd} size="sm" />
+                      <div key={sale.id}>
+                        <button
+                          type="button"
+                          className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                          onClick={() => setExpandedSaleId(expandedSaleId === sale.id ? null : sale.id)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSaleId === sale.id ? "rotate-180" : ""}`} />
+                            <div className="text-left">
+                              <p className="text-sm font-medium">
+                                {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {new Date(sale.createdAt).toLocaleDateString("uz")}
+                              </p>
+                            </div>
+                          </div>
+                          <CurrencyDisplay amountUzs={sale.totalUzs} amountUsd={sale.totalUsd} size="sm" />
+                        </button>
+                        {expandedSaleId === sale.id && (
+                          <div className="ml-6 mt-1 mb-1 border-l-2 border-gray-200 pl-3 space-y-1">
+                            {(sale.items?.length ?? 0) > 0 ? sale.items.map((item) => (
+                              <div key={item.id} className="flex justify-between text-xs text-gray-600 py-0.5">
+                                <span>
+                                  {item.product?.name ?? item.serviceName ?? "—"}
+                                  <span className="text-gray-400 ml-1">x{Number(item.quantity)}</span>
+                                </span>
+                                <span>{formatUzs(Number(item.totalUzs))}</span>
+                              </div>
+                            )) : (
+                              <p className="text-xs text-gray-400 italic">{t("Batafsil ma'lumot yo'q")}</p>
+                            )}
+                            {(sale.payments?.length ?? 0) > 0 && (
+                              <div className="border-t border-gray-200 pt-1 mt-1">
+                                {sale.payments.map((p) => (
+                                  <div key={p.id} className="flex justify-between text-xs text-green-600 py-0.5">
+                                    <span>{p.paymentType === "CASH_UZS" ? t("Naqd") : p.paymentType === "CARD" ? t("Karta") : t("O'tkazma")}</span>
+                                    <span>{formatUzs(Number(p.amountUzs))}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))
                   )}

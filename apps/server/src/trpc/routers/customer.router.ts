@@ -33,7 +33,7 @@ export const customerRouter = router({
           sales: {
             orderBy: { createdAt: "desc" },
             take: 50,
-            include: { items: true, payments: true },
+            include: { items: { include: { product: { select: { name: true } } } }, payments: true },
           },
           payments: { orderBy: { createdAt: "desc" }, take: 50 },
         },
@@ -156,6 +156,7 @@ export const customerRouter = router({
         where: { customerId: input.id, status: { not: "CANCELLED" } },
         include: {
           payments: { select: { amountUzs: true, amountUsd: true } },
+          items: { include: { product: { select: { name: true } } } },
         },
         orderBy: { createdAt: "asc" },
       });
@@ -169,6 +170,11 @@ export const customerRouter = router({
             totalUzs: Number(sale.totalUzs),
             paidUzs,
             debtUzs,
+            items: sale.items.map((i) => ({
+              name: i.product?.name ?? i.serviceName ?? "—",
+              quantity: Number(i.quantity),
+              totalUzs: Number(i.totalUzs),
+            })),
           };
         })
         .filter((s) => s.debtUzs > 0.01);
