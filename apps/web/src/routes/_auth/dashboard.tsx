@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { useCurrencyStore } from "@/store/currency.store";
@@ -18,6 +19,8 @@ import {
   Save,
   StickyNote,
   Wrench,
+  ArrowUpRight,
+  ChevronRight,
 } from "lucide-react";
 
 export function DashboardPage() {
@@ -28,7 +31,7 @@ export function DashboardPage() {
   const statsQuery = useQuery({
     queryKey: ["report", "dashboardStats"],
     queryFn: () => trpc.report.dashboardStats.query(),
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 60000,
   });
 
   const stats = statsQuery.data;
@@ -41,33 +44,40 @@ export function DashboardPage() {
       />
 
       <div className="page-body">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard
+        {/* Stats Cards - Today */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <StatCardLink
+            to="/reports"
+            search={{ tab: "charts" }}
             label={t("Bugungi sotuvlar")}
             value={String(stats?.todaySalesCount ?? 0)}
-            sub={t("hujjat")}
+            sub={`${t("Hafta")}: ${stats?.weekSalesCount ?? 0} | ${t("Oy")}: ${stats?.monthSalesCount ?? 0}`}
             icon={ShoppingCart}
             color="text-blue-600 bg-blue-100"
           />
-          <StatCard
+          <StatCardLink
+            to="/reports"
+            search={isBoss() ? { tab: "boss" } : { tab: "cashier" }}
             label={t("Bugungi kirim")}
             value={formatUzs(stats?.todayIncomeUzs ?? 0)}
-            sub={t("naqd + karta")}
+            sub={`${t("Oy")}: ${formatUzs(stats?.monthIncomeUzs ?? 0)}`}
             icon={TrendingUp}
             color="text-green-600 bg-green-100"
           />
-          <StatCard
+          <StatCardLink
+            to="/reports"
+            search={isBoss() ? { tab: "boss" } : { tab: "cashier" }}
             label={t("Bugungi xarajatlar")}
             value={formatUzs(stats?.todayExpensesUzs ?? 0)}
             sub={t("barcha kassalar")}
             icon={Wallet}
             color="text-red-600 bg-red-100"
           />
-          <StatCard
+          <StatCardLink
+            to="/customers"
             label={t("Aktiv mijozlar")}
             value={String(stats?.activeCustomers ?? 0)}
-            sub={t("jami")}
+            sub={`${stats?.totalDebtors ?? 0} ${t("ta qarzdor")}`}
             icon={Users}
             color="text-purple-600 bg-purple-100"
           />
@@ -75,16 +85,9 @@ export function DashboardPage() {
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Sales */}
           <RecentSalesCard sales={stats?.recentSales ?? []} />
-
-          {/* Notes for Boss */}
           {isBoss() && <NotesCard />}
-
-          {/* Workshop tasks for master */}
           {isMaster() && <WorkshopTasksCard />}
-
-          {/* Low stock alert */}
           <LowStockCard items={stats?.lowStockItems ?? []} />
         </div>
       </div>
@@ -92,18 +95,26 @@ export function DashboardPage() {
   );
 }
 
-// ===== Stat Card =====
-interface StatCardProps {
+// ===== Clickable Stat Card =====
+interface StatCardLinkProps {
+  to: string;
+  search?: Record<string, string>;
   label: string;
   value: string;
   sub: string;
   icon: React.ElementType;
   color: string;
+  trend?: string;
+  trendColor?: string;
 }
 
-function StatCard({ label, value, sub, icon: Icon, color }: StatCardProps) {
+function StatCardLink({ to, search, label, value, sub, icon: Icon, color, trend, trendColor }: StatCardLinkProps) {
   return (
-    <div className="stat-card">
+    <Link
+      to={to}
+      search={search}
+      className="stat-card group relative overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer"
+    >
       <div className="flex items-center justify-between">
         <span className="stat-card-label">{label}</span>
         <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${color}`}>
@@ -111,8 +122,11 @@ function StatCard({ label, value, sub, icon: Icon, color }: StatCardProps) {
         </div>
       </div>
       <div className="stat-card-value truncate">{value}</div>
-      <div className="stat-card-sub">{sub}</div>
-    </div>
+      <div className="flex items-center justify-between">
+        <span className="stat-card-sub">{sub}</span>
+        <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-brand-500 transition-colors" />
+      </div>
+    </Link>
   );
 }
 
@@ -137,6 +151,9 @@ function RecentSalesCard({ sales }: { sales: RecentSale[] }) {
           <ShoppingCart size={16} className="text-blue-500" />
           {t("So'nggi sotuvlar")}
         </h3>
+        <Link to="/sales" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors">
+          {t("Barchasi")} <ChevronRight size={14} />
+        </Link>
       </div>
       <div className="card-body p-0">
         {sales.length === 0 ? (
@@ -147,7 +164,7 @@ function RecentSalesCard({ sales }: { sales: RecentSale[] }) {
         ) : (
           <div className="divide-y divide-gray-100">
             {sales.map((sale) => (
-              <div key={sale.id} className="px-5 py-3 flex items-center justify-between">
+              <div key={sale.id} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
                 <div>
                   <div className="flex items-center gap-2">
                     <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
@@ -260,9 +277,10 @@ function WorkshopTasksCard() {
           <Wrench size={16} className="text-orange-500" />
           {t("Mening vazifalarim")}
         </h3>
-        {tasks.length > 0 && (
-          <Badge variant="warning">{tasks.length}</Badge>
-        )}
+        <Link to="/workshop" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors">
+          {t("Barchasi")} {tasks.length > 0 && <Badge variant="warning">{tasks.length}</Badge>}
+          <ChevronRight size={14} />
+        </Link>
       </div>
       <div className="card-body p-0">
         {tasks.length === 0 ? (
@@ -273,20 +291,13 @@ function WorkshopTasksCard() {
         ) : (
           <div className="divide-y divide-gray-100">
             {tasks.slice(0, 5).map((task) => (
-              <div key={task.id} className="px-5 py-3">
+              <div key={task.id} className="px-5 py-3 hover:bg-gray-50/50 transition-colors">
                 <p className="font-medium text-sm">{task.description}</p>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {task.sale?.createdAt ? new Date(task.sale.createdAt).toLocaleDateString("uz") : ""}
                 </p>
               </div>
             ))}
-            {tasks.length > 5 && (
-              <div className="px-5 py-2 text-center">
-                <a href="/workshop" className="text-xs text-brand-600 hover:text-brand-700">
-                  {t("Barchasini ko'rish")} ({tasks.length})
-                </a>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -312,9 +323,10 @@ function LowStockCard({ items }: { items: LowStockItem[] }) {
           <AlertTriangle size={16} className="text-amber-500" />
           {t("Kam qolgan mahsulotlar")}
         </h3>
-        {items.length > 0 && (
-          <Badge variant="danger">{items.length}</Badge>
-        )}
+        <Link to="/products" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors">
+          {t("Barchasi")} {items.length > 0 && <Badge variant="danger">{items.length}</Badge>}
+          <ChevronRight size={14} />
+        </Link>
       </div>
       <div className="card-body p-0">
         {items.length === 0 ? (
@@ -325,7 +337,7 @@ function LowStockCard({ items }: { items: LowStockItem[] }) {
         ) : (
           <div className="divide-y divide-gray-100">
             {items.map((item, idx) => (
-              <div key={idx} className="px-5 py-3 flex items-center justify-between">
+              <div key={idx} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
                 <div>
                   <p className="font-medium text-sm">{item.productName}</p>
                   <p className="text-xs text-gray-400">{item.warehouseName}</p>

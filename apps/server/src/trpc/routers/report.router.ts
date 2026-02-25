@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { router, protectedProcedure, bossProcedure } from "../trpc";
 
 const dateRangeInput = z.object({
@@ -14,50 +15,78 @@ export const reportRouter = router({
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    const [todaySales, todayIncome, todayExpenses, activeCustomers, recentSales, lowStock] =
-      await Promise.all([
-        // Today's sales count
-        ctx.db.sale.count({
-          where: {
-            createdAt: { gte: todayStart, lte: todayEnd },
-            status: { not: "CANCELLED" },
-          },
-        }),
-        // Today's income
-        ctx.db.payment.aggregate({
-          where: { createdAt: { gte: todayStart, lte: todayEnd } },
-          _sum: { amountUzs: true, amountUsd: true },
-        }),
-        // Today's expenses
-        ctx.db.expense.aggregate({
-          where: { createdAt: { gte: todayStart, lte: todayEnd } },
-          _sum: { amountUzs: true },
-        }),
-        // Active customers count
-        ctx.db.customer.count({ where: { isActive: true } }),
-        // Recent 10 sales
-        ctx.db.sale.findMany({
-          where: { status: { not: "CANCELLED" } },
-          include: {
-            customer: { select: { fullName: true } },
-            cashier: { select: { fullName: true } },
-          },
-          orderBy: { createdAt: "desc" },
-          take: 10,
-        }),
-        // Low stock items
-        ctx.db.stockItem.findMany({
-          where: {
-            product: { isActive: true },
-          },
-          include: {
-            product: { select: { name: true, minStockAlert: true, unit: true } },
-            warehouse: { select: { name: true } },
-          },
-        }),
-      ]);
+    // Week start (Monday)
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + (weekStart.getDay() === 0 ? -6 : 1));
 
-    // Filter low stock in JS (Prisma can't compare two columns directly)
+    // Month start
+    const monthStart = new Date();
+    monthStart.setHours(0, 0, 0, 0);
+    monthStart.setDate(1);
+
+    const [
+      todaySales, todayIncome, todayExpenses,
+      weekSales, weekIncome,
+      monthSales, monthIncome,
+      activeCustomers, totalDebtors, recentSales, lowStock,
+    ] = await Promise.all([
+      // Today
+      ctx.db.sale.count({
+        where: { createdAt: { gte: todayStart, lte: todayEnd }, status: { not: "CANCELLED" } },
+      }),
+      ctx.db.payment.aggregate({
+        where: { createdAt: { gte: todayStart, lte: todayEnd } },
+        _sum: { amountUzs: true, amountUsd: true },
+      }),
+      ctx.db.expense.aggregate({
+        where: { createdAt: { gte: todayStart, lte: todayEnd } },
+        _sum: { amountUzs: true },
+      }),
+      // Week
+      ctx.db.sale.count({
+        where: { createdAt: { gte: weekStart, lte: todayEnd }, status: { not: "CANCELLED" } },
+      }),
+      ctx.db.payment.aggregate({
+        where: { createdAt: { gte: weekStart, lte: todayEnd } },
+        _sum: { amountUzs: true },
+      }),
+      // Month
+      ctx.db.sale.count({
+        where: { createdAt: { gte: monthStart, lte: todayEnd }, status: { not: "CANCELLED" } },
+      }),
+      ctx.db.payment.aggregate({
+        where: { createdAt: { gte: monthStart, lte: todayEnd } },
+        _sum: { amountUzs: true },
+      }),
+      // Customers
+      ctx.db.customer.count({ where: { isActive: true } }),
+      // Debtors count (customers with OPEN sales)
+      ctx.db.sale.groupBy({
+        by: ["customerId"],
+        where: { status: "OPEN", customerId: { not: null } },
+        _count: true,
+      }),
+      // Recent 10 sales
+      ctx.db.sale.findMany({
+        where: { status: { not: "CANCELLED" } },
+        include: {
+          customer: { select: { fullName: true } },
+          cashier: { select: { fullName: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+      // Low stock items
+      ctx.db.stockItem.findMany({
+        where: { product: { isActive: true } },
+        include: {
+          product: { select: { name: true, minStockAlert: true, unit: true } },
+          warehouse: { select: { name: true } },
+        },
+      }),
+    ]);
+
     const lowStockItems = lowStock
       .filter((s) => Number(s.quantity) <= Number(s.product.minStockAlert) && Number(s.product.minStockAlert) > 0)
       .slice(0, 10);
@@ -67,7 +96,12 @@ export const reportRouter = router({
       todayIncomeUzs: Number(todayIncome._sum.amountUzs ?? 0),
       todayIncomeUsd: Number(todayIncome._sum.amountUsd ?? 0),
       todayExpensesUzs: Number(todayExpenses._sum.amountUzs ?? 0),
+      weekSalesCount: weekSales,
+      weekIncomeUzs: Number(weekIncome._sum.amountUzs ?? 0),
+      monthSalesCount: monthSales,
+      monthIncomeUzs: Number(monthIncome._sum.amountUzs ?? 0),
       activeCustomers,
+      totalDebtors: totalDebtors.length,
       recentSales: recentSales.map((s) => ({
         id: s.id,
         documentNo: s.documentNo,
@@ -89,42 +123,59 @@ export const reportRouter = router({
     };
   }),
 
-  // Sales chart data (last N days)
+  // Sales chart data — efficient single-query approach
   salesChart: protectedProcedure
     .input(z.object({ days: z.number().min(7).max(90).default(30) }))
     .query(async ({ ctx, input }) => {
+      const startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      startDate.setDate(startDate.getDate() - input.days + 1);
+      const endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+
+      // Get all sales in range grouped by date
+      const salesRaw = await ctx.db.$queryRaw<Array<{ date: string; total_uzs: Prisma.Decimal; cnt: bigint }>>`
+        SELECT DATE("createdAt") as date, COALESCE(SUM("totalUzs"), 0) as total_uzs, COUNT(*) as cnt
+        FROM "Sale"
+        WHERE "createdAt" >= ${startDate} AND "createdAt" <= ${endDate} AND "status" != 'CANCELLED'
+        GROUP BY DATE("createdAt")
+        ORDER BY date
+      `;
+
+      const expensesRaw = await ctx.db.$queryRaw<Array<{ date: string; total_uzs: Prisma.Decimal }>>`
+        SELECT DATE("createdAt") as date, COALESCE(SUM("amountUzs"), 0) as total_uzs
+        FROM "Expense"
+        WHERE "createdAt" >= ${startDate} AND "createdAt" <= ${endDate}
+        GROUP BY DATE("createdAt")
+        ORDER BY date
+      `;
+
+      const salesMap = new Map(salesRaw.map((r) => [
+        new Date(r.date).toISOString().split("T")[0],
+        { uzs: Number(r.total_uzs), count: Number(r.cnt) },
+      ]));
+      const expensesMap = new Map(expensesRaw.map((r) => [
+        new Date(r.date).toISOString().split("T")[0],
+        Number(r.total_uzs),
+      ]));
+
+      // Build complete date range
       const data: Array<{ date: string; salesUzs: number; expensesUzs: number; count: number }> = [];
-
-      for (let i = input.days - 1; i >= 0; i--) {
-        const d = new Date();
-        d.setHours(0, 0, 0, 0);
-        d.setDate(d.getDate() - i);
-        const dayEnd = new Date(d);
-        dayEnd.setHours(23, 59, 59, 999);
-
-        const [sales, expenses] = await Promise.all([
-          ctx.db.sale.aggregate({
-            where: { createdAt: { gte: d, lte: dayEnd }, status: { not: "CANCELLED" } },
-            _sum: { totalUzs: true },
-            _count: true,
-          }),
-          ctx.db.expense.aggregate({
-            where: { createdAt: { gte: d, lte: dayEnd } },
-            _sum: { amountUzs: true },
-          }),
-        ]);
-
+      for (let i = 0; i < input.days; i++) {
+        const d = new Date(startDate);
+        d.setDate(d.getDate() + i);
+        const key = d.toISOString().split("T")[0]!;
+        const sale = salesMap.get(key);
         data.push({
-          date: d.toISOString().split("T")[0]!,
-          salesUzs: Number(sales._sum.totalUzs ?? 0),
-          expensesUzs: Number(expenses._sum.amountUzs ?? 0),
-          count: sales._count,
+          date: key,
+          salesUzs: sale?.uzs ?? 0,
+          expensesUzs: expensesMap.get(key) ?? 0,
+          count: sale?.count ?? 0,
         });
       }
       return data;
     }),
 
-  // Top products by revenue
   topProducts: protectedProcedure
     .input(z.object({
       dateFrom: z.string(),
@@ -170,7 +221,11 @@ export const reportRouter = router({
 
       const [sales, payments, expenses] = await Promise.all([
         ctx.db.sale.aggregate({
-          where: { createdAt: { gte: dateFrom, lte: dateTo }, status: { not: "CANCELLED" }, ...registerFilter.cashRegister ? { saleType: registerFilter.cashRegister === "SALES" ? "PRODUCT" : "SERVICE" } : {} },
+          where: {
+            createdAt: { gte: dateFrom, lte: dateTo },
+            status: { not: "CANCELLED" },
+            ...(registerFilter.cashRegister ? { saleType: registerFilter.cashRegister === "SALES" ? "PRODUCT" : "SERVICE" } : {}),
+          },
           _sum: { totalUzs: true, totalUsd: true },
           _count: true,
         }),

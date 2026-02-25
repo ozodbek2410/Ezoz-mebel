@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearch } from "@tanstack/react-router";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
@@ -27,7 +28,12 @@ function getMonthAgo(): string {
 export function ReportsPage() {
   const { isBoss } = useAuth();
   const t = useT();
-  const [activeTab, setActiveTab] = useState(isBoss() ? "boss" : "cashier");
+  const search = useSearch({ strict: false }) as Record<string, string>;
+  const [activeTab, setActiveTab] = useState(search?.tab ?? (isBoss() ? "boss" : "cashier"));
+
+  useEffect(() => {
+    if (search?.tab) setActiveTab(search.tab);
+  }, [search?.tab]);
   const [dateFrom, setDateFrom] = useState(getMonthAgo());
   const [dateTo, setDateTo] = useState(getToday());
   const [cashRegister, setCashRegister] = useState<string>("");
