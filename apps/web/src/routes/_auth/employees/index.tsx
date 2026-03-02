@@ -179,7 +179,7 @@ export function EmployeesPage() {
 
   // ===== Render =====
   return (
-    <>
+    <div className="page-enter">
       <PageHeader
         title={t("Xodimlar")}
         actions={isBoss() && (
@@ -218,8 +218,8 @@ export function EmployeesPage() {
                     <TableRow key={emp.id}>
                       <td>
                         <div>
-                          <p className="font-medium text-gray-900">{emp.fullName}</p>
-                          <p className="text-xs text-gray-400">@{emp.username}</p>
+                          <p className="font-medium text-slate-900">{emp.fullName}</p>
+                          <p className="text-xs text-slate-400">@{emp.username}</p>
                         </div>
                       </td>
                       <td>
@@ -227,9 +227,9 @@ export function EmployeesPage() {
                           {UserRoleLabels[emp.role as UserRole] || emp.role}
                         </Badge>
                       </td>
-                      <td className="text-sm text-gray-500 hidden sm:table-cell">{emp.phone || "-"}</td>
+                      <td className="text-sm text-slate-500 hidden sm:table-cell">{emp.phone || "-"}</td>
                       <td className="currency-uzs text-sm hidden sm:table-cell">{formatUzs(Number(emp.baseSalaryUzs))}</td>
-                      <td className="text-sm text-gray-500 hidden md:table-cell">{formatUzs(Number(emp.bonusPerJob))}</td>
+                      <td className="text-sm text-slate-500 hidden md:table-cell">{formatUzs(Number(emp.bonusPerJob))}</td>
                       {isBoss() && (
                         <td>
                           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -312,8 +312,8 @@ export function EmployeesPage() {
           <div className="border-t pt-4">
             <div className="flex items-center gap-2 mb-3">
               <Shield className="w-4 h-4 text-brand-600" />
-              <h4 className="text-sm font-semibold text-gray-700">{t("Ruxsatlar")}</h4>
-              <span className="text-xs text-gray-400">({editPermissions.length} {t("ta tanlangan")})</span>
+              <h4 className="text-sm font-semibold text-slate-700">{t("Ruxsatlar")}</h4>
+              <span className="text-xs text-slate-400">({editPermissions.length} {t("ta tanlangan")})</span>
             </div>
             <PermissionsPanel selectedPermissions={editPermissions} onChange={setEditPermissions} />
           </div>
@@ -364,8 +364,8 @@ export function EmployeesPage() {
           <div className="border-t pt-4">
             <div className="flex items-center gap-2 mb-3">
               <Shield className="w-4 h-4 text-brand-600" />
-              <h4 className="text-sm font-semibold text-gray-700">{t("Ruxsatlar")}</h4>
-              <span className="text-xs text-gray-400">({createPermissions.length} {t("ta tanlangan")})</span>
+              <h4 className="text-sm font-semibold text-slate-700">{t("Ruxsatlar")}</h4>
+              <span className="text-xs text-slate-400">({createPermissions.length} {t("ta tanlangan")})</span>
             </div>
             <PermissionsPanel selectedPermissions={createPermissions} onChange={setCreatePermissions} />
           </div>
@@ -390,7 +390,7 @@ export function EmployeesPage() {
             onChange={(e) => setPasswords((p) => ({ ...p, confirmPassword: e.target.value }))} />
         </div>
       </Modal>
-    </>
+    </div>
   );
 }
 
@@ -431,7 +431,7 @@ function PermissionsPanel({
 
         return (
           <div key={group.title} className={`rounded-lg border overflow-hidden transition-colors ${
-            allSelected ? "border-brand-200" : someSelected ? "border-amber-200" : "border-gray-200"
+            allSelected ? "border-brand-200" : someSelected ? "border-amber-200" : "border-slate-200"
           }`}>
             {/* Group header — click to toggle all */}
             <button
@@ -440,19 +440,19 @@ function PermissionsPanel({
               className={`w-full flex items-center justify-between px-3 py-2 transition-colors ${
                 allSelected ? "bg-brand-50 hover:bg-brand-100" :
                 someSelected ? "bg-amber-50 hover:bg-amber-100" :
-                "bg-gray-50 hover:bg-gray-100"
+                "bg-slate-50 hover:bg-slate-100"
               }`}
             >
               <div className="flex items-center gap-2">
                 <div className={`w-[18px] h-[18px] rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                   allSelected ? "bg-brand-600 border-brand-600 text-white" :
                   someSelected ? "bg-amber-400 border-amber-400 text-white" :
-                  "border-gray-300 bg-white"
+                  "border-slate-300 bg-white"
                 }`}>
                   {(allSelected || someSelected) && <Check size={11} />}
                 </div>
                 <span className={`text-sm font-semibold ${
-                  allSelected ? "text-brand-700" : someSelected ? "text-amber-700" : "text-gray-700"
+                  allSelected ? "text-brand-700" : someSelected ? "text-amber-700" : "text-slate-700"
                 }`}>
                   {t(group.title)}
                 </span>
@@ -460,7 +460,7 @@ function PermissionsPanel({
               <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
                 allSelected ? "bg-brand-100 text-brand-700" :
                 someSelected ? "bg-amber-100 text-amber-700" :
-                "bg-gray-100 text-gray-400"
+                "bg-slate-100 text-slate-400"
               }`}>
                 {selectedCount}/{groupKeys.length}
               </span>
@@ -478,7 +478,7 @@ function PermissionsPanel({
                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
                       isSelected
                         ? "bg-brand-600 border-brand-600 text-white shadow-sm"
-                        : "bg-white border-gray-200 text-gray-500 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50"
+                        : "bg-white border-slate-200 text-slate-500 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50"
                     }`}
                   >
                     {isSelected && <Check size={10} className="flex-shrink-0" />}

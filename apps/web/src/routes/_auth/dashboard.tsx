@@ -19,8 +19,9 @@ import {
   Save,
   StickyNote,
   Wrench,
-  ArrowUpRight,
   ChevronRight,
+  DollarSign,
+  BarChart3,
 } from "lucide-react";
 
 export function DashboardPage() {
@@ -36,50 +37,90 @@ export function DashboardPage() {
 
   const stats = statsQuery.data;
 
-  return (
-    <>
-      <PageHeader
-        title={`${t("Xush kelibsiz")}, ${user?.fullName ?? ""}`}
-        subtitle={rate ? `${t("Bugungi kurs")}: 1$ = ${rate.toLocaleString()} ${t("so'm")}` : undefined}
-      />
+  // Calculate gross profit estimate and average check from available data
+  const avgCheck = stats && stats.todaySalesCount > 0
+    ? Math.round(stats.todayIncomeUzs / stats.todaySalesCount)
+    : 0;
 
-      <div className="page-body">
-        {/* Stats Cards - Today */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          <StatCardLink
+  return (
+    <div className="page-enter">
+      <PageHeader title={`${t("Bosh sahifa")}`} />
+
+      <div className="page-body space-y-6">
+        {/* Greeting + currency */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              {t("Xush kelibsiz")}, {user?.fullName ?? ""}
+            </h2>
+            {rate && (
+              <p className="text-sm text-slate-500 mt-0.5">
+                {t("Bugungi kurs")}: <span className="font-medium text-slate-700">1$ = {rate.toLocaleString()} {t("so'm")}</span>
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Main stat cards — Regos style */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
             to="/reports"
             search={{ tab: "charts" }}
             label={t("Bugungi sotuvlar")}
             value={String(stats?.todaySalesCount ?? 0)}
             sub={`${t("Hafta")}: ${stats?.weekSalesCount ?? 0} | ${t("Oy")}: ${stats?.monthSalesCount ?? 0}`}
             icon={ShoppingCart}
-            color="text-blue-600 bg-blue-100"
+            iconBg="bg-brand-50"
+            iconColor="text-brand-500"
           />
-          <StatCardLink
+          <StatCard
             to="/reports"
             search={isBoss() ? { tab: "boss" } : { tab: "cashier" }}
             label={t("Bugungi kirim")}
             value={formatUzs(stats?.todayIncomeUzs ?? 0)}
             sub={`${t("Oy")}: ${formatUzs(stats?.monthIncomeUzs ?? 0)}`}
             icon={TrendingUp}
-            color="text-green-600 bg-green-100"
+            iconBg="bg-green-50"
+            iconColor="text-green-500"
           />
-          <StatCardLink
-            to="/reports"
-            search={isBoss() ? { tab: "boss" } : { tab: "cashier" }}
+          <StatCard
+            to="/expenses"
             label={t("Bugungi xarajatlar")}
             value={formatUzs(stats?.todayExpensesUzs ?? 0)}
             sub={t("barcha kassalar")}
             icon={Wallet}
-            color="text-red-600 bg-red-100"
+            iconBg="bg-red-50"
+            iconColor="text-red-500"
           />
-          <StatCardLink
+          <StatCard
             to="/customers"
             label={t("Aktiv mijozlar")}
             value={String(stats?.activeCustomers ?? 0)}
             sub={`${stats?.totalDebtors ?? 0} ${t("ta qarzdor")}`}
             icon={Users}
-            color="text-purple-600 bg-purple-100"
+            iconBg="bg-purple-50"
+            iconColor="text-purple-500"
+          />
+        </div>
+
+        {/* Second row — small stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <MiniStatCard
+            label={t("O'rtacha chek")}
+            value={avgCheck > 0 ? formatUzs(avgCheck) : "—"}
+            icon={BarChart3}
+          />
+          <MiniStatCard
+            label={t("Haftalik kirim")}
+            value={formatUzs(stats?.weekIncomeUzs ?? 0)}
+            icon={DollarSign}
+          />
+          <MiniStatCard
+            label={t("Oylik sotuvlar")}
+            value={String(stats?.monthSalesCount ?? 0)}
+            sub={t("ta chek")}
+            icon={ShoppingCart}
+            className="hidden lg:block"
           />
         </div>
 
@@ -91,46 +132,66 @@ export function DashboardPage() {
           <LowStockCard items={stats?.lowStockItems ?? []} />
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
-// ===== Clickable Stat Card =====
-interface StatCardLinkProps {
+// ===== Stat Card (Regos Style) =====
+interface StatCardProps {
   to: string;
   search?: Record<string, string>;
   label: string;
   value: string;
   sub: string;
   icon: React.ElementType;
-  color: string;
-  trend?: string;
-  trendColor?: string;
+  iconBg: string;
+  iconColor: string;
 }
 
-function StatCardLink({ to, search, label, value, sub, icon: Icon, color, trend, trendColor }: StatCardLinkProps) {
+function StatCard({ to, search, label, value, sub, icon: Icon, iconBg, iconColor }: StatCardProps) {
   return (
     <Link
       to={to}
       search={search}
-      className="stat-card group relative overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-200 cursor-pointer"
+      className="stat-card group cursor-pointer hover:shadow-md transition-all duration-200"
     >
       <div className="flex items-center justify-between">
-        <span className="stat-card-label">{label}</span>
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${color}`}>
-          <Icon size={18} />
+        <p className="stat-card-label">{label}</p>
+        <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center`}>
+          <Icon className={`w-6 h-6 ${iconColor}`} />
         </div>
       </div>
-      <div className="stat-card-value truncate">{value}</div>
-      <div className="flex items-center justify-between">
-        <span className="stat-card-sub">{sub}</span>
-        <ArrowUpRight className="w-4 h-4 text-gray-300 group-hover:text-brand-500 transition-colors" />
-      </div>
+      <p className="stat-card-value truncate">{value}</p>
+      <p className="stat-card-sub">{sub}</p>
     </Link>
   );
 }
 
-// ===== Recent Sales =====
+// ===== Mini Stat Card =====
+interface MiniStatCardProps {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ElementType;
+  className?: string;
+}
+
+function MiniStatCard({ label, value, sub, icon: Icon, className = "" }: MiniStatCardProps) {
+  return (
+    <div className={`bg-white rounded-lg p-4 border border-slate-200 ${className}`}>
+      <div className="flex items-center gap-2 mb-1">
+        <Icon size={14} className="text-slate-400" />
+        <p className="text-xs text-slate-500 uppercase tracking-wider">{label}</p>
+      </div>
+      <p className="text-lg font-bold text-slate-900">
+        {value}
+        {sub && <span className="text-xs font-normal text-slate-400 ml-1">{sub}</span>}
+      </p>
+    </div>
+  );
+}
+
+// ===== Recent Sales (Regos List Style) =====
 interface RecentSale {
   id: number;
   documentNo: string;
@@ -147,24 +208,24 @@ function RecentSalesCard({ sales }: { sales: RecentSale[] }) {
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-          <ShoppingCart size={16} className="text-blue-500" />
+        <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+          <ShoppingCart size={16} className="text-brand-500" />
           {t("So'nggi sotuvlar")}
         </h3>
-        <Link to="/sales" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors">
+        <Link to="/receipts" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors">
           {t("Barchasi")} <ChevronRight size={14} />
         </Link>
       </div>
-      <div className="card-body p-0">
+      <div className="p-0">
         {sales.length === 0 ? (
-          <div className="text-center text-gray-400 py-8">
-            <ShoppingCart size={40} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm">{t("Hali sotuvlar yo'q")}</p>
+          <div className="empty-state">
+            <ShoppingCart className="empty-state-icon" />
+            <p className="empty-state-title">{t("Hali sotuvlar yo'q")}</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-slate-100">
             {sales.map((sale) => (
-              <div key={sale.id} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+              <div key={sale.id} className="px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
                 <div>
                   <div className="flex items-center gap-2">
                     <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
@@ -174,13 +235,13 @@ function RecentSalesCard({ sales }: { sales: RecentSale[] }) {
                       {sale.status === "COMPLETED" ? t("Yakunlangan") : sale.status === "OPEN" ? t("Ochiq") : sale.status}
                     </Badge>
                   </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p className="text-xs text-slate-400 mt-1">
                     {sale.customerName ?? t("Oddiy mijoz")} &middot; {sale.cashierName}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-sm">{formatUzs(sale.totalUzs)}</p>
-                  <p className="text-xs text-gray-400">
+                  <p className="font-semibold text-sm text-slate-900">{formatUzs(sale.totalUzs)}</p>
+                  <p className="text-xs text-slate-400">
                     {new Date(sale.createdAt).toLocaleTimeString("uz", { hour: "2-digit", minute: "2-digit" })}
                   </p>
                 </div>
@@ -217,7 +278,6 @@ function NotesCard() {
     },
   });
 
-  // Auto-save every 60 seconds
   useEffect(() => {
     const timer = setInterval(() => {
       if (content && content !== notesQuery.data?.content) {
@@ -232,9 +292,9 @@ function NotesCard() {
       <div className="card-header">
         <div className="flex items-center gap-2">
           <StickyNote size={16} className="text-amber-500" />
-          <h3 className="font-semibold text-gray-900">{t("Eslatmalar")}</h3>
+          <h3 className="text-base font-semibold text-slate-900">{t("Eslatmalar")}</h3>
         </div>
-        <span className="text-xs text-gray-400">{content.length}/800</span>
+        <span className="text-xs text-slate-400">{content.length}/800</span>
       </div>
       <div className="card-body">
         <textarea
@@ -245,7 +305,7 @@ function NotesCard() {
           onChange={(e) => setContent(e.target.value)}
         />
         <div className="mt-2 flex items-center justify-between">
-          <span className="text-xs text-gray-400">{t("Avtomatik saqlanadi")}</span>
+          <span className="text-xs text-slate-400">{t("Avtomatik saqlanadi")}</span>
           <button
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}
@@ -273,7 +333,7 @@ function WorkshopTasksCard() {
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+        <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
           <Wrench size={16} className="text-orange-500" />
           {t("Mening vazifalarim")}
         </h3>
@@ -282,18 +342,18 @@ function WorkshopTasksCard() {
           <ChevronRight size={14} />
         </Link>
       </div>
-      <div className="card-body p-0">
+      <div className="p-0">
         {tasks.length === 0 ? (
-          <div className="text-center text-gray-400 py-8">
-            <Clock size={40} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm">{t("Hali vazifalar yo'q")}</p>
+          <div className="empty-state">
+            <Clock className="empty-state-icon" />
+            <p className="empty-state-title">{t("Hali vazifalar yo'q")}</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-slate-100">
             {tasks.slice(0, 5).map((task) => (
-              <div key={task.id} className="px-5 py-3 hover:bg-gray-50/50 transition-colors">
-                <p className="font-medium text-sm">{task.description}</p>
-                <p className="text-xs text-gray-400 mt-0.5">
+              <div key={task.id} className="px-5 py-3 hover:bg-slate-50 transition-colors">
+                <p className="font-medium text-sm text-slate-900">{task.description}</p>
+                <p className="text-xs text-slate-400 mt-0.5">
                   {task.sale?.createdAt ? new Date(task.sale.createdAt).toLocaleDateString("uz") : ""}
                 </p>
               </div>
@@ -319,7 +379,7 @@ function LowStockCard({ items }: { items: LowStockItem[] }) {
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+        <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
           <AlertTriangle size={16} className="text-amber-500" />
           {t("Kam qolgan mahsulotlar")}
         </h3>
@@ -328,25 +388,25 @@ function LowStockCard({ items }: { items: LowStockItem[] }) {
           <ChevronRight size={14} />
         </Link>
       </div>
-      <div className="card-body p-0">
+      <div className="p-0">
         {items.length === 0 ? (
-          <div className="text-center text-gray-400 py-8">
-            <Package size={40} className="mx-auto mb-2 opacity-30" />
-            <p className="text-sm">{t("Barcha mahsulotlar yetarli")}</p>
+          <div className="empty-state">
+            <Package className="empty-state-icon" />
+            <p className="empty-state-title">{t("Barcha mahsulotlar yetarli")}</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-slate-100">
             {items.map((item, idx) => (
-              <div key={idx} className="px-5 py-3 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+              <div key={idx} className="px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
                 <div>
-                  <p className="font-medium text-sm">{item.productName}</p>
-                  <p className="text-xs text-gray-400">{item.warehouseName}</p>
+                  <p className="font-medium text-sm text-slate-900">{item.productName}</p>
+                  <p className="text-xs text-slate-400">{item.warehouseName}</p>
                 </div>
                 <div className="text-right">
                   <span className={`text-sm font-bold ${item.quantity <= 0 ? "text-red-600" : "text-amber-600"}`}>
                     {item.quantity} {item.unit}
                   </span>
-                  <p className="text-xs text-gray-400">min: {item.minAlert}</p>
+                  <p className="text-xs text-slate-400">min: {item.minAlert}</p>
                 </div>
               </div>
             ))}

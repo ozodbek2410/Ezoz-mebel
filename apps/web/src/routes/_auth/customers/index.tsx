@@ -231,7 +231,7 @@ export function CustomersPage() {
   }, [detail]);
 
   return (
-    <>
+    <div className="page-enter">
       <PageHeader
         title={t("Mijozlar")}
         subtitle={`${listQuery.data?.total ?? 0} ${t("ta mijoz")}`}
@@ -288,9 +288,9 @@ export function CustomersPage() {
                       onClick={() => setDetailId(detailId === c.id ? null : c.id)}
                     >
                       <td>
-                        <span className="font-medium text-gray-900">{c.fullName}</span>
+                        <span className="font-medium text-slate-900">{c.fullName}</span>
                       </td>
-                      <td className="text-gray-500 hidden sm:table-cell">{c.phone || "-"}</td>
+                      <td className="text-slate-500 hidden sm:table-cell">{c.phone || "-"}</td>
                       <td className="hidden md:table-cell">
                         <Badge variant={c.category === "MASTER" ? "info" : "neutral"}>
                           {c.category === "MASTER" ? t("Usta") : t("Oddiy")}
@@ -300,15 +300,15 @@ export function CustomersPage() {
                         <div className="flex items-center gap-1">
                           {can("customer:update") && (
                             <button
-                              className="p-1.5 hover:bg-gray-100 rounded-lg"
+                              className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"
                               onClick={(e) => { e.stopPropagation(); openEdit(c); }}
                             >
-                              <Edit2 className="w-3.5 h-3.5 text-gray-500" />
+                              <Edit2 className="w-3.5 h-3.5 text-slate-500" />
                             </button>
                           )}
                           {can("customer:delete") && (
                             <button
-                              className="p-1.5 hover:bg-red-50 rounded-lg"
+                              className="p-1.5 hover:bg-red-50 rounded-md transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 if (confirm(getT()(`"${c.fullName}" ni o'chirmoqchimisiz?`))) {
@@ -523,7 +523,7 @@ export function CustomersPage() {
                   {/* Summary */}
                   <div className="bg-red-50 rounded-lg p-3 flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-gray-500">{t("Jami qarz")}</p>
+                      <p className="text-xs text-slate-500">{t("Jami qarz")}</p>
                       <p className="text-xl font-bold text-red-600">{formatUzs(debt.totalDebtUzs)}</p>
                       {debt.totalDebtUsd > 0 && <p className="text-xs text-blue-600">{formatUsd(debt.totalDebtUsd)}</p>}
                     </div>
@@ -538,7 +538,7 @@ export function CustomersPage() {
                   </div>
 
                   {/* Breakdown */}
-                  <div className="text-xs text-gray-500 space-y-1 border rounded-lg px-3 py-2">
+                  <div className="text-xs text-slate-500 space-y-1 border rounded-lg px-3 py-2">
                     <div className="flex justify-between">
                       <span>{t("Boshlang'ich qarz:")}</span>
                       <span>{formatUzs(debt.initialDebtUzs)}</span>
@@ -556,7 +556,7 @@ export function CustomersPage() {
                   {/* Unpaid sales */}
                   {unpaidSalesQuery.data && unpaidSalesQuery.data.length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-gray-600 mb-2">{t("Qarzli sotuvlar")}</p>
+                      <p className="text-xs font-medium text-slate-600 mb-2">{t("Qarzli sotuvlar")}</p>
                       <div className="space-y-1.5">
                         {unpaidSalesQuery.data.map((sale) => (
                           <div key={sale.id}>
@@ -566,21 +566,21 @@ export function CustomersPage() {
                               onClick={() => setExpandedSaleId(expandedSaleId === sale.id ? null : sale.id)}
                             >
                               <span className="flex items-center gap-1.5">
-                                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expandedSaleId === sale.id ? "rotate-180" : ""}`} />
-                                <span className="text-gray-500">{new Date(sale.createdAt).toLocaleDateString("uz")}</span>
+                                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${expandedSaleId === sale.id ? "rotate-180" : ""}`} />
+                                <span className="text-slate-500">{new Date(sale.createdAt).toLocaleDateString("uz")}</span>
                               </span>
-                              <span className="text-gray-500">{t("Jami:")} {formatUzs(sale.totalUzs)}</span>
+                              <span className="text-slate-500">{t("Jami:")} {formatUzs(sale.totalUzs)}</span>
                               <span className="font-bold text-amber-700">{t("Qarz:")} {formatUzs(sale.debtUzs)}</span>
                             </button>
                             {expandedSaleId === sale.id && (
                               <div className="ml-5 mt-1 mb-1 border-l-2 border-amber-200 pl-3 space-y-1">
                                 {(sale.items?.length ?? 0) > 0 ? sale.items.map((item, idx) => (
-                                  <div key={idx} className="flex justify-between text-xs text-gray-600">
-                                    <span>{item.name} <span className="text-gray-400">x{item.quantity}</span></span>
+                                  <div key={idx} className="flex justify-between text-xs text-slate-600">
+                                    <span>{item.name} <span className="text-slate-400">x{item.quantity}</span></span>
                                     <span>{formatUzs(item.totalUzs)}</span>
                                   </div>
                                 )) : (
-                                  <p className="text-xs text-gray-400 italic">{t("Batafsil ma'lumot yo'q")}</p>
+                                  <p className="text-xs text-slate-400 italic">{t("Batafsil ma'lumot yo'q")}</p>
                                 )}
                               </div>
                             )}
@@ -593,12 +593,12 @@ export function CustomersPage() {
                   {/* Debt payment history */}
                   {detail.payments.filter((p) => p.source === "OLD_DEBT").length > 0 && (
                     <div>
-                      <p className="text-xs font-medium text-gray-600 mb-2">{t("Qarz to'lovlari")}</p>
+                      <p className="text-xs font-medium text-slate-600 mb-2">{t("Qarz to'lovlari")}</p>
                       <div className="space-y-1.5">
                         {detail.payments.filter((p) => p.source === "OLD_DEBT").map((p) => (
                           <div key={p.id} className="flex justify-between items-center px-3 py-2 bg-green-50 rounded-lg text-xs">
-                            <span className="text-gray-500">{new Date(p.createdAt).toLocaleDateString("uz")}</span>
-                            <span className="text-gray-500">{p.paymentType === "CASH_UZS" ? t("Naqd") : p.paymentType === "CARD" ? t("Karta") : t("O'tkazma")}</span>
+                            <span className="text-slate-500">{new Date(p.createdAt).toLocaleDateString("uz")}</span>
+                            <span className="text-slate-500">{p.paymentType === "CASH_UZS" ? t("Naqd") : p.paymentType === "CARD" ? t("Karta") : t("O'tkazma")}</span>
                             <span className="font-bold text-green-700">{formatUzs(Number(p.amountUzs))}</span>
                           </div>
                         ))}
@@ -617,16 +617,16 @@ export function CustomersPage() {
                       <div key={sale.id}>
                         <button
                           type="button"
-                          className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                          className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                           onClick={() => setExpandedSaleId(expandedSaleId === sale.id ? null : sale.id)}
                         >
                           <div className="flex items-center gap-2">
-                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedSaleId === sale.id ? "rotate-180" : ""}`} />
+                            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedSaleId === sale.id ? "rotate-180" : ""}`} />
                             <div className="text-left">
                               <p className="text-sm font-medium">
                                 {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}
                               </p>
-                              <p className="text-xs text-gray-400">
+                              <p className="text-xs text-slate-400">
                                 {new Date(sale.createdAt).toLocaleDateString("uz")}
                               </p>
                             </div>
@@ -634,20 +634,20 @@ export function CustomersPage() {
                           <CurrencyDisplay amountUzs={sale.totalUzs} amountUsd={sale.totalUsd} size="sm" />
                         </button>
                         {expandedSaleId === sale.id && (
-                          <div className="ml-6 mt-1 mb-1 border-l-2 border-gray-200 pl-3 space-y-1">
+                          <div className="ml-6 mt-1 mb-1 border-l-2 border-slate-200 pl-3 space-y-1">
                             {(sale.items?.length ?? 0) > 0 ? sale.items.map((item) => (
-                              <div key={item.id} className="flex justify-between text-xs text-gray-600 py-0.5">
+                              <div key={item.id} className="flex justify-between text-xs text-slate-600 py-0.5">
                                 <span>
                                   {item.product?.name ?? item.serviceName ?? "—"}
-                                  <span className="text-gray-400 ml-1">x{Number(item.quantity)}</span>
+                                  <span className="text-slate-400 ml-1">x{Number(item.quantity)}</span>
                                 </span>
                                 <span>{formatUzs(Number(item.totalUzs))}</span>
                               </div>
                             )) : (
-                              <p className="text-xs text-gray-400 italic">{t("Batafsil ma'lumot yo'q")}</p>
+                              <p className="text-xs text-slate-400 italic">{t("Batafsil ma'lumot yo'q")}</p>
                             )}
                             {(sale.payments?.length ?? 0) > 0 && (
-                              <div className="border-t border-gray-200 pt-1 mt-1">
+                              <div className="border-t border-slate-200 pt-1 mt-1">
                                 {sale.payments.map((p) => (
                                   <div key={p.id} className="flex justify-between text-xs text-green-600 py-0.5">
                                     <span>{p.paymentType === "CASH_UZS" ? t("Naqd") : p.paymentType === "CARD" ? t("Karta") : t("O'tkazma")}</span>
@@ -743,6 +743,6 @@ export function CustomersPage() {
           />
         </div>
       </Modal>
-    </>
+    </div>
   );
 }

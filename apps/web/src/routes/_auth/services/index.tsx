@@ -106,7 +106,7 @@ export function ServicesPage() {
   const services = servicesQuery.data ?? [];
 
   return (
-    <>
+    <div className="page-enter">
       <PageHeader
         title={t("Xizmatlar")}
         actions={
@@ -140,7 +140,7 @@ export function ServicesPage() {
             ) : (
               services.map((service, idx) => (
                 <TableRow key={service.id}>
-                  <td className="text-gray-400 text-sm">{idx + 1}</td>
+                  <td className="text-slate-400 text-sm">{idx + 1}</td>
                   <td>
                     <div className="flex items-center gap-2">
                       <Wrench className="w-4 h-4 text-amber-500" />
@@ -149,18 +149,18 @@ export function ServicesPage() {
                   </td>
                   <td className="currency-uzs">{formatUzs(Number(service.priceUzs))}</td>
                   <td className="currency-usd hidden sm:table-cell">{formatUsd(Number(service.priceUsd))}</td>
-                  <td className="text-gray-400 text-sm hidden sm:table-cell">{service.sortOrder}</td>
+                  <td className="text-slate-400 text-sm hidden sm:table-cell">{service.sortOrder}</td>
                   {boss && (
                     <td>
                       <div className="flex items-center gap-1">
                         <button
-                          className="p-1.5 hover:bg-gray-100 rounded-lg"
+                          className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"
                           onClick={() => openEdit(service)}
                         >
-                          <Pencil className="w-4 h-4 text-gray-500" />
+                          <Pencil className="w-4 h-4 text-slate-500" />
                         </button>
                         <button
-                          className="p-1.5 hover:bg-red-50 rounded-lg"
+                          className="p-1.5 hover:bg-red-50 rounded-md transition-colors"
                           onClick={() => {
                             if (confirm(getT()("Bu xizmatni o'chirmoqchimisiz?"))) {
                               deleteService.mutate(service.id);
@@ -218,6 +218,6 @@ export function ServicesPage() {
           />
         </div>
       </Modal>
-    </>
+    </div>
   );
 }

@@ -96,7 +96,7 @@ export function WorkshopPage() {
 
   function getGroupColor(status: string) {
     switch (status) {
-      case "IN_PROGRESS": return "border-l-blue-500 bg-blue-50/30";
+      case "IN_PROGRESS": return "border-l-brand-400 bg-brand-50/30";
       case "COMPLETED": return "border-l-green-500 bg-green-50/20 opacity-75";
       default: return "border-l-amber-400";
     }
@@ -111,7 +111,7 @@ export function WorkshopPage() {
   }
 
   return (
-    <>
+    <div className="page-enter">
       <PageHeader
         title={t("Ustaxona")}
         subtitle={`${pendingCount} ${t("kutilmoqda")}, ${inProgressCount} ${t("bajarilmoqda")}`}
@@ -137,16 +137,16 @@ export function WorkshopPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="card card-body animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-3" />
-                <div className="h-3 bg-gray-200 rounded w-1/2 mb-2" />
-                <div className="h-3 bg-gray-200 rounded w-full" />
+                <div className="h-4 bg-slate-200 rounded w-3/4 mb-3" />
+                <div className="h-3 bg-slate-200 rounded w-1/2 mb-2" />
+                <div className="h-3 bg-slate-200 rounded w-full" />
               </div>
             ))}
           </div>
         ) : filteredGroups.length === 0 ? (
           <div className="card card-body text-center py-12">
-            <CheckCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-400">{t("Vazifalar yo'q")}</p>
+            <CheckCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-400">{t("Vazifalar yo'q")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -161,20 +161,20 @@ export function WorkshopPage() {
                   className={`card overflow-hidden border-l-4 ${getGroupColor(gStatus)}`}
                 >
                   {/* Header */}
-                  <div className="px-4 py-3 border-b border-gray-100">
+                  <div className="px-4 py-3 border-b border-slate-100">
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-gray-400" />
-                        <span className="font-semibold text-sm text-gray-900">
+                        <User className="w-4 h-4 text-slate-400" />
+                        <span className="font-semibold text-sm text-slate-900">
                           {sale?.customer?.fullName ?? t("Oddiy mijoz")}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400 font-mono">#{firstTask.saleId}</span>
+                        <span className="text-xs text-slate-400 font-mono">#{firstTask.saleId}</span>
                         <StatusBadge status={gStatus} />
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                    <div className="flex items-center gap-4 text-xs text-slate-400">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {sale ? formatDate(sale.createdAt) : "—"}
@@ -185,13 +185,13 @@ export function WorkshopPage() {
 
                   {/* Sale items (products + services) */}
                   {sale && sale.items.length > 0 && (
-                    <div className="px-4 py-2 bg-gray-50/50 border-b border-gray-100">
+                    <div className="px-4 py-2 bg-slate-50/50 border-b border-slate-100">
                       <div className="flex flex-wrap gap-1.5">
                         {sale.items.map((item) => (
-                          <span key={item.id} className="inline-flex items-center gap-1 text-xs bg-white border border-gray-200 rounded-md px-2 py-0.5">
-                            <ShoppingBag className="w-3 h-3 text-gray-400" />
-                            <span className="text-gray-700">{item.product?.name ?? item.serviceName ?? "—"}</span>
-                            <span className="text-gray-400">x{Number(item.quantity)}</span>
+                          <span key={item.id} className="inline-flex items-center gap-1 text-xs bg-white border border-slate-200 rounded-md px-2 py-0.5">
+                            <ShoppingBag className="w-3 h-3 text-slate-400" />
+                            <span className="text-slate-700">{item.product?.name ?? item.serviceName ?? "—"}</span>
+                            <span className="text-slate-400">x{Number(item.quantity)}</span>
                           </span>
                         ))}
                       </div>
@@ -199,7 +199,7 @@ export function WorkshopPage() {
                   )}
 
                   {/* Tasks list */}
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-slate-100">
                     {groupTasks.map((task) => {
                       const isMyTask = isMaster() && task.assignedToId === user?.userId;
                       const serviceName = getServiceName(task.description, sale?.items ?? []);
@@ -210,7 +210,7 @@ export function WorkshopPage() {
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                               <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                              <span className="text-sm font-medium text-gray-900 truncate">{serviceName}</span>
+                              <span className="text-sm font-medium text-slate-900 truncate">{serviceName}</span>
                             </div>
                             <StatusBadge status={task.status} />
                           </div>
@@ -249,13 +249,13 @@ export function WorkshopPage() {
                                 ))}
                               </select>
                             ) : (
-                              <span className="text-xs text-gray-400 italic">{t("Tayinlanmagan")}</span>
+                              <span className="text-xs text-slate-400 italic">{t("Tayinlanmagan")}</span>
                             )}
                           </div>
 
                           {/* Time info */}
                           {task.startedAt && (
-                            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-400">
                               <Clock className="w-3 h-3" />
                               <span>{t("Boshlangan")}: {formatDate(task.startedAt)}</span>
                             </div>
@@ -269,7 +269,7 @@ export function WorkshopPage() {
 
                           {/* Notes */}
                           {task.notes && (
-                            <div className="flex items-start gap-2 p-2 bg-amber-50 rounded-lg">
+                            <div className="flex items-start gap-2 p-2 bg-amber-50 rounded-md">
                               <MessageSquare className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
                               <p className="text-xs text-amber-700">{task.notes}</p>
                             </div>
@@ -343,6 +343,6 @@ export function WorkshopPage() {
           placeholder={t("Bajarilgan ish haqida izoh...")}
         />
       </Modal>
-    </>
+    </div>
   );
 }

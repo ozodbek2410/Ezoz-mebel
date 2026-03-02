@@ -12,7 +12,7 @@ export function AdminSettingsPage() {
   const [activeTab, setActiveTab] = useState("company");
 
   return (
-    <>
+    <div className="page-enter">
       <PageHeader title={t("Sozlamalar")} />
 
       <div className="page-body">
@@ -30,7 +30,7 @@ export function AdminSettingsPage() {
           {activeTab === "notes" && <NotesTab />}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -136,7 +136,7 @@ function NotesTab() {
           <StickyNote className="w-5 h-5 text-amber-500" />
           <h3 className="text-base font-semibold">{t("Eslatmalar")}</h3>
         </div>
-        <span className="text-xs text-gray-400">{content.length}/800</span>
+        <span className="text-xs text-slate-400">{content.length}/800</span>
       </div>
       <textarea
         className="input-field min-h-[200px] resize-y"
@@ -147,7 +147,7 @@ function NotesTab() {
         placeholder={t("Bu yerga eslatmalar yozing...")}
       />
       <div className="mt-3 flex items-center justify-between">
-        <span className="text-xs text-gray-400">{t("Avtomatik saqlanadi (60s)")}</span>
+        <span className="text-xs text-slate-400">{t("Avtomatik saqlanadi (60s)")}</span>
         <Button size="sm" loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
           <Save className="w-3.5 h-3.5" />
           {t("Saqlash")}

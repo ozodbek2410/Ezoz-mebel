@@ -85,7 +85,7 @@ export function ExpensesPage() {
   const totalUzs = expenses.reduce((sum, e) => sum + Number(e.amountUzs), 0);
 
   return (
-    <>
+    <div className="page-enter">
       <PageHeader
         title={t("Xarajatlar")}
         subtitle={`${t("Jami")}: ${formatUzs(totalUzs)}`}
@@ -126,19 +126,19 @@ export function ExpensesPage() {
             ) : (
               expenses.map((exp) => (
                 <TableRow key={exp.id}>
-                  <td className="text-sm text-gray-500 hidden sm:table-cell">
+                  <td className="text-sm text-slate-500 hidden sm:table-cell">
                     {new Date(exp.createdAt).toLocaleDateString("uz")}
                   </td>
                   <td>
                     <Badge variant="neutral">{exp.category.name}</Badge>
                   </td>
-                  <td className="text-gray-700">{exp.description}</td>
+                  <td className="text-slate-700">{exp.description}</td>
                   <td className="hidden md:table-cell">
                     <Badge variant={exp.cashRegister === "SALES" ? "info" : "warning"}>
                       {exp.cashRegister === "SALES" ? t("Savdo") : t("Xizmat")}
                     </Badge>
                   </td>
-                  <td className="text-sm text-gray-500 hidden sm:table-cell">
+                  <td className="text-sm text-slate-500 hidden sm:table-cell">
                     {t(PAYMENT_LABELS[exp.paymentType] ?? exp.paymentType)}
                   </td>
                   <td>
@@ -241,6 +241,6 @@ export function ExpensesPage() {
       >
         <Input label={t("Kategoriya nomi")} value={catName} onChange={(e) => setCatName(e.target.value)} placeholder={t("Masalan: Transport")} />
       </Modal>
-    </>
+    </div>
   );
 }

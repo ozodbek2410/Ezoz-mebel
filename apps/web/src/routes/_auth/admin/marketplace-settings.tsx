@@ -31,7 +31,7 @@ export function MarketplaceSettingsPage() {
   const pendingCount = ordersQuery.data?.filter((o) => o.status === "PENDING").length ?? 0;
 
   return (
-    <>
+    <div className="page-enter">
       <PageHeader
         title="Marketplace"
         subtitle={t("Mahsulotlar, reklama va buyurtmalarni boshqarish")}
@@ -65,7 +65,7 @@ export function MarketplaceSettingsPage() {
           {activeTab === "orders" && <OrdersTab />}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -180,7 +180,7 @@ function ProductsTab() {
                     className={`p-2 rounded-lg transition-colors ${
                       product.isMarketplaceVisible
                         ? "bg-green-100 text-green-700 hover:bg-green-200"
-                        : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                        : "bg-slate-100 text-slate-400 hover:bg-slate-200"
                     }`}
                   >
                     {product.isMarketplaceVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -191,8 +191,8 @@ function ProductsTab() {
                     onClick={() => toggleShowPrice.mutate({ id: product.id, showPrice: !product.showPrice })}
                     className={`p-2 rounded-lg transition-colors ${
                       product.showPrice
-                        ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                        : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                        ? "bg-brand-100 text-brand-700 hover:bg-brand-200"
+                        : "bg-slate-100 text-slate-400 hover:bg-slate-200"
                     }`}
                   >
                     <DollarSign className="w-4 h-4" />
@@ -284,7 +284,7 @@ function BannersTab() {
 
   return (
     <div>
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-slate-500 mb-4">
         {t("Reklama bannerlarini boshqaring. Har bir bannerga mahsulot biriktirsangiz, foydalanuvchi bosganda o'sha mahsulotga o'tadi.")}
       </p>
 
@@ -294,9 +294,9 @@ function BannersTab() {
           const linkedId = bannerLinks[name];
 
           return (
-            <div key={name} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div key={name} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
               {/* Banner image */}
-              <div className="aspect-[16/7] bg-gray-100 relative group">
+              <div className="aspect-[16/7] bg-slate-100 relative group">
                 <img
                   key={bannerKeys}
                   src={`/${name}?t=${bannerKeys}`}
@@ -319,7 +319,7 @@ function BannersTab() {
                       input.click();
                     }}
                     disabled={uploading === name}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity px-4 py-2 bg-white/90 text-gray-800 text-sm font-medium rounded-lg hover:bg-white flex items-center gap-2"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity px-4 py-2 bg-white/90 text-slate-800 text-sm font-medium rounded-lg hover:bg-white flex items-center gap-2"
                   >
                     <Upload className="w-4 h-4" />
                     {uploading === name ? t("Yuklanmoqda...") : t("Rasm almashtirish")}
@@ -331,8 +331,8 @@ function BannersTab() {
               <div className="px-3 py-2.5 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Image className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs text-gray-600 font-medium">Banner {i + 1}</span>
+                    <Image className="w-4 h-4 text-slate-400" />
+                    <span className="text-xs text-slate-600 font-medium">Banner {i + 1}</span>
                   </div>
                 </div>
 
@@ -351,7 +351,7 @@ function BannersTab() {
                       </button>
                     </div>
                   ) : (
-                    <span className="text-xs text-gray-400 flex-1">{t("Mahsulot biriktirilmagan")}</span>
+                    <span className="text-xs text-slate-400 flex-1">{t("Mahsulot biriktirilmagan")}</span>
                   )}
                   <button
                     onClick={() => setSelectingProduct(name)}
@@ -377,8 +377,8 @@ function BannersTab() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => { setSelectingProduct(null); setProductSearch(""); }}>
           <div className="bg-white rounded-xl shadow-2xl w-full sm:w-[500px] max-h-[80vh] mx-4 flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="px-4 py-3 border-b flex items-center justify-between shrink-0">
-              <h3 className="font-semibold text-gray-900 text-sm">{t("Mahsulot tanlash")} — Banner {BANNER_FILES.indexOf(selectingProduct) + 1}</h3>
-              <button onClick={() => { setSelectingProduct(null); setProductSearch(""); }} className="text-gray-400 hover:text-gray-600">
+              <h3 className="font-semibold text-slate-900 text-sm">{t("Mahsulot tanlash")} — Banner {BANNER_FILES.indexOf(selectingProduct) + 1}</h3>
+              <button onClick={() => { setSelectingProduct(null); setProductSearch(""); }} className="text-slate-400 hover:text-slate-600">
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
@@ -388,36 +388,36 @@ function BannersTab() {
                 placeholder={t("Mahsulot qidirish...")}
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                 autoFocus
               />
             </div>
             <div className="overflow-y-auto flex-1">
               {productsQuery.isLoading ? (
-                <div className="p-4 text-center text-sm text-gray-400">{t("Yuklanmoqda...")}</div>
+                <div className="p-4 text-center text-sm text-slate-400">{t("Yuklanmoqda...")}</div>
               ) : filteredProducts.length === 0 ? (
-                <div className="p-4 text-center text-sm text-gray-400">{t("Topilmadi")}</div>
+                <div className="p-4 text-center text-sm text-slate-400">{t("Topilmadi")}</div>
               ) : (
                 filteredProducts.map((product) => (
                   <button
                     key={product.id}
                     onClick={() => setBannerLink.mutate({ bannerName: selectingProduct, productId: product.id })}
-                    className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-50"
+                    className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-50"
                   >
-                    <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden shrink-0">
+                    <div className="w-10 h-10 bg-slate-100 rounded-lg overflow-hidden shrink-0">
                       {product.images?.[0] ? (
                         <img src={product.images[0].filePath} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Image className="w-4 h-4 text-gray-300" />
+                          <Image className="w-4 h-4 text-slate-300" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-800 truncate">{product.name}</p>
-                      <p className="text-xs text-gray-400">{product.category.name}</p>
+                      <p className="text-sm font-medium text-slate-800 truncate">{product.name}</p>
+                      <p className="text-xs text-slate-400">{product.category.name}</p>
                     </div>
-                    <span className="text-xs text-gray-500 shrink-0">
+                    <span className="text-xs text-slate-500 shrink-0">
                       {formatUzs(Number(product.sellPriceUzs))}
                     </span>
                   </button>
@@ -474,7 +474,7 @@ function OrdersTab() {
   return (
     <>
       {/* Status filters */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
+      <div className="toggle-group mb-4">
         {([
           { id: "all", label: t("Barchasi") },
           { id: "PENDING", label: t("Kutilmoqda") },
@@ -484,11 +484,7 @@ function OrdersTab() {
           <button
             key={f.id}
             onClick={() => setStatusFilter(f.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              statusFilter === f.id
-                ? "bg-brand-600 text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
+            className={statusFilter === f.id ? "toggle-group-btn toggle-group-btn-active" : "toggle-group-btn toggle-group-btn-inactive"}
           >
             {f.label}
             <span className="ml-1.5 opacity-60">{counts[f.id]}</span>
@@ -499,14 +495,14 @@ function OrdersTab() {
       {ordersQuery.isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="animate-pulse bg-white border border-gray-200 rounded-lg p-4">
-              <div className="h-4 bg-gray-100 rounded w-1/4 mb-2" />
-              <div className="h-3 bg-gray-100 rounded w-1/2" />
+            <div key={i} className="animate-pulse bg-white border border-slate-200 rounded-lg p-4">
+              <div className="h-4 bg-slate-100 rounded w-1/4 mb-2" />
+              <div className="h-3 bg-slate-100 rounded w-1/2" />
             </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-gray-400 text-sm">
+        <div className="text-center py-16 text-slate-400 text-sm">
           {t("Buyurtmalar topilmadi")}
         </div>
       ) : (
@@ -519,57 +515,57 @@ function OrdersTab() {
             return (
               <div
                 key={order.id}
-                className="bg-white border border-gray-200 rounded-xl overflow-hidden"
+                className="bg-white border border-slate-200 rounded-xl overflow-hidden"
               >
                 {/* Order header */}
                 <button
                   onClick={() => setExpandedOrder(isExpanded ? null : order.id)}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm font-bold text-gray-900">#{order.id}</span>
+                      <span className="text-sm font-bold text-slate-900">#{order.id}</span>
                       <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${config.color}`}>
                         <StatusIcon className="w-3 h-3" />
                         {config.label}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <div className="flex items-center gap-3 text-xs text-slate-500">
                       <span>{order.customerName}</span>
                       <span>{order.customerPhone}</span>
                       <span>{new Date(order.createdAt).toLocaleString("uz")}</span>
                     </div>
                   </div>
-                  <span className="text-sm font-bold text-gray-900 shrink-0">
+                  <span className="text-sm font-bold text-slate-900 shrink-0">
                     {formatUzs(Number(order.totalUzs))}
                   </span>
-                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                 </button>
 
                 {/* Expanded content */}
                 {isExpanded && (
-                  <div className="px-4 pb-4 border-t border-gray-100">
+                  <div className="px-4 pb-4 border-t border-slate-100">
                     {/* Items */}
                     <div className="mt-3 space-y-1.5">
                       {order.items.map((item) => (
                         <div key={item.id} className="flex justify-between text-sm">
-                          <span className="text-gray-600">
-                            {item.productName} <span className="text-gray-400">x{item.quantity}</span>
+                          <span className="text-slate-600">
+                            {item.productName} <span className="text-slate-400">x{item.quantity}</span>
                           </span>
-                          <span className="font-medium text-gray-800">{formatUzs(Number(item.totalUzs))}</span>
+                          <span className="font-medium text-slate-800">{formatUzs(Number(item.totalUzs))}</span>
                         </div>
                       ))}
                     </div>
 
                     {/* Info */}
-                    <div className="mt-3 pt-3 border-t border-gray-100 space-y-1 text-xs text-gray-500">
-                      {order.address && <p>{t("Manzil")}: <span className="text-gray-700">{order.address}</span></p>}
-                      {order.notes && <p>{t("Izoh")}: <span className="text-gray-700">{order.notes}</span></p>}
+                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-1 text-xs text-slate-500">
+                      {order.address && <p>{t("Manzil")}: <span className="text-slate-700">{order.address}</span></p>}
+                      {order.notes && <p>{t("Izoh")}: <span className="text-slate-700">{order.notes}</span></p>}
                     </div>
 
                     {/* Actions */}
                     {order.status === "PENDING" && (
-                      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
+                      <div className="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2">
                         <button
                           onClick={() => updateStatus.mutate({ id: order.id, status: "CONFIRMED" })}
                           disabled={updateStatus.isPending}

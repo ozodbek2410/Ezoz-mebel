@@ -10,7 +10,6 @@ import { trpc } from "@/lib/trpc";
 import { useAuthStore } from "@/store/auth.store";
 import toast from "react-hot-toast";
 import { useT, getT } from "@/hooks/useT";
-import { LocaleToggle } from "@/components/ui";
 import {
   LayoutDashboard,
   Users,
@@ -19,23 +18,19 @@ import {
   ShoppingCart,
   Wrench,
   Receipt,
-  Wallet,
+  CreditCard,
   BarChart3,
   UserCog,
   Settings,
   Store,
-  LogOut,
-  Clock,
+  Factory,
+  Settings2,
+  Scissors,
   Download,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Edit2,
   X,
   Save,
   Lock,
-  Scissors,
-  Menu,
 } from "lucide-react";
 
 interface NavItem {
@@ -65,19 +60,19 @@ const navSections: NavSection[] = [
     icon: ShoppingCart,
     items: [
       { label: "Mahsulotlar", href: "/products", icon: Package, permission: "product:read" },
-      { label: "Xizmatlar", href: "/services", icon: Scissors, permission: "sale:service" },
+      { label: "Xizmatlar", href: "/services", icon: Wrench, permission: "sale:service" },
       { label: "Savdo kassasi", href: "/sales", icon: ShoppingCart, permission: "sale:product" },
-      { label: "Xizmat kassasi", href: "/sales/service", icon: Wrench, permission: "sale:service" },
-      { label: "Ustaxona", href: "/workshop", icon: Clock, permission: "workshop:view" },
+      { label: "Xizmat kassasi", href: "/sales/service", icon: Settings2, permission: "sale:service" },
+      { label: "Ustaxona", href: "/workshop", icon: Factory, permission: "workshop:view" },
       { label: "Ombor", href: "/warehouse", icon: Warehouse, permission: "warehouse:read" },
     ],
   },
   {
     title: "Moliya",
-    icon: Wallet,
+    icon: CreditCard,
     items: [
       { label: "Cheklar", href: "/receipts", icon: Receipt, permission: "receipt:print" },
-      { label: "Xarajatlar", href: "/expenses", icon: Wallet, permission: "expense:create" },
+      { label: "Xarajatlar", href: "/expenses", icon: CreditCard, permission: "expense:create" },
       { label: "Hisobotlar", href: "/reports", icon: BarChart3, permission: "report:own" },
     ],
   },
@@ -120,15 +115,8 @@ function CollapsibleSection({
   const hasActiveItem = visibleItems.some(isItemActive);
 
   const contentRef = useRef<HTMLDivElement>(null);
-  const [contentHeight, setContentHeight] = useState<number>(0);
 
-  useEffect(() => {
-    if (contentRef.current) {
-      setContentHeight(contentRef.current.scrollHeight);
-    }
-  }, [visibleItems.length]);
-
-  // Collapsed mode: show only section icon
+  // Collapsed mode: show only icons with tooltip
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-0.5 py-0.5">
@@ -140,10 +128,10 @@ function CollapsibleSection({
               key={item.href}
               to={item.href}
               activeOptions={{ exact: true }}
-              className={`w-10 h-10 flex items-center justify-center rounded-lg transition-colors ${
+              className={`w-10 h-10 flex items-center justify-center rounded-md transition-colors ${
                 isActive
-                  ? "bg-sidebar-active text-white shadow-sm shadow-brand-500/20"
-                  : "text-gray-400 hover:bg-sidebar-hover hover:text-white"
+                  ? "bg-sidebar-active-bg text-white"
+                  : "text-sidebar-text hover:bg-sidebar-hover hover:text-white"
               }`}
               title={t(item.label)}
             >
@@ -160,21 +148,22 @@ function CollapsibleSection({
       {sectionIndex > 0 && <div className="sidebar-divider" />}
 
       <button onClick={onToggle} className="sidebar-section-header">
-        <section.icon size={16} className={hasActiveItem ? "text-brand-400" : "text-gray-300"} />
+        <section.icon size={16} className={hasActiveItem ? "text-brand-400" : "text-slate-400"} />
         <span className={`flex-1 text-left ${hasActiveItem ? "!text-brand-400" : ""}`}>
           {t(section.title)}
         </span>
         <ChevronDown
           size={14}
-          className={`text-gray-400 transition-transform duration-200 ${
+          className={`text-slate-500 transition-transform duration-200 ${
             isOpen ? "rotate-0" : "-rotate-90"
           }`}
         />
       </button>
 
       <div
-        className="overflow-hidden transition-all duration-200 ease-in-out"
-        style={{ maxHeight: isOpen ? `${contentHeight}px` : "0px" }}
+        className={`overflow-hidden transition-all duration-200 ease-in-out ${
+          isOpen ? "max-h-96" : "max-h-0"
+        }`}
       >
         <div ref={contentRef}>
           {visibleItems.map((item) => {
@@ -198,7 +187,7 @@ function CollapsibleSection({
 }
 
 // ===== Edit Profile Modal =====
-function EditProfileModal({ onClose }: { onClose: () => void }) {
+export function EditProfileModal({ onClose }: { onClose: () => void }) {
   const t = useT();
   const [fullName, setFullName] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -238,19 +227,18 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full sm:w-[400px] max-h-[90vh] mx-4 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h3 className="font-semibold text-gray-900">{t("Profilni tahrirlash")}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3 className="text-lg font-semibold text-slate-900">{t("Profilni tahrirlash")}</h3>
+          <button onClick={onClose} className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
             <X size={18} />
           </button>
         </div>
 
-        <div className="px-5 py-4 space-y-5">
-          {/* Profile section */}
+        <div className="modal-body space-y-5">
           <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700">{t("To'liq ism")}</label>
+            <label className="input-label">{t("To'liq ism")}</label>
             <input
               type="text"
               className="input-field"
@@ -258,7 +246,7 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
               onChange={(e) => setFullName(e.target.value)}
             />
             <button
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="btn-primary w-full"
               disabled={updateProfile.isPending || fullName === user?.fullName}
               onClick={() => updateProfile.mutate()}
             >
@@ -267,11 +255,10 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
 
-          {/* Password section */}
-          <div className="border-t pt-4 space-y-3">
+          <div className="border-t border-slate-100 pt-4 space-y-3">
             <div className="flex items-center gap-2 mb-1">
-              <Lock size={14} className="text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">{t("Parolni o'zgartirish")}</span>
+              <Lock size={14} className="text-slate-500" />
+              <span className="text-sm font-medium text-slate-700">{t("Parolni o'zgartirish")}</span>
             </div>
             <input
               type="password"
@@ -295,7 +282,7 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
               onChange={(e) => setConfirmPassword(e.target.value)}
             />
             <button
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="btn w-full bg-slate-800 text-white hover:bg-slate-900 transition-colors"
               disabled={changePassword.isPending || !currentPassword || !newPassword}
               onClick={handlePasswordChange}
             >
@@ -309,33 +296,18 @@ function EditProfileModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ===== Mobile Hamburger Button =====
-export function MobileMenuButton() {
-  const { toggleMobileSidebar } = useUIStore();
-  return (
-    <button
-      onClick={toggleMobileSidebar}
-      className="lg:hidden p-2 -ml-2 mr-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
-    >
-      <Menu size={22} />
-    </button>
-  );
-}
-
 // ===== Main Sidebar =====
 export function Sidebar() {
   const t = useT();
-  const { user, logout, can } = useAuth();
-  const router = useRouter();
+  const { user, can } = useAuth();
   const { canInstall, install } = usePWA();
   const location = useLocation();
-  const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const { mobileSidebarOpen, closeMobileSidebar, sidebarCollapsed, toggleSidebarCollapsed } = useUIStore();
+  const { mobileSidebarOpen, closeMobileSidebar, sidebarCollapsed } = useUIStore();
 
-  // Accordion: only one section open at a time, default all closed
+  // Accordion state
   const [openSection, setOpenSection] = useState<string | null>(null);
 
-  // Auto-open section that contains active route
+  // Auto-open section with active route
   useEffect(() => {
     const cleanPath = location.pathname.replace(/\/+$/, "");
     for (const section of navSections) {
@@ -370,44 +342,28 @@ export function Sidebar() {
       />
 
       <aside className={`sidebar ${mobileSidebarOpen ? "open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`}>
-        {/* Logo */}
+        {/* Logo section — dark bg */}
         <div className={`sidebar-logo ${sidebarCollapsed ? "justify-center px-2" : ""}`}>
           <div className="w-9 h-9 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">
             EZ
           </div>
           {!sidebarCollapsed && (
             <>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="sidebar-logo-text">EZOZ MEBEL</div>
-                <div className="text-[11px] text-gray-500">Savdo Boshqaruv</div>
+                <div className="text-[10px] text-slate-500">Savdo Boshqaruv</div>
               </div>
               <button
-                onClick={toggleSidebarCollapsed}
-                className="hidden lg:flex text-gray-500 hover:text-white p-1 transition-colors"
-                title={t("Yig'ish")}
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
                 onClick={closeMobileSidebar}
-                className="lg:hidden text-gray-400 hover:text-white p-1"
+                className="lg:hidden text-slate-400 hover:text-white p-1"
               >
                 <X size={20} />
               </button>
             </>
           )}
-          {sidebarCollapsed && (
-            <button
-              onClick={toggleSidebarCollapsed}
-              className="hidden lg:flex absolute right-1 top-5 text-gray-500 hover:text-white p-1 transition-colors"
-              title={t("Kengaytirish")}
-            >
-              <ChevronRight size={16} />
-            </button>
-          )}
         </div>
 
-        {/* Nav */}
+        {/* Navigation */}
         <nav className={`sidebar-nav ${sidebarCollapsed ? "px-1" : ""}`}>
           {navSections.reduce<{ elements: React.ReactNode[]; visibleIndex: number }>(
             (acc, section) => {
@@ -440,7 +396,7 @@ export function Sidebar() {
           <div className="px-3 pb-2">
             <button
               onClick={install}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-lg transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-md transition-colors"
             >
               <Download size={14} />
               {t("Ilovani o'rnatish")}
@@ -448,41 +404,18 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Locale toggle */}
-        <div className={`px-3 pb-2 ${sidebarCollapsed ? "flex justify-center" : ""}`}>
-          <LocaleToggle collapsed={sidebarCollapsed} />
-        </div>
-
-        {/* User section */}
-        <div className={`sidebar-user ${sidebarCollapsed ? "flex-col gap-2 px-2" : ""}`}>
+        {/* User section (minimal — full controls in Topbar) */}
+        <div className={`sidebar-user ${sidebarCollapsed ? "flex-col gap-2 px-2 py-2" : ""}`}>
           <div className="w-8 h-8 bg-brand-700 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
             {user.fullName.charAt(0).toUpperCase()}
           </div>
           {!sidebarCollapsed && (
-            <>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-white truncate">{user.fullName}</div>
-                <div className="text-[11px] text-gray-500">{UserRoleLabels[user.role as UserRole]}</div>
-              </div>
-              <button
-                onClick={() => setEditProfileOpen(true)}
-                className="text-gray-500 hover:text-brand-400 transition-colors p-1"
-                title={t("Tahrirlash")}
-              >
-                <Edit2 size={14} />
-              </button>
-            </>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-white truncate">{user.fullName}</div>
+              <div className="text-[10px] text-slate-500">{UserRoleLabels[user.role as UserRole]}</div>
+            </div>
           )}
-          <button
-            onClick={() => { logout(); void router.navigate({ to: "/login" }); }}
-            className="text-gray-500 hover:text-red-400 transition-colors p-1"
-            title={t("Chiqish")}
-          >
-            <LogOut size={16} />
-          </button>
         </div>
-
-        {editProfileOpen && <EditProfileModal onClose={() => setEditProfileOpen(false)} />}
       </aside>
     </>
   );

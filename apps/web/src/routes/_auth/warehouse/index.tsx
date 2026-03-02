@@ -45,7 +45,7 @@ export function WarehousePage() {
   const [activeTab, setActiveTab] = useState("stock");
 
   return (
-    <>
+    <div className="page-enter">
       <PageHeader title={t("Ombor")} />
 
       <div className="page-body">
@@ -73,7 +73,7 @@ export function WarehousePage() {
           {activeTab === "revalue" && <RevalueTab />}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -140,7 +140,7 @@ function StockTab() {
               type="checkbox"
               checked={lowStockOnly}
               onChange={(e) => setLowStockOnly(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-slate-300"
             />
             {t("Kam qoldiq")}
           </label>
@@ -178,17 +178,17 @@ function StockTab() {
 
               return (
                 <TableRow key={s.id}>
-                  <td className="font-mono text-xs text-gray-500">{s.product.code}</td>
-                  <td className="font-medium text-gray-900">{s.product.name}</td>
+                  <td className="font-mono text-xs text-slate-500">{s.product.code}</td>
+                  <td className="font-medium text-slate-900">{s.product.name}</td>
                   <td><Badge variant="neutral">{s.product.category.name}</Badge></td>
                   <td>
                     <div className="flex items-center gap-1.5">
-                      <Warehouse className="w-3.5 h-3.5 text-gray-400" />
+                      <Warehouse className="w-3.5 h-3.5 text-slate-400" />
                       <span className="text-sm">{s.warehouse.name}</span>
                     </div>
                   </td>
                   <td><span className={stockClass}>{qty} {s.product.unit}</span></td>
-                  <td className="text-sm text-gray-500">{minAlert > 0 ? minAlert : "-"}</td>
+                  <td className="text-sm text-slate-500">{minAlert > 0 ? minAlert : "-"}</td>
                   <td><CurrencyDisplay amountUzs={s.product.sellPriceUzs} amountUsd={s.product.sellPriceUsd} size="sm" /></td>
                 </TableRow>
               );
@@ -354,23 +354,23 @@ function PurchaseTab() {
         <div className="card card-body space-y-3 mb-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
-              <span className="text-gray-500">{t("Sana")}:</span>
+              <span className="text-slate-500">{t("Sana")}:</span>
               <p className="font-medium">{new Date(p.createdAt).toLocaleDateString("uz")}</p>
             </div>
             <div>
-              <span className="text-gray-500">{t("Yetkazuvchi")}:</span>
+              <span className="text-slate-500">{t("Yetkazuvchi")}:</span>
               <p className="font-medium">{p.supplier?.name ?? t("Noma'lum")}</p>
             </div>
             <div>
-              <span className="text-gray-500">{t("Jami UZS")}:</span>
+              <span className="text-slate-500">{t("Jami UZS")}:</span>
               <p className="font-medium text-red-600">{formatUzs(Number(p.totalUzs))}</p>
             </div>
             <div>
-              <span className="text-gray-500">{t("Jami USD")}:</span>
+              <span className="text-slate-500">{t("Jami USD")}:</span>
               <p className="font-medium text-blue-600">${Number(p.totalUsd).toLocaleString()}</p>
             </div>
           </div>
-          {p.notes && <p className="text-sm text-gray-500">{t("Izoh")}: {p.notes}</p>}
+          {p.notes && <p className="text-sm text-slate-500">{t("Izoh")}: {p.notes}</p>}
         </div>
         <Table>
           <TableHead>
@@ -440,7 +440,7 @@ function PurchaseTab() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">{t("Mahsulotlar")}</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">{t("Mahsulotlar")}</label>
             <Table>
               <TableHead>
                 <tr>
@@ -453,7 +453,7 @@ function PurchaseTab() {
               </TableHead>
               <TableBody>
                 {items.map((item, idx) => (
-                  <tr key={idx} className="border-b border-gray-100">
+                  <tr key={idx} className="border-b border-slate-100">
                     <td className="py-1.5 px-2">
                       <select
                         className="input-field text-sm py-1.5"
@@ -520,7 +520,7 @@ function PurchaseTab() {
           </div>
 
           <div className="flex items-center justify-between pt-2">
-            <div className="text-sm text-gray-500">
+            <div className="text-sm text-slate-500">
               {validItems.length > 0 && (
                 <span>
                   {validItems.length} {t("ta mahsulot")} | {t("Jami")}:{" "}
@@ -609,7 +609,7 @@ function PurchaseTab() {
                 <td className="text-sm font-semibold text-blue-600">${Number(p.totalUsd).toLocaleString()}</td>
                 <td>
                   <button
-                    className="text-gray-400 hover:text-brand-600 p-1"
+                    className="text-slate-400 hover:text-brand-600 p-1"
                     onClick={() => { setDetailId(p.id); setMode("detail"); }}
                   >
                     <Eye className="w-4 h-4" />
@@ -984,7 +984,7 @@ function InventoryTab() {
                     return (
                       <TableRow key={item.productId}>
                         <td className="font-medium">{item.productName}</td>
-                        <td className="text-sm text-gray-500">{item.expected} {item.unit}</td>
+                        <td className="text-sm text-slate-500">{item.expected} {item.unit}</td>
                         <td>
                           <input
                             type="number"
@@ -998,7 +998,7 @@ function InventoryTab() {
                           />
                         </td>
                         <td>
-                          <span className={`text-sm font-semibold ${diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : "text-gray-400"}`}>
+                          <span className={`text-sm font-semibold ${diff > 0 ? "text-green-600" : diff < 0 ? "text-red-600" : "text-slate-400"}`}>
                             {diff > 0 ? "+" : ""}{diff} {item.unit}
                           </span>
                         </td>
@@ -1096,7 +1096,7 @@ function RevalueTab() {
                   <td className="text-sm">{new Date(r.createdAt).toLocaleDateString("uz")}</td>
                   <td className="text-sm">{formatUzs(Number(r.oldPriceUzs))}</td>
                   <td className="text-sm font-semibold">{formatUzs(Number(r.newPriceUzs))}</td>
-                  <td className="text-sm text-gray-500">{r.reason || "-"}</td>
+                  <td className="text-sm text-slate-500">{r.reason || "-"}</td>
                 </TableRow>
               ))
             )}
@@ -1118,7 +1118,7 @@ function RevalueTab() {
               placeholder={t("Mahsulot tanlang")}
             />
             {selectedProduct && (
-              <div className="p-3 bg-gray-50 rounded-lg text-sm">
+              <div className="p-3 bg-slate-50 rounded-lg text-sm">
                 <p>{t("Joriy tannarx")}: <strong>{formatUzs(Number(selectedProduct.costPriceUzs))}</strong></p>
               </div>
             )}

@@ -63,7 +63,7 @@ function CategoryTree({
         >
           {hasChildren ? (
             <button
-              className="p-0.5 hover:bg-gray-200 rounded"
+              className="p-0.5 hover:bg-slate-200 rounded"
               onClick={(e) => {
                 e.stopPropagation();
                 toggleExpand(node.id);
@@ -76,14 +76,14 @@ function CategoryTree({
           )}
           <FolderOpen className="w-4 h-4 text-brand-500 shrink-0" />
           <span className="flex-1 truncate">{node.name}</span>
-          <span className="text-xs text-gray-400">{node._count.products}</span>
+          <span className="text-xs text-slate-400">{node._count.products}</span>
           {isBoss && (
             <div className="hidden group-hover:flex items-center gap-1">
               <button
-                className="p-1 hover:bg-gray-200 rounded"
+                className="p-1 hover:bg-slate-200 rounded"
                 onClick={(e) => { e.stopPropagation(); onEdit(node); }}
               >
-                <Edit2 className="w-3 h-3 text-gray-500" />
+                <Edit2 className="w-3 h-3 text-slate-500" />
               </button>
               <button
                 className="p-1 hover:bg-red-100 rounded"
@@ -109,7 +109,7 @@ function CategoryTree({
         className={`tree-item ${selectedId === null ? "active" : ""}`}
         onClick={() => onSelect(null)}
       >
-        <Package className="w-4 h-4 text-gray-500" />
+        <Package className="w-4 h-4 text-slate-500" />
         <span className="flex-1">{t("Barcha mahsulotlar")}</span>
       </div>
       {categories.map((cat) => renderNode(cat))}
@@ -383,13 +383,14 @@ export function ProductsPage() {
     if (!detail) return;
 
     const qrData = JSON.stringify({ id: detail.id, code: detail.code, name: detail.name });
-    const qrDataUrl = await QRCode.toDataURL(qrData, { width: 150, margin: 1 });
+    const qrDataUrl = await QRCode.toDataURL(qrData, { width: 200, margin: 1 });
 
     const priceUzs = Number(detail.sellPriceUzs).toLocaleString("uz-UZ");
     const priceUsd = Number(detail.sellPriceUsd).toFixed(2);
     const _t = getT();
 
-    const printWindow = window.open("", "_blank", "width=400,height=400");
+    // Label size: 2.24in x 1.54in (56.9mm x 39.1mm)
+    const printWindow = window.open("", "_blank", "width=400,height=300");
     if (!printWindow) return;
 
     printWindow.document.write(`<!DOCTYPE html>
@@ -398,26 +399,67 @@ export function ProductsPage() {
   <meta charset="utf-8">
   <title>${_t("Yorliq")} - ${detail.name}</title>
   <style>
-    @page { size: 58mm 40mm; margin: 0; }
+    @page { size: 2.24in 1.54in; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { width: 58mm; font-family: Arial, sans-serif; padding: 2mm; }
-    .name { font-size: 9pt; font-weight: bold; text-align: center; margin-bottom: 1mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .qr { text-align: center; margin-bottom: 1mm; }
-    .qr img { width: 20mm; height: 20mm; }
-    .price { text-align: center; font-size: 10pt; font-weight: bold; }
-    .price-uzs { color: #dc2626; }
-    .price-usd { color: #2563eb; font-size: 8pt; }
-    .code { text-align: center; font-size: 7pt; color: #666; margin-top: 1mm; }
+    body {
+      width: 2.24in;
+      height: 1.54in;
+      font-family: Arial, Helvetica, sans-serif;
+      padding: 1.5mm 2mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .name {
+      font-size: 8pt;
+      font-weight: 700;
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+    .middle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2mm;
+      flex: 1;
+    }
+    .qr img { width: 22mm; height: 22mm; }
+    .info {
+      text-align: center;
+    }
+    .price-uzs {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #dc2626;
+      line-height: 1.3;
+    }
+    .price-usd {
+      font-size: 8pt;
+      font-weight: 600;
+      color: #2563eb;
+      line-height: 1.3;
+    }
+    .code {
+      font-size: 7pt;
+      color: #555;
+      text-align: center;
+      line-height: 1.2;
+    }
   </style>
 </head>
 <body>
   <div class="name">${detail.name}</div>
-  <div class="qr"><img src="${qrDataUrl}" /></div>
-  <div class="price">
-    <div class="price-uzs">${priceUzs} ${_t("so'm")}</div>
-    <div class="price-usd">$${priceUsd}</div>
+  <div class="middle">
+    <div class="qr"><img src="${qrDataUrl}" /></div>
+    <div class="info">
+      <div class="price-uzs">${priceUzs} ${_t("so'm")}</div>
+      <div class="price-usd">$${priceUsd}</div>
+    </div>
   </div>
-  <div class="code">${detail.code}</div>
+  <div class="code">#${detail.code}</div>
 </body>
 </html>`);
     printWindow.document.close();
@@ -500,10 +542,9 @@ export function ProductsPage() {
   }, [productDetailQuery.data]);
 
   return (
-    <>
+    <div className="page-enter">
       <PageHeader
         title={t("Mahsulotlar")}
-        subtitle={undefined}
         actions={
           (can("product:create") || can("category:manage")) ? (
             <div className="flex items-center gap-2">
@@ -544,11 +585,11 @@ export function ProductsPage() {
           <div className="hidden lg:block w-64 shrink-0">
             <div className="card">
               <div className="card-header">
-                <h3 className="text-sm font-semibold text-gray-700">{t("Guruhlar")}</h3>
+                <h3 className="text-sm font-semibold text-slate-700">{t("Guruhlar")}</h3>
               </div>
               <div className="p-2 overflow-y-auto">
                 {categoriesQuery.isLoading ? (
-                  <div className="p-4 text-center text-gray-400 text-sm">{t("Yuklanmoqda...")}</div>
+                  <div className="p-4 text-center text-slate-400 text-sm">{t("Yuklanmoqda...")}</div>
                 ) : (
                   <CategoryTree
                     categories={(categoriesQuery.data ?? []) as CategoryNode[]}
@@ -576,8 +617,8 @@ export function ProductsPage() {
             <div className="lg:hidden fixed inset-0 z-30 bg-black/50" onClick={() => setShowCategories(false)}>
               <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                 <div className="px-4 py-3 border-b flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-700">{t("Guruhlar")}</h3>
-                  <button onClick={() => setShowCategories(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                  <h3 className="text-sm font-semibold text-slate-700">{t("Guruhlar")}</h3>
+                  <button onClick={() => setShowCategories(false)} className="p-1 text-slate-400 hover:text-slate-600">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -614,13 +655,13 @@ export function ProductsPage() {
                 onPageChange={setPage}
               />
               {total > 0 && (
-                <span className="text-xs text-gray-400">{total} {t("ta mahsulot")}</span>
+                <span className="text-xs text-slate-400">{total} {t("ta mahsulot")}</span>
               )}
             </div>
             <div className="mb-4 flex items-center gap-2">
               <button
                 onClick={() => setShowCategories(true)}
-                className="lg:hidden shrink-0 p-2.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+                className="lg:hidden shrink-0 p-2.5 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
               >
                 <Filter className="w-4 h-4" />
               </button>
@@ -640,38 +681,38 @@ export function ProductsPage() {
                 <tr>
                   <th className="w-12"></th>
                   <th className="whitespace-nowrap max-w-[200px]">
-                    <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("code")}>
+                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("code")}>
                       {t("Mahsulot")}
                       {sortKey === "code" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("category")}>
+                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("category")}>
                       <FolderOpen className="w-3.5 h-3.5" />
                       {t("Guruh")}
                       {sortKey === "category" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-32 whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("sellPrice")}>
+                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("sellPrice")}>
                       {t("Sotish")}
                       {sortKey === "sellPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-32 whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("minPrice")}>
+                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("minPrice")}>
                       {t("Min")}
                       {sortKey === "minPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-32 whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("costPrice")}>
+                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("costPrice")}>
                       {t("Tan")}
                       {sortKey === "costPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-20 whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-gray-900" onClick={() => toggleSort("stock")}>
+                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("stock")}>
                       {t("Qoldiq")}
                       {sortKey === "stock" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
@@ -698,20 +739,20 @@ export function ProductsPage() {
                         onClick={() => setSelectedProductId(selectedProductId === product.id ? null : product.id)}
                       >
                         <td className="!p-1.5">
-                          <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center">
                             {thumbnail ? (
                               <img src={thumbnail} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              <Package className="w-4 h-4 text-gray-300" />
+                              <Package className="w-4 h-4 text-slate-300" />
                             )}
                           </div>
                         </td>
                         <td className="max-w-[200px]">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-medium text-gray-900 truncate">{product.name}</span>
+                            <span className="font-medium text-slate-900 truncate">{product.name}</span>
                             {product.isLocked && <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
+                          <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
                             <span className="font-mono">{product.code}</span>
                             <span>{unitOptions.find((u) => u.value === product.unit)?.label ?? product.unit}</span>
                           </div>
@@ -734,30 +775,30 @@ export function ProductsPage() {
                         <td className="!p-1">
                           <div className="flex items-center gap-0.5">
                             <button
-                              className="p-2 sm:p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                              className="p-2 sm:p-1.5 hover:bg-slate-100 rounded-md transition-colors"
                               title={t("QR yorliq chop etish")}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handlePrintLabel(product);
                               }}
                             >
-                              <QrCode className="w-5 h-5 sm:w-4 sm:h-4 text-gray-400" />
+                              <QrCode className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" />
                             </button>
                             {can("product:update") && (
                               <button
-                                className="p-2 sm:p-1.5 hover:bg-blue-50 rounded-lg transition-colors"
+                                className="p-2 sm:p-1.5 hover:bg-brand-50 rounded-md transition-colors"
                                 title={t("Tahrirlash")}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedProductId(product.id);
                                 }}
                               >
-                                <Edit2 className="w-5 h-5 sm:w-4 sm:h-4 text-gray-400" />
+                                <Edit2 className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" />
                               </button>
                             )}
                             {can("product:delete") && (
                               <button
-                                className="p-2 sm:p-1.5 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-2 sm:p-1.5 hover:bg-red-50 rounded-md transition-colors"
                                 title={t("O'chirish")}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -766,7 +807,7 @@ export function ProductsPage() {
                                   }
                                 }}
                               >
-                                <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 text-gray-400" />
+                                <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" />
                               </button>
                             )}
                           </div>
@@ -835,7 +876,7 @@ export function ProductsPage() {
           />
 
           <div className="border-t pt-4 space-y-3">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">{t("Narxlar")}</h4>
+            <h4 className="text-sm font-medium text-slate-700 mb-3">{t("Narxlar")}</h4>
             <CurrencyPairInput
               label={t("Sotish narxi")}
               valueUzs={form.sellPriceUzs}
@@ -986,7 +1027,7 @@ export function ProductsPage() {
             />
 
             <div className="border-t pt-4 space-y-3">
-              <h4 className="text-sm font-medium text-gray-700">{t("Narxlar")}</h4>
+              <h4 className="text-sm font-medium text-slate-700">{t("Narxlar")}</h4>
               <CurrencyPairInput
                 label={t("Sotish narxi")}
                 valueUzs={slideForm.sellPriceUzs}
@@ -1019,10 +1060,10 @@ export function ProductsPage() {
 
             {/* Product images */}
             <div className="border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">{t("Rasmlar")}</h4>
+              <h4 className="text-sm font-medium text-slate-700 mb-2">{t("Rasmlar")}</h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {productDetailQuery.data.images.map((img) => (
-                  <div key={img.id} className="relative group rounded-lg overflow-hidden aspect-square bg-gray-100">
+                  <div key={img.id} className="relative group rounded-lg overflow-hidden aspect-square bg-slate-100">
                     <img
                       src={img.filePath}
                       alt=""
@@ -1039,9 +1080,9 @@ export function ProductsPage() {
                   </div>
                 ))}
                 {can("product:update") && (
-                  <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition-colors">
-                    <ImagePlus className="w-6 h-6 text-gray-400" />
-                    <span className="text-xs text-gray-400 mt-1">{t("Qo'shish")}</span>
+                  <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition-colors">
+                    <ImagePlus className="w-6 h-6 text-slate-400" />
+                    <span className="text-xs text-slate-400 mt-1">{t("Qo'shish")}</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -1056,12 +1097,12 @@ export function ProductsPage() {
 
             {/* Stock edit */}
             <div className="border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">{t("Ombor qoldiqlari")}</h4>
+              <h4 className="text-sm font-medium text-slate-700 mb-2">{t("Ombor qoldiqlari")}</h4>
               <div className="space-y-1.5">
                 {productDetailQuery.data.stockItems.map((si) => (
-                  <div key={si.id} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded">
-                    <Warehouse className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                    <span className="text-gray-600 flex-1">{si.warehouse.name}</span>
+                  <div key={si.id} className="flex items-center gap-2 text-sm p-2 bg-slate-50 rounded">
+                    <Warehouse className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="text-slate-600 flex-1">{si.warehouse.name}</span>
                     {can("product:update") ? (
                       <input
                         type="number"
@@ -1130,6 +1171,6 @@ export function ProductsPage() {
           </div>
         )}
       </SlideOver>
-    </>
+    </div>
   );
 }

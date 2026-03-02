@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useCallback, useMemo, useRef, useEffect, memo } from "react";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import {
   Plus, ShoppingCart, Trash2, Check, X,
@@ -18,6 +18,7 @@ import { useSocket, useSocketEvent } from "@/hooks/useSocket";
 import { useT, getT } from "@/hooks/useT";
 import { formatUzs, formatUsd } from "@ezoz/shared";
 import toast from "react-hot-toast";
+import { fetchAndPrintReceipt } from "@/lib/printReceipt";
 
 interface CartItem {
   productId: number | null;
@@ -69,54 +70,74 @@ function SalesPageInner() {
     cardUzs: "0",
   });
 
-  // Warehouse auto-detect
+  // Warehouse auto-detect (cached — rarely changes)
   const warehousesQuery = useQuery({
     queryKey: ["warehouse", "list"],
     queryFn: () => trpc.warehouse.listWarehouses.query(),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
   const warehouses = warehousesQuery.data ?? [];
   const targetWarehouse = warehouses.find((w) =>
     isServiceMode ? w.name === "Sex" : w.name === "Asosiy ombor",
   );
 
-  // Service types
+  // Service types (cached — rarely changes)
   const serviceTypesQuery = useQuery({
     queryKey: ["serviceType", "list"],
     queryFn: () => trpc.serviceType.list.query(),
     enabled: isServiceMode,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
   const serviceTypes = serviceTypesQuery.data ?? [];
 
-  // Masters
+  // Masters (cached)
   const usersQuery = useQuery({
     queryKey: ["auth", "getUsers"],
     queryFn: () => trpc.auth.getUsers.query(),
     enabled: isServiceMode,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
-  const masters = (usersQuery.data ?? []).filter((u) => u.role === "MASTER");
+  const masters = useMemo(
+    () => (usersQuery.data ?? []).filter((u) => u.role === "MASTER"),
+    [usersQuery.data],
+  );
 
-  // Products
+  // Products — load ALL once, filter client-side
   const productsQuery = useQuery({
-    queryKey: ["product", "list", productSearch, targetWarehouse?.id],
+    queryKey: ["product", "list", targetWarehouse?.id],
     queryFn: () =>
       trpc.product.list.query({
-        search: productSearch || undefined,
         warehouseId: targetWarehouse?.id,
         limit: 1000,
       }),
-    enabled: activeTab === "pos" && !!targetWarehouse,
+    enabled: !!targetWarehouse,
+    staleTime: 60 * 1000,
+    gcTime: 5 * 60 * 1000,
   });
 
+  // Debounced customer search
+  const [debouncedCustomerSearch, setDebouncedCustomerSearch] = useState("");
+  const customerDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    customerDebounceRef.current = setTimeout(() => setDebouncedCustomerSearch(customerSearch), 300);
+    return () => clearTimeout(customerDebounceRef.current);
+  }, [customerSearch]);
+
   const customerSearchQuery = useQuery({
-    queryKey: ["customer", "search", customerSearch],
-    queryFn: () => trpc.customer.search.query({ query: customerSearch }),
-    enabled: customerDropdownOpen && !selectedCustomer,
+    queryKey: ["customer", "search", debouncedCustomerSearch],
+    queryFn: () => trpc.customer.search.query({ query: debouncedCustomerSearch }),
+    enabled: customerDropdownOpen && !selectedCustomer && debouncedCustomerSearch.length >= 1,
+    staleTime: 30 * 1000,
   });
 
   const salesQuery = useQuery({
     queryKey: ["sale", "list", saleType],
     queryFn: () => trpc.sale.list.query({ saleType }),
     enabled: activeTab === "history",
+    staleTime: 30 * 1000,
   });
 
   const hasWorkshopItems = cart.some((item) => item.serviceName && item.masterId);
@@ -135,7 +156,7 @@ function SalesPageInner() {
   // Service mode: create sale immediately (no payment modal)
   const createServiceSale = useMutation({
     mutationFn: async () => {
-      await trpc.sale.create.mutate({
+      const sale = await trpc.sale.create.mutate({
         customerId: selectedCustomer?.id,
         warehouseId: targetWarehouse?.id,
         saleType: "SERVICE",
@@ -150,8 +171,9 @@ function SalesPageInner() {
         goesToWorkshop: hasWorkshopItems,
         notes: saleNotes || undefined,
       });
+      return sale;
     },
-    onSuccess: () => {
+    onSuccess: (sale) => {
       queryClient.invalidateQueries({ queryKey: ["sale"] });
       queryClient.invalidateQueries({ queryKey: ["product"] });
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
@@ -159,6 +181,7 @@ function SalesPageInner() {
       setSelectedCustomer(null);
       setSaleNotes("");
       toast.success(getT()("Sotuv yaratildi"));
+      void fetchAndPrintReceipt(sale.id);
     },
     onError: (err) => toast.error(err.message),
   });
@@ -208,8 +231,9 @@ function SalesPageInner() {
       }
       // Complete sale
       await trpc.sale.complete.mutate({ id: saleId });
+      return saleId;
     },
-    onSuccess: () => {
+    onSuccess: (completedSaleId) => {
       queryClient.invalidateQueries({ queryKey: ["sale"] });
       queryClient.invalidateQueries({ queryKey: ["product"] });
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
@@ -221,6 +245,7 @@ function SalesPageInner() {
         setSaleNotes("");
       }
       toast.success(getT()("Sotuv yakunlandi"));
+      void fetchAndPrintReceipt(completedSaleId);
     },
     onError: (err) => toast.error(err.message),
   });
@@ -271,9 +296,12 @@ function SalesPageInner() {
   const [customServiceOpen, setCustomServiceOpen] = useState(false);
   const [customServiceForm, setCustomServiceForm] = useState({ name: "", price: "" });
 
-  const updateCartQuantity = (index: number, qty: number) => {
-    if (qty <= 0) setCart((prev) => prev.filter((_, i) => i !== index));
-    else setCart((prev) => prev.map((item, i) => (i === index ? { ...item, quantity: qty } : item)));
+  const updateCartQuantity = (index: number, qty: number, fromButton = false) => {
+    if (fromButton && qty <= 0) {
+      setCart((prev) => prev.filter((_, i) => i !== index));
+      return;
+    }
+    setCart((prev) => prev.map((item, i) => (i === index ? { ...item, quantity: qty } : item)));
   };
 
   const updateCartPrice = (index: number, field: "priceUzs" | "priceUsd", value: number) => {
@@ -284,16 +312,38 @@ function SalesPageInner() {
     setCart((prev) => prev.map((item, i) => (i === index ? { ...item, masterId } : item)));
   };
 
-  const cartTotal = cart.reduce(
-    (acc, item) => ({ uzs: acc.uzs + item.priceUzs * item.quantity, usd: acc.usd + item.priceUsd * item.quantity }),
-    { uzs: 0, usd: 0 },
+  const cartTotal = useMemo(
+    () => cart.reduce(
+      (acc, item) => ({ uzs: acc.uzs + item.priceUzs * item.quantity, usd: acc.usd + item.priceUsd * item.quantity }),
+      { uzs: 0, usd: 0 },
+    ),
+    [cart],
   );
 
-  const products = productsQuery.data?.items ?? [];
-  const availableProducts = products.filter((p) => {
-    const stock = p.stockItems[0] ? Number(p.stockItems[0].quantity) : 0;
-    return stock > 0;
-  });
+  // Map for O(1) cart lookup in product cards
+  const cartMap = useMemo(
+    () => new Map(cart.filter((i) => i.productId).map((i) => [i.productId, i.quantity])),
+    [cart],
+  );
+
+  const allProducts = productsQuery.data?.items ?? [];
+
+  // Client-side search + stock filter (no API call on search)
+  const products = useMemo(() => {
+    if (!productSearch) return allProducts;
+    const q = productSearch.toLowerCase();
+    return allProducts.filter((p) =>
+      p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q),
+    );
+  }, [allProducts, productSearch]);
+
+  const availableProducts = useMemo(
+    () => products.filter((p) => {
+      const stock = p.stockItems[0] ? Number(p.stockItems[0].quantity) : 0;
+      return stock > 0;
+    }),
+    [products],
+  );
   const sales = salesQuery.data?.sales ?? [];
 
   function getMasterName(id: number | null) {
@@ -303,7 +353,7 @@ function SalesPageInner() {
 
   // ===================== RENDER =====================
   return (
-    <>
+    <div className="page-enter">
       <PageHeader
         title={isServiceMode ? t("Xizmat kassasi") : t("Savdo kassasi")}
         actions={
@@ -326,21 +376,17 @@ function SalesPageInner() {
             <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
               {/* ===== LEFT: Services / Products ===== */}
               <div className="flex-1 min-w-0">
-                <div className="flex gap-1 mb-4 bg-gray-100 rounded-xl p-1">
+                <div className="toggle-group mb-4">
                   <button
                     onClick={() => setServicePanel("services")}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                      servicePanel === "services" ? "bg-white text-amber-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={servicePanel === "services" ? "toggle-group-btn toggle-group-btn-active" : "toggle-group-btn toggle-group-btn-inactive"}
                   >
                     <Wrench className="w-4 h-4" />
                     {t("Xizmatlar")}
                   </button>
                   <button
                     onClick={() => setServicePanel("products")}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all ${
-                      servicePanel === "products" ? "bg-white text-brand-700 shadow-sm" : "text-gray-500 hover:text-gray-700"
-                    }`}
+                    className={servicePanel === "products" ? "toggle-group-btn toggle-group-btn-active" : "toggle-group-btn toggle-group-btn-inactive"}
                   >
                     <Package className="w-4 h-4" />
                     {t("Mahsulotlar")} ({availableProducts.length})
@@ -348,7 +394,7 @@ function SalesPageInner() {
                 </div>
 
                 {servicePanel === "services" ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {serviceTypes.map((st) => {
                       const inCart = cart.find((i) => i.serviceName === st.name);
                       return (
@@ -359,7 +405,7 @@ function SalesPageInner() {
                         >
                           <div className="flex items-center gap-2 mb-1">
                             <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            <p className="font-medium text-sm text-gray-900 truncate">{st.name}</p>
+                            <p className="font-medium text-sm text-slate-900 truncate">{st.name}</p>
                           </div>
                           <span className="currency-uzs text-sm">{formatUzs(Number(st.priceUzs))}</span>
                           {inCart && (
@@ -373,10 +419,10 @@ function SalesPageInner() {
                     {/* Custom service card */}
                     <button
                       onClick={() => setCustomServiceOpen(true)}
-                      className="pos-product-card border-dashed !border-gray-300 flex flex-col items-center justify-center gap-1 min-h-[72px]"
+                      className="pos-product-card border-dashed !border-slate-300 flex flex-col items-center justify-center gap-1 min-h-[72px]"
                     >
-                      <Plus className="w-5 h-5 text-gray-400" />
-                      <span className="text-xs text-gray-500 font-medium">{t("Boshqa xizmat")}</span>
+                      <Plus className="w-5 h-5 text-slate-400" />
+                      <span className="text-xs text-slate-500 font-medium">{t("Boshqa xizmat")}</span>
                     </button>
                   </div>
                 ) : (
@@ -390,43 +436,35 @@ function SalesPageInner() {
                       />
                     </div>
                     {productsQuery.isLoading ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {Array.from({ length: 8 }).map((_, i) => (
                           <div key={i} className="pos-product-card animate-pulse">
-                            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-                            <div className="h-3 bg-gray-200 rounded w-1/2" />
+                            <div className="h-4 bg-slate-200 rounded w-3/4 mb-2" />
+                            <div className="h-3 bg-slate-200 rounded w-1/2" />
                           </div>
                         ))}
                       </div>
                     ) : availableProducts.length === 0 ? (
-                      <div className="text-center py-12 text-gray-400">
+                      <div className="text-center py-12 text-slate-400">
                         <Package className="w-10 h-10 mx-auto mb-2 opacity-30" />
                         <p className="text-sm">{t("Mahsulotlar topilmadi")}</p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                        {availableProducts.map((product) => {
-                          const stock = product.stockItems[0] ? Number(product.stockItems[0].quantity) : 0;
-                          const inCart = cart.find((i) => i.productId === product.id);
-                          return (
-                            <button
-                              key={product.id}
-                              onClick={() => addToCart(product)}
-                              className={`pos-product-card relative ${inCart ? "!border-brand-400 ring-2 ring-brand-100" : ""}`}
-                            >
-                              <p className="font-medium text-sm text-gray-900 truncate">{product.name}</p>
-                              <div className="flex items-center justify-between mt-1.5">
-                                <span className="currency-uzs text-sm">{formatUzs(Number(product.sellPriceUzs))}</span>
-                                <span className="text-xs text-gray-400">{stock} {product.unit.toLowerCase()}</span>
-                              </div>
-                              {inCart && (
-                                <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-brand-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">
-                                  {inCart.quantity}
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
+                      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {availableProducts.map((product) => (
+                          <ProductCard
+                            key={product.id}
+                            id={product.id}
+                            name={product.name}
+                            code={product.code}
+                            sellPriceUzs={Number(product.sellPriceUzs)}
+                            stock={product.stockItems[0] ? Number(product.stockItems[0].quantity) : 0}
+                            unit={product.unit.toLowerCase()}
+                            thumb={product.images[0]?.filePath ?? null}
+                            cartQty={cartMap.get(product.id) ?? 0}
+                            onAdd={() => addToCart(product)}
+                          />
+                        ))}
                       </div>
                     )}
                   </>
@@ -442,13 +480,13 @@ function SalesPageInner() {
                       <h3 className="font-semibold">{t("Savat")} ({cart.length})</h3>
                     </div>
                     {cart.length > 0 && (
-                      <button onClick={() => setCart([])} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+                      <button onClick={() => setCart([])} className="text-xs text-slate-400 hover:text-red-500 transition-colors">
                         {t("Tozalash")}
                       </button>
                     )}
                   </div>
 
-                  <div className="px-4 py-3 border-b border-gray-100">
+                  <div className="px-4 py-3 border-b border-slate-100">
                     <div className="relative">
                       <SearchInput
                         placeholder={t("Mijoz tanlash (ixtiyoriy)...")}
@@ -461,17 +499,17 @@ function SalesPageInner() {
                       {customerDropdownOpen && !selectedCustomer && customerSearchQuery.data && (
                         <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border max-h-48 overflow-y-auto">
                           {customerSearchQuery.data.length === 0 ? (
-                            <div className="px-3 py-2 text-sm text-gray-400">{t("Mijoz topilmadi")}</div>
+                            <div className="px-3 py-2 text-sm text-slate-400">{t("Mijoz topilmadi")}</div>
                           ) : (
                             customerSearchQuery.data.map((c) => (
                               <button
                                 key={c.id}
-                                className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+                                className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm flex items-center gap-2"
                                 onMouseDown={() => { setSelectedCustomer({ id: c.id, fullName: c.fullName }); setCustomerSearch(""); setCustomerDropdownOpen(false); }}
                               >
-                                <User className="w-3.5 h-3.5 text-gray-400" />
+                                <User className="w-3.5 h-3.5 text-slate-400" />
                                 <span>{c.fullName}</span>
-                                {c.phone && <span className="text-xs text-gray-400">{c.phone}</span>}
+                                {c.phone && <span className="text-xs text-slate-400">{c.phone}</span>}
                               </button>
                             ))
                           )}
@@ -480,9 +518,9 @@ function SalesPageInner() {
                     </div>
                   </div>
 
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-slate-100">
                     {cart.length === 0 ? (
-                      <div className="text-center py-10 text-gray-400 text-sm">
+                      <div className="text-center py-10 text-slate-400 text-sm">
                         <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
                         {t("Xizmat yoki mahsulot tanlang")}
                       </div>
@@ -494,12 +532,12 @@ function SalesPageInner() {
                               {item.serviceName ? (
                                 <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                               ) : (
-                                <Package className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                <Package className="w-3.5 h-3.5 text-brand-400 shrink-0" />
                               )}
-                              <span className="text-sm font-semibold text-gray-900 truncate">{item.productName}</span>
+                              <span className="text-sm font-semibold text-slate-900 truncate">{item.productName}</span>
                             </div>
                             <button
-                              className="text-gray-300 hover:text-red-500 p-0.5 transition-colors"
+                              className="text-slate-300 hover:text-red-500 p-0.5 transition-colors"
                               onClick={() => setCart((prev) => prev.filter((_, i) => i !== idx))}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -514,7 +552,7 @@ function SalesPageInner() {
                                 className={`w-full text-xs py-1.5 px-2 border rounded-lg bg-white outline-none transition-colors ${
                                   !item.masterId
                                     ? "border-red-300 text-red-500 focus:border-red-400 focus:ring-1 focus:ring-red-200"
-                                    : "border-gray-200 text-gray-700 focus:border-brand-400 focus:ring-1 focus:ring-brand-200"
+                                    : "border-slate-200 text-slate-700 focus:border-brand-400 focus:ring-1 focus:ring-brand-200"
                                 }`}
                               >
                                 <option value="">{t("Usta tanlang")} *</option>
@@ -526,22 +564,26 @@ function SalesPageInner() {
                           )}
                           <div className="flex items-center gap-2 ml-[22px]">
                             <div className="pos-qty-control">
-                              <button onClick={() => updateCartQuantity(idx, item.quantity - 1)}>-</button>
+                              <button onClick={() => updateCartQuantity(idx, item.quantity - 1, true)}>-</button>
                               <input
-                                type="number"
-                                value={item.quantity}
-                                onChange={(e) => updateCartQuantity(idx, Number(e.target.value))}
+                                type="text"
+                                inputMode="numeric"
+                                value={item.quantity || ""}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/\D/g, "");
+                                  updateCartQuantity(idx, val === "" ? 0 : Number(val));
+                                }}
                               />
                               <button onClick={() => updateCartQuantity(idx, item.quantity + 1)}>+</button>
                             </div>
-                            <span className="text-gray-300">x</span>
+                            <span className="text-slate-300">x</span>
                             <input
                               type="number"
                               value={item.priceUzs}
                               onChange={(e) => updateCartPrice(idx, "priceUzs", Number(e.target.value))}
-                              className="w-24 text-sm px-2 py-1 border border-gray-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
+                              className="w-24 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
                             />
-                            <span className="text-sm font-bold text-gray-800 ml-auto whitespace-nowrap">
+                            <span className="text-sm font-bold text-slate-800 ml-auto whitespace-nowrap">
                               {formatUzs(item.priceUzs * item.quantity)}
                             </span>
                           </div>
@@ -564,7 +606,7 @@ function SalesPageInner() {
                       </div>
                     )}
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm text-gray-500">{t("Jami")}:</span>
+                      <span className="text-sm text-slate-500">{t("Jami")}:</span>
                       <div className="text-right">
                         <p className="text-2xl font-bold currency-uzs">{formatUzs(cartTotal.uzs)}</p>
                         {cartTotal.usd > 0 && <p className="text-sm currency-usd mt-0.5">{formatUsd(cartTotal.usd)}</p>}
@@ -599,41 +641,31 @@ function SalesPageInner() {
                   />
                 </div>
                 {productsQuery.isLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {Array.from({ length: 8 }).map((_, i) => (
                       <div key={i} className="pos-product-card animate-pulse">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2" />
-                        <div className="h-3 bg-gray-200 rounded w-1/2" />
+                        <div className="h-20 bg-slate-200 rounded-md mb-1.5" />
+                        <div className="h-4 bg-slate-200 rounded w-3/4 mb-1.5" />
+                        <div className="h-3 bg-slate-200 rounded w-1/2" />
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                    {products.map((product) => {
-                      const stock = product.stockItems[0] ? Number(product.stockItems[0].quantity) : 0;
-                      const inCart = cart.find((i) => i.productId === product.id);
-                      return (
-                        <button
-                          key={product.id}
-                          onClick={() => { if (stock > 0) addToCart(product); }}
-                          disabled={stock <= 0}
-                          className={`pos-product-card relative ${inCart ? "!border-brand-400 ring-2 ring-brand-100" : ""}`}
-                        >
-                          <p className="font-medium text-sm text-gray-900 truncate">{product.name}</p>
-                          <div className="flex items-center justify-between mt-1.5">
-                            <span className="currency-uzs text-sm">{formatUzs(Number(product.sellPriceUzs))}</span>
-                            <span className={`text-xs ${stock <= 0 ? "text-red-500 font-medium" : "text-gray-400"}`}>
-                              {stock} {product.unit.toLowerCase()}
-                            </span>
-                          </div>
-                          {inCart && (
-                            <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-brand-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold">
-                              {inCart.quantity}
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {products.map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        id={product.id}
+                        name={product.name}
+                        code={product.code}
+                        sellPriceUzs={Number(product.sellPriceUzs)}
+                        stock={product.stockItems[0] ? Number(product.stockItems[0].quantity) : 0}
+                        unit={product.unit.toLowerCase()}
+                        thumb={product.images[0]?.filePath ?? null}
+                        cartQty={cartMap.get(product.id) ?? 0}
+                        onAdd={() => addToCart(product)}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
@@ -647,13 +679,13 @@ function SalesPageInner() {
                       <h3 className="font-semibold">{t("Savat")} ({cart.length})</h3>
                     </div>
                     {cart.length > 0 && (
-                      <button onClick={() => setCart([])} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
+                      <button onClick={() => setCart([])} className="text-xs text-slate-400 hover:text-red-500 transition-colors">
                         {t("Tozalash")}
                       </button>
                     )}
                   </div>
 
-                  <div className="px-4 py-3 border-b border-gray-100">
+                  <div className="px-4 py-3 border-b border-slate-100">
                     <div className="relative">
                       <SearchInput
                         placeholder={t("Mijoz tanlash (ixtiyoriy)...")}
@@ -666,17 +698,17 @@ function SalesPageInner() {
                       {customerDropdownOpen && !selectedCustomer && customerSearchQuery.data && (
                         <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border max-h-48 overflow-y-auto">
                           {customerSearchQuery.data.length === 0 ? (
-                            <div className="px-3 py-2 text-sm text-gray-400">{t("Mijoz topilmadi")}</div>
+                            <div className="px-3 py-2 text-sm text-slate-400">{t("Mijoz topilmadi")}</div>
                           ) : (
                             customerSearchQuery.data.map((c) => (
                               <button
                                 key={c.id}
-                                className="w-full text-left px-3 py-2 hover:bg-gray-50 text-sm flex items-center gap-2"
+                                className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm flex items-center gap-2"
                                 onMouseDown={() => { setSelectedCustomer({ id: c.id, fullName: c.fullName }); setCustomerSearch(""); setCustomerDropdownOpen(false); }}
                               >
-                                <User className="w-3.5 h-3.5 text-gray-400" />
+                                <User className="w-3.5 h-3.5 text-slate-400" />
                                 <span>{c.fullName}</span>
-                                {c.phone && <span className="text-xs text-gray-400">{c.phone}</span>}
+                                {c.phone && <span className="text-xs text-slate-400">{c.phone}</span>}
                               </button>
                             ))
                           )}
@@ -685,9 +717,9 @@ function SalesPageInner() {
                     </div>
                   </div>
 
-                  <div className="divide-y divide-gray-100">
+                  <div className="divide-y divide-slate-100">
                     {cart.length === 0 ? (
-                      <div className="text-center py-10 text-gray-400 text-sm">
+                      <div className="text-center py-10 text-slate-400 text-sm">
                         <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
                         {t("Savat bo'sh")}
                       </div>
@@ -696,11 +728,11 @@ function SalesPageInner() {
                         <div key={idx} className="px-4 py-3">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <Package className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                              <span className="text-sm font-semibold text-gray-900 truncate">{item.productName}</span>
+                              <Package className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                              <span className="text-sm font-semibold text-slate-900 truncate">{item.productName}</span>
                             </div>
                             <button
-                              className="text-gray-300 hover:text-red-500 p-0.5 transition-colors"
+                              className="text-slate-300 hover:text-red-500 p-0.5 transition-colors"
                               onClick={() => setCart((prev) => prev.filter((_, i) => i !== idx))}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -708,22 +740,26 @@ function SalesPageInner() {
                           </div>
                           <div className="flex items-center gap-2 ml-[22px]">
                             <div className="pos-qty-control">
-                              <button onClick={() => updateCartQuantity(idx, item.quantity - 1)}>-</button>
+                              <button onClick={() => updateCartQuantity(idx, item.quantity - 1, true)}>-</button>
                               <input
-                                type="number"
-                                value={item.quantity}
-                                onChange={(e) => updateCartQuantity(idx, Number(e.target.value))}
+                                type="text"
+                                inputMode="numeric"
+                                value={item.quantity || ""}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/\D/g, "");
+                                  updateCartQuantity(idx, val === "" ? 0 : Number(val));
+                                }}
                               />
                               <button onClick={() => updateCartQuantity(idx, item.quantity + 1)}>+</button>
                             </div>
-                            <span className="text-gray-300">x</span>
+                            <span className="text-slate-300">x</span>
                             <input
                               type="number"
                               value={item.priceUzs}
                               onChange={(e) => updateCartPrice(idx, "priceUzs", Number(e.target.value))}
-                              className="w-24 text-sm px-2 py-1 border border-gray-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
+                              className="w-24 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
                             />
-                            <span className="text-sm font-bold text-gray-800 ml-auto whitespace-nowrap">
+                            <span className="text-sm font-bold text-slate-800 ml-auto whitespace-nowrap">
                               {formatUzs(item.priceUzs * item.quantity)}
                             </span>
                           </div>
@@ -734,7 +770,7 @@ function SalesPageInner() {
 
                   <div className="pos-cart-total">
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm text-gray-500">{t("Jami")}:</span>
+                      <span className="text-sm text-slate-500">{t("Jami")}:</span>
                       <div className="text-right">
                         <p className="text-2xl font-bold currency-uzs">{formatUzs(cartTotal.uzs)}</p>
                         {cartTotal.usd > 0 && <p className="text-sm currency-usd mt-0.5">{formatUsd(cartTotal.usd)}</p>}
@@ -778,7 +814,7 @@ function SalesPageInner() {
                 sales.map((sale) => (
                   <TableRow key={sale.id}>
                     <td className="font-mono text-xs">{sale.documentNo}</td>
-                    <td className="text-sm text-gray-500 hidden sm:table-cell">{new Date(sale.createdAt).toLocaleString("uz")}</td>
+                    <td className="text-sm text-slate-500 hidden sm:table-cell">{new Date(sale.createdAt).toLocaleString("uz")}</td>
                     <td className="hidden md:table-cell">{sale.customer?.fullName || t("Oddiy mijoz")}</td>
                     <td className="hidden sm:table-cell">
                       <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
@@ -792,7 +828,7 @@ function SalesPageInner() {
                         {sale.status === "OPEN" && (
                           <>
                             <button
-                              className="p-1.5 hover:bg-green-50 rounded-lg"
+                              className="p-1.5 hover:bg-green-50 rounded-md transition-colors"
                               title={t("Yakunlash")}
                               onClick={() => {
                                 setPaymentSaleId(sale.id);
@@ -805,7 +841,7 @@ function SalesPageInner() {
                               <Banknote className="w-4 h-4 text-green-600" />
                             </button>
                             <button
-                              className="p-1.5 hover:bg-red-50 rounded-lg"
+                              className="p-1.5 hover:bg-red-50 rounded-md transition-colors"
                               title={t("Bekor qilish")}
                               onClick={() => { if (confirm(getT()("Bu sotuvni bekor qilmoqchimisiz?"))) cancelSale.mutate(sale.id); }}
                             >
@@ -857,8 +893,8 @@ function SalesPageInner() {
           const debtUzs = Math.max(0, paymentSaleTotal - cash - card);
           return (
             <div className="space-y-3">
-              <div className="bg-gray-50 rounded-lg px-4 py-3 flex justify-between items-center">
-                <span className="text-sm text-gray-500">{t("Jami summa")}</span>
+              <div className="bg-slate-50 rounded-lg px-4 py-3 flex justify-between items-center">
+                <span className="text-sm text-slate-500">{t("Jami summa")}</span>
                 <span className="font-bold text-base">{formatUzs(paymentSaleTotal)}</span>
               </div>
               <Input
@@ -918,7 +954,52 @@ function SalesPageInner() {
           <Input label={t("Narx (UZS)")} type="number" value={customServiceForm.price} onChange={(e) => setCustomServiceForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" />
         </div>
       </Modal>
-    </>
+    </div>
   );
 }
 
+// ===== Memoized Product Card (prevents re-render on cart/search changes) =====
+interface ProductCardProps {
+  id: number;
+  name: string;
+  code: string;
+  sellPriceUzs: number;
+  stock: number;
+  unit: string;
+  thumb: string | null;
+  cartQty: number;
+  onAdd: () => void;
+}
+
+const ProductCard = memo(function ProductCard({ name, code, sellPriceUzs, stock, unit, thumb, cartQty, onAdd }: ProductCardProps) {
+  return (
+    <button
+      onClick={onAdd}
+      disabled={stock <= 0}
+      className={`pos-product-card relative text-left ${cartQty > 0 ? "!border-brand-400 ring-2 ring-brand-100" : ""}`}
+    >
+      <div className="h-20 rounded-md overflow-hidden bg-slate-100 mb-1.5">
+        {thumb ? (
+          <img src={thumb} alt={name} className="w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <Package className="w-6 h-6 text-slate-300" />
+          </div>
+        )}
+      </div>
+      <p className="font-medium text-sm text-slate-900 truncate">{name}</p>
+      {code && <p className="text-[10px] text-slate-400 truncate">#{code}</p>}
+      <div className="flex items-center justify-between mt-0.5">
+        <span className="currency-uzs text-sm">{formatUzs(sellPriceUzs)}</span>
+        <span className={`text-xs font-medium ${stock <= 0 ? "text-red-500" : stock < 10 ? "text-amber-500" : "text-slate-400"}`}>
+          {stock} {unit}
+        </span>
+      </div>
+      {cartQty > 0 && (
+        <div className="absolute top-1.5 right-1.5 w-6 h-6 bg-brand-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-sm">
+          {cartQty}
+        </div>
+      )}
+    </button>
+  );
+});

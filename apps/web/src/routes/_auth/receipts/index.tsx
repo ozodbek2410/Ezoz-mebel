@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Printer } from "lucide-react";
 import { trpc } from "@/lib/trpc";
@@ -7,14 +7,13 @@ import { SearchInput, Table, TableHead, TableBody, TableRow, TableEmpty, TableLo
 import { CurrencyDisplay } from "@/components/shared";
 import { formatUzs, formatUsd } from "@ezoz/shared";
 import { useT } from "@/hooks/useT";
+import { printReceiptHtml } from "@/lib/printReceipt";
 
 export function ReceiptsPage() {
   const t = useT();
   const [search, setSearch] = useState("");
   const [previewSaleId, setPreviewSaleId] = useState<number | null>(null);
   const [printerSize, setPrinterSize] = useState("80mm");
-  const printRef = useRef<HTMLDivElement>(null);
-
   const salesQuery = useQuery({
     queryKey: ["sale", "list-receipts"],
     queryFn: () => trpc.sale.list.query({ status: "COMPLETED" }),
@@ -32,23 +31,8 @@ export function ReceiptsPage() {
   });
 
   function handlePrint() {
-    const content = printRef.current;
-    if (!content) return;
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    const width = printerSize === "58mm" ? "54mm" : "76mm";
-    printWindow.document.write(`<html><head><style>
-      @page { size: ${printerSize} auto; margin: 2mm; }
-      body { font-family: "Courier New", monospace; font-size: 11px; width: ${width}; margin: 0; padding: 0; }
-      .center { text-align: center; }
-      .bold { font-weight: bold; }
-      .divider { border-top: 1px dashed #000; margin: 4px 0; }
-      .row { display: flex; justify-content: space-between; }
-    </style></head><body>${content.innerHTML}</body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    if (!detail) return;
+    printReceiptHtml(detail, company, printerSize as "80mm" | "58mm");
   }
 
   const sales = salesQuery.data?.sales ?? [];
@@ -62,7 +46,7 @@ export function ReceiptsPage() {
   const company = companyInfo.data ?? {};
 
   return (
-    <>
+    <div className="page-enter">
       <PageHeader title={t("Cheklar")} subtitle={`${filtered.length} ${t("ta chek")}`} />
 
       <div className="page-body">
@@ -95,11 +79,11 @@ export function ReceiptsPage() {
             ) : (
               filtered.map((sale) => (
                 <TableRow key={sale.id}>
-                  <td className="text-sm text-gray-500">
+                  <td className="text-sm text-slate-500">
                     {new Date(sale.createdAt).toLocaleDateString("uz")}
                   </td>
                   <td>{sale.customer?.fullName || t("Oddiy mijoz")}</td>
-                  <td className="text-sm text-gray-500 hidden md:table-cell">{sale.cashier.fullName}</td>
+                  <td className="text-sm text-slate-500 hidden md:table-cell">{sale.cashier.fullName}</td>
                   <td className="hidden sm:table-cell">
                     <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
                       {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}
@@ -110,10 +94,10 @@ export function ReceiptsPage() {
                   </td>
                   <td>
                     <button
-                      className="p-1.5 hover:bg-gray-100 rounded-lg"
+                      className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"
                       onClick={() => setPreviewSaleId(sale.id)}
                     >
-                      <Printer className="w-4 h-4 text-gray-500" />
+                      <Printer className="w-4 h-4 text-slate-500" />
                     </button>
                   </td>
                 </TableRow>
@@ -148,12 +132,12 @@ export function ReceiptsPage() {
         }
       >
         {detail && (
-          <div ref={printRef} className="font-mono text-xs p-4 bg-white border rounded-lg max-w-[300px] mx-auto">
+          <div className="font-mono text-xs p-4 bg-white border rounded-lg max-w-[300px] mx-auto">
             <div className="text-center mb-3">
               <p className="text-sm font-bold">{company["name"] || "EZOZ MEBEL"}</p>
               {company["address"] && <p>{company["address"]}</p>}
               {company["phone"] && <p>Tel: {company["phone"]}</p>}
-              <div className="border-t border-dashed border-gray-400 my-2" />
+              <div className="border-t border-dashed border-slate-400 my-2" />
             </div>
 
             <div className="mb-2 space-y-0.5">
@@ -163,7 +147,7 @@ export function ReceiptsPage() {
               <div className="flex justify-between"><span>{t("Kassir:")} </span><span>{detail.cashier.fullName}</span></div>
             </div>
 
-            <div className="border-t border-dashed border-gray-400 my-2" />
+            <div className="border-t border-dashed border-slate-400 my-2" />
 
             <div className="space-y-1.5">
               {detail.items.map((item, idx) => (
@@ -177,7 +161,7 @@ export function ReceiptsPage() {
               ))}
             </div>
 
-            <div className="border-t border-dashed border-gray-400 my-2" />
+            <div className="border-t border-dashed border-slate-400 my-2" />
 
             <div className="flex justify-between text-sm font-bold">
               <span>{t("JAMI:")}</span>
@@ -192,7 +176,7 @@ export function ReceiptsPage() {
 
             {detail.payments.length > 0 && (
               <>
-                <div className="border-t border-dashed border-gray-400 my-2" />
+                <div className="border-t border-dashed border-slate-400 my-2" />
                 {detail.payments.map((p, idx) => (
                   <div key={idx} className="flex justify-between" style={{ fontSize: "10px" }}>
                     <span>{p.paymentType}</span>
@@ -202,11 +186,11 @@ export function ReceiptsPage() {
               </>
             )}
 
-            <div className="border-t border-dashed border-gray-400 my-2" />
-            <p className="text-center text-gray-500" style={{ fontSize: "10px" }}>{t("Xaridingiz uchun rahmat!")}</p>
+            <div className="border-t border-dashed border-slate-400 my-2" />
+            <p className="text-center text-slate-500" style={{ fontSize: "10px" }}>{t("Xaridingiz uchun rahmat!")}</p>
           </div>
         )}
       </Modal>
-    </>
+    </div>
   );
 }

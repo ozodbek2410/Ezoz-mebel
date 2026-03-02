@@ -5,13 +5,14 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, ShoppingBag, Wallet } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown, DollarSign, ShoppingBag, Wallet, Download } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input, Select, Tabs, Badge } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
 import { useT } from "@/hooks/useT";
 import { formatUzs, formatUsd } from "@ezoz/shared";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const CHART_COLORS = ["#4f46e5", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#6366f1"];
 
@@ -75,7 +76,7 @@ export function ReportsPage() {
   });
 
   return (
-    <>
+    <div className="page-enter">
       <PageHeader title={t("Hisobotlar")} />
 
       <div className="page-body">
@@ -129,6 +130,36 @@ export function ReportsPage() {
         {/* Cashier Report */}
         {activeTab === "cashier" && cashierReport.data && (
           <div className="space-y-6">
+            <div className="flex justify-end mb-2">
+              <button
+                className="btn-sm flex items-center gap-1.5 text-xs bg-green-600 text-white hover:bg-green-700 px-3 py-1.5 rounded-lg transition-colors"
+                onClick={() => {
+                  const d = cashierReport.data;
+                  if (!d) return;
+                  exportToExcel({
+                    filename: `kassir-hisobot_${dateFrom}_${dateTo}`,
+                    sheetName: t("Kassir hisoboti"),
+                    columns: [
+                      { header: t("Ko'rsatkich"), key: "label", width: 25 },
+                      { header: t("Qiymat"), key: "value", width: 20 },
+                    ],
+                    data: [
+                      { label: t("Sotuvlar soni"), value: d.salesCount },
+                      { label: t("Jami sotuvlar (UZS)"), value: d.totalSalesUzs },
+                      { label: t("Jami sotuvlar (USD)"), value: d.totalSalesUsd },
+                      { label: t("Jami to'lovlar (UZS)"), value: d.totalPaymentsUzs },
+                      { label: t("Jami to'lovlar (USD)"), value: d.totalPaymentsUsd },
+                      { label: t("Xarajatlar (UZS)"), value: d.totalExpensesUzs },
+                      { label: t("Xarajatlar (USD)"), value: d.totalExpensesUsd },
+                      { label: t("Sof foyda (UZS)"), value: d.netUzs },
+                    ],
+                  });
+                }}
+              >
+                <Download size={14} />
+                Excel
+              </button>
+            </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard label={t("Sotuvlar soni")} value={String(cashierReport.data.salesCount)}
                 icon={<ShoppingBag className="w-5 h-5 text-brand-600" />} />
@@ -144,14 +175,14 @@ export function ReportsPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="card card-body">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">{t("Tushumlar tafsiloti")}</h4>
+                <h4 className="text-sm font-medium text-slate-500 mb-3">{t("Tushumlar tafsiloti")}</h4>
                 <div className="space-y-2">
                   <DetailRow label={t("Jami to'lovlar (UZS)")} value={formatUzs(cashierReport.data.totalPaymentsUzs)} />
                   <DetailRow label={t("Jami to'lovlar (USD)")} value={formatUsd(cashierReport.data.totalPaymentsUsd)} className="text-usd" />
                 </div>
               </div>
               <div className="card card-body">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">{t("Xarajatlar tafsiloti")}</h4>
+                <h4 className="text-sm font-medium text-slate-500 mb-3">{t("Xarajatlar tafsiloti")}</h4>
                 <div className="space-y-2">
                   <DetailRow label={t("Xarajatlar (UZS)")} value={formatUzs(cashierReport.data.totalExpensesUzs)} className="text-red-600" />
                   <DetailRow label={t("Xarajatlar (USD)")} value={formatUsd(cashierReport.data.totalExpensesUsd)} className="text-red-500" />
@@ -164,6 +195,37 @@ export function ReportsPage() {
         {/* Boss Report */}
         {activeTab === "boss" && bossReport.data && (
           <div className="space-y-6">
+            <div className="flex justify-end mb-2">
+              <button
+                className="btn-sm flex items-center gap-1.5 text-xs bg-green-600 text-white hover:bg-green-700 px-3 py-1.5 rounded-lg transition-colors"
+                onClick={() => {
+                  const d = bossReport.data;
+                  if (!d) return;
+                  exportToExcel({
+                    filename: `umumiy-hisobot_${dateFrom}_${dateTo}`,
+                    sheetName: t("Umumiy hisobot"),
+                    columns: [
+                      { header: t("Ko'rsatkich"), key: "label", width: 25 },
+                      { header: t("UZS"), key: "uzs", width: 20 },
+                      { header: t("USD"), key: "usd", width: 15 },
+                    ],
+                    data: [
+                      { label: t("Savdo kassa tushum"), uzs: d.salesCashUzs, usd: d.salesCashUsd },
+                      { label: t("Savdo kassa xarajat"), uzs: d.salesExpensesUzs, usd: 0 },
+                      { label: t("Xizmat kassa tushum"), uzs: d.serviceCashUzs, usd: d.serviceCashUsd },
+                      { label: t("Xizmat kassa xarajat"), uzs: d.serviceExpensesUzs, usd: 0 },
+                      { label: t("Jami xarajatlar"), uzs: d.totalExpensesUzs, usd: 0 },
+                      { label: t("Avanslar"), uzs: d.totalAdvancesUzs, usd: 0 },
+                      { label: t("Jami tushum"), uzs: d.totalIncomeUzs, usd: 0 },
+                      { label: t("Sof foyda"), uzs: d.netProfitUzs, usd: 0 },
+                    ],
+                  });
+                }}
+              >
+                <Download size={14} />
+                Excel
+              </button>
+            </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard label={t("Savdo kassa")} value={formatUzs(bossReport.data.salesCashUzs)}
                 sub={formatUsd(bossReport.data.salesCashUsd)}
@@ -180,21 +242,21 @@ export function ReportsPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="card card-body">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">{t("Savdo kassa")}</h4>
+                <h4 className="text-sm font-medium text-slate-500 mb-3">{t("Savdo kassa")}</h4>
                 <div className="space-y-2">
                   <DetailRow label={t("Tushum")} value={formatUzs(bossReport.data.salesCashUzs)} className="text-green-600" />
                   <DetailRow label={t("Xarajat")} value={formatUzs(bossReport.data.salesExpensesUzs)} className="text-red-600" />
                 </div>
               </div>
               <div className="card card-body">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">{t("Xizmat kassa")}</h4>
+                <h4 className="text-sm font-medium text-slate-500 mb-3">{t("Xizmat kassa")}</h4>
                 <div className="space-y-2">
                   <DetailRow label={t("Tushum")} value={formatUzs(bossReport.data.serviceCashUzs)} className="text-green-600" />
                   <DetailRow label={t("Xarajat")} value={formatUzs(bossReport.data.serviceExpensesUzs)} className="text-red-600" />
                 </div>
               </div>
               <div className="card card-body">
-                <h4 className="text-sm font-medium text-gray-500 mb-3">{t("Qo'shimcha")}</h4>
+                <h4 className="text-sm font-medium text-slate-500 mb-3">{t("Qo'shimcha")}</h4>
                 <div className="space-y-2">
                   <DetailRow label={t("Avanslar")} value={formatUzs(bossReport.data.totalAdvancesUzs)} className="text-amber-600" />
                   <DetailRow label={t("Jami tushum")} value={formatUzs(bossReport.data.totalIncomeUzs)} className="text-green-600" />
@@ -207,10 +269,46 @@ export function ReportsPage() {
         {/* Inventory Report */}
         {activeTab === "inventory" && inventoryReport.data && (
           <div className="space-y-6">
+            <div className="flex justify-end mb-2">
+              <button
+                className="btn-sm flex items-center gap-1.5 text-xs bg-green-600 text-white hover:bg-green-700 px-3 py-1.5 rounded-lg transition-colors"
+                onClick={() => {
+                  const d = inventoryReport.data;
+                  if (!d) return;
+                  exportToExcel({
+                    filename: `inventar-hisobot_${new Date().toISOString().split("T")[0]}`,
+                    sheetName: t("Inventar"),
+                    columns: [
+                      { header: "#", key: "idx", width: 5 },
+                      { header: t("Mahsulot"), key: "name", width: 25 },
+                      { header: t("Guruh"), key: "category", width: 15 },
+                      { header: t("Ombor"), key: "warehouse", width: 15 },
+                      { header: t("Qoldiq"), key: "qty", width: 10 },
+                      { header: t("Sotish narxi (UZS)"), key: "price", width: 18 },
+                      { header: t("Tan narxi (UZS)"), key: "cost", width: 18 },
+                      { header: t("Jami qiymat (UZS)"), key: "total", width: 18 },
+                    ],
+                    data: d.items.map((item, idx) => ({
+                      idx: idx + 1,
+                      name: item.productName,
+                      category: item.category,
+                      warehouse: item.warehouse,
+                      qty: item.quantity,
+                      price: item.priceUzs,
+                      cost: item.costUzs,
+                      total: item.totalPriceUzs,
+                    })),
+                  });
+                }}
+              >
+                <Download size={14} />
+                Excel
+              </button>
+            </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard label={t("Ombor qiymati (sotish)")} value={formatUzs(inventoryReport.data.totalValueUzs)} icon={<BarChart3 className="w-5 h-5 text-brand-600" />} />
               <StatCard label={t("Ombor qiymati (USD)")} value={formatUsd(inventoryReport.data.totalValueUsd)} icon={<DollarSign className="w-5 h-5 text-usd" />} />
-              <StatCard label={t("Tan narxi")} value={formatUzs(inventoryReport.data.totalCostUzs)} icon={<BarChart3 className="w-5 h-5 text-gray-600" />} />
+              <StatCard label={t("Tan narxi")} value={formatUzs(inventoryReport.data.totalCostUzs)} icon={<BarChart3 className="w-5 h-5 text-slate-600" />} />
               <StatCard label={t("Potensial foyda")} value={formatUzs(inventoryReport.data.totalValueUzs - inventoryReport.data.totalCostUzs)} icon={<TrendingUp className="w-5 h-5 text-green-600" />} variant="success" />
             </div>
 
@@ -233,10 +331,10 @@ export function ReportsPage() {
                       <tr key={idx}>
                         <td className="font-medium">{item.productName}</td>
                         <td className="hidden sm:table-cell"><Badge variant="neutral">{item.category}</Badge></td>
-                        <td className="text-sm text-gray-500 hidden md:table-cell">{item.warehouse}</td>
+                        <td className="text-sm text-slate-500 hidden md:table-cell">{item.warehouse}</td>
                         <td>{item.quantity}</td>
                         <td className="currency-uzs text-sm hidden sm:table-cell">{formatUzs(item.priceUzs)}</td>
-                        <td className="text-sm text-gray-500 hidden md:table-cell">{formatUzs(item.costUzs)}</td>
+                        <td className="text-sm text-slate-500 hidden md:table-cell">{formatUzs(item.costUzs)}</td>
                         <td className="currency-uzs font-medium">{formatUzs(item.totalPriceUzs)}</td>
                       </tr>
                     ))}
@@ -247,7 +345,7 @@ export function ReportsPage() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -295,14 +393,12 @@ function ChartsTab({
     <div className="space-y-6">
       {/* Period selector */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-        <div className="flex items-center gap-2 overflow-x-auto">
+        <div className="toggle-group">
           {[7, 14, 30, 60].map((d) => (
             <button
               key={d}
               onClick={() => setChartDays(d)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
-                chartDays === d ? "bg-brand-600 text-white" : "bg-white border text-gray-600 hover:bg-gray-50"
-              }`}
+              className={chartDays === d ? "toggle-group-btn toggle-group-btn-active" : "toggle-group-btn toggle-group-btn-inactive"}
             >
               {d} {t("kun")}
             </button>
@@ -316,7 +412,7 @@ function ChartsTab({
 
       {/* Sales & Expenses Chart */}
       <div className="card card-body">
-        <h3 className="font-semibold text-gray-900 mb-4">{t("Sotuvlar va xarajatlar")}</h3>
+        <h3 className="font-semibold text-slate-900 mb-4">{t("Sotuvlar va xarajatlar")}</h3>
         <ResponsiveContainer width="100%" height={320}>
           <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -346,7 +442,7 @@ function ChartsTab({
 
       {/* Sales Count Line Chart */}
       <div className="card card-body">
-        <h3 className="font-semibold text-gray-900 mb-4">{t("Sotuvlar soni (kunlik)")}</h3>
+        <h3 className="font-semibold text-slate-900 mb-4">{t("Sotuvlar soni (kunlik)")}</h3>
         <ResponsiveContainer width="100%" height={240}>
           <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -374,9 +470,9 @@ function ChartsTab({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bar chart */}
         <div className="card card-body">
-          <h3 className="font-semibold text-gray-900 mb-4">{t("Top mahsulotlar (tushum bo'yicha)")}</h3>
+          <h3 className="font-semibold text-slate-900 mb-4">{t("Top mahsulotlar (tushum bo'yicha)")}</h3>
           {topProducts.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">{t("Ma'lumot yo'q")}</p>
+            <p className="text-sm text-slate-400 text-center py-8">{t("Ma'lumot yo'q")}</p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={topProducts} layout="vertical" margin={{ top: 0, right: 20, bottom: 0, left: 0 }}>
@@ -402,9 +498,9 @@ function ChartsTab({
 
         {/* Pie chart */}
         <div className="card card-body">
-          <h3 className="font-semibold text-gray-900 mb-4">{t("Mahsulot ulushi")}</h3>
+          <h3 className="font-semibold text-slate-900 mb-4">{t("Mahsulot ulushi")}</h3>
           {topProducts.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">{t("Ma'lumot yo'q")}</p>
+            <p className="text-sm text-slate-400 text-center py-8">{t("Ma'lumot yo'q")}</p>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -465,7 +561,7 @@ function StatCard({
 function DetailRow({ label, value, className = "" }: { label: string; value: string; className?: string }) {
   return (
     <div className="flex items-center justify-between text-sm">
-      <span className="text-gray-500">{label}</span>
+      <span className="text-slate-500">{label}</span>
       <span className={`font-medium ${className}`}>{value}</span>
     </div>
   );
