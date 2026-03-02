@@ -175,7 +175,7 @@ export function ProductsPage() {
   const [form, setForm] = useState<ProductFormData>(defaultForm);
   const [slideForm, setSlideForm] = useState<ProductFormData>(defaultForm);
   const [catForm, setCatForm] = useState({ name: "", parentId: "" });
-  const [sortKey, setSortKey] = useState<"name" | "code" | "category" | "sellPrice" | "minPrice" | "costPrice" | "stock">("code");
+  const [sortKey, setSortKey] = useState<"name" | "code" | "category" | "sellPrice" | "costPrice" | "stock">("code");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showCategories, setShowCategories] = useState(false);
   const [page, setPage] = useState(1);
@@ -637,30 +637,32 @@ export function ProductsPage() {
 
           {/* Products table */}
           <div className="flex-1 min-w-0">
-            {/* Top pagination */}
-            <div className="mb-3 flex items-center justify-between">
-              <Pagination
-                page={page}
-                totalPages={totalPages}
-                onPageChange={setPage}
-              />
-              {total > 0 && (
-                <span className="text-xs text-slate-400">{total} {t("ta mahsulot")}</span>
-              )}
-            </div>
-            <div className="mb-4 flex items-center gap-2">
-              <button
-                onClick={() => setShowCategories(true)}
-                className="lg:hidden shrink-0 p-2.5 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50"
-              >
-                <Filter className="w-4 h-4" />
-              </button>
-              <div className="flex-1">
-                <SearchInput
-                  placeholder={t("Mahsulot qidirish (nom, kod, SKU)...")}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  onClear={() => setSearch("")}
+            {/* Toolbar: search + count + pagination */}
+            <div className="mb-3 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+              <div className="flex items-center gap-2 flex-1 w-full sm:w-auto">
+                <button
+                  onClick={() => setShowCategories(true)}
+                  className="lg:hidden shrink-0 p-2 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors"
+                >
+                  <Filter className="w-4 h-4" />
+                </button>
+                <div className="flex-1">
+                  <SearchInput
+                    placeholder={t("Mahsulot qidirish (nom, kod, SKU)...")}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    onClear={() => setSearch("")}
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {total > 0 && (
+                  <span className="text-xs text-slate-400 whitespace-nowrap">{total} {t("ta")}</span>
+                )}
+                <Pagination
+                  page={page}
+                  totalPages={totalPages}
+                  onPageChange={setPage}
                 />
               </div>
             </div>
@@ -669,45 +671,39 @@ export function ProductsPage() {
             <Table>
               <TableHead>
                 <tr>
-                  <th className="w-12"></th>
-                  <th className="whitespace-nowrap max-w-[200px]">
+                  <th className="w-8 !px-2">#</th>
+                  <th className="whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("code")}>
                       {t("Mahsulot")}
-                      {sortKey === "code" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                      {sortKey === "code" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
                     </button>
                   </th>
                   <th className="whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("category")}>
-                      <FolderOpen className="w-3.5 h-3.5" />
                       {t("Guruh")}
-                      {sortKey === "category" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                      {sortKey === "category" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
                     </button>
                   </th>
-                  <th className="w-32 whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("sellPrice")}>
-                      {t("Sotish")}
-                      {sortKey === "sellPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
-                    </button>
-                  </th>
-                  <th className="w-32 whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("minPrice")}>
-                      {t("Min")}
-                      {sortKey === "minPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
-                    </button>
-                  </th>
-                  <th className="w-32 whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("costPrice")}>
-                      {t("Tan")}
-                      {sortKey === "costPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
-                    </button>
-                  </th>
-                  <th className="w-20 whitespace-nowrap">
+                  <th className="whitespace-nowrap text-center">{t("Birlik")}</th>
+                  <th className="whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("stock")}>
                       {t("Qoldiq")}
-                      {sortKey === "stock" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                      {sortKey === "stock" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
                     </button>
                   </th>
-                  <th className="w-10"></th>
+                  <th className="whitespace-nowrap">
+                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("sellPrice")}>
+                      {t("Sotish narxi")}
+                      {sortKey === "sellPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
+                    </button>
+                  </th>
+                  <th className="whitespace-nowrap">
+                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("costPrice")}>
+                      {t("Tan narxi")}
+                      {sortKey === "costPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
+                    </button>
+                  </th>
+                  <th className="w-24"></th>
                 </tr>
               </TableHead>
               <TableBody>
@@ -716,7 +712,7 @@ export function ProductsPage() {
                 ) : products.length === 0 ? (
                   <TableEmpty colSpan={8} message={t("Mahsulot topilmadi")} />
                 ) : (
-                  products.map((product) => {
+                  products.map((product, idx) => {
                     const stock = getStockTotal(product);
                     const minAlert = Number(product.minStockAlert);
                     const stockClass = stock <= 0 ? "stock-empty" : stock <= minAlert ? "stock-low" : "stock-ok";
@@ -728,67 +724,67 @@ export function ProductsPage() {
                         active={selectedProductId === product.id}
                         onClick={() => setSelectedProductId(selectedProductId === product.id ? null : product.id)}
                       >
-                        <td className="!p-1.5">
-                          <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center">
-                            {thumbnail ? (
-                              <img src={thumbnail} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <Package className="w-4 h-4 text-slate-300" />
-                            )}
-                          </div>
-                        </td>
-                        <td className="max-w-[200px]">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-medium text-slate-900 truncate">{product.name}</span>
-                            {product.isLocked && <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-                            <span className="font-mono">{product.code}</span>
-                            <span>{unitOptions.find((u) => u.value === product.unit)?.label ?? product.unit}</span>
+                        <td className="!px-2 !py-1.5 text-xs text-slate-400 text-center">{(page - 1) * 50 + idx + 1}</td>
+                        <td className="!py-1.5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-md bg-slate-100 overflow-hidden flex items-center justify-center shrink-0 border border-slate-200">
+                              {thumbnail ? (
+                                <img src={thumbnail} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <Package className="w-4 h-4 text-slate-300" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium text-slate-900 truncate text-[13px] leading-tight">{product.name}</span>
+                                {product.isLocked && <Lock className="w-3 h-3 text-amber-500 shrink-0" />}
+                              </div>
+                              <span className="text-[11px] text-slate-400 font-mono">{product.code}</span>
+                            </div>
                           </div>
                         </td>
                         <td className="whitespace-nowrap">
-                          <Badge variant="neutral">{product.category.name}</Badge>
+                          <span className="text-[12px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{product.category.name}</span>
+                        </td>
+                        <td className="text-center">
+                          <span className="text-[12px] text-slate-500">{unitOptions.find((u) => u.value === product.unit)?.label ?? product.unit}</span>
+                        </td>
+                        <td>
+                          <span className={stockClass}>{stock}</span>
                         </td>
                         <td>
                           <CurrencyDisplay amountUzs={product.sellPriceUzs} amountUsd={product.sellPriceUsd} />
                         </td>
                         <td>
-                          <CurrencyDisplay amountUzs={product.minPriceUzs} amountUsd={product.minPriceUsd} />
-                        </td>
-                        <td>
                           <CurrencyDisplay amountUzs={product.costPriceUzs} amountUsd={product.costPriceUsd} />
                         </td>
-                        <td>
-                          <span className={stockClass}>{stock}</span>
-                        </td>
                         <td className="!p-1">
-                          <div className="flex items-center gap-0.5">
+                          <div className="flex items-center justify-end gap-0.5">
                             <button
-                              className="p-2 sm:p-1.5 hover:bg-slate-100 rounded-md transition-colors"
+                              className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"
                               title={t("QR yorliq chop etish")}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handlePrintLabel(product);
                               }}
                             >
-                              <QrCode className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" />
+                              <QrCode className="w-4 h-4 text-slate-400 hover:text-indigo-500" />
                             </button>
                             {can("product:update") && (
                               <button
-                                className="p-2 sm:p-1.5 hover:bg-indigo-50 rounded-md transition-colors"
+                                className="p-1.5 hover:bg-indigo-50 rounded-md transition-colors"
                                 title={t("Tahrirlash")}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setSelectedProductId(product.id);
                                 }}
                               >
-                                <Edit2 className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" />
+                                <Edit2 className="w-4 h-4 text-slate-400 hover:text-indigo-500" />
                               </button>
                             )}
                             {can("product:delete") && (
                               <button
-                                className="p-2 sm:p-1.5 hover:bg-red-50 rounded-md transition-colors"
+                                className="p-1.5 hover:bg-red-50 rounded-md transition-colors"
                                 title={t("O'chirish")}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -797,7 +793,7 @@ export function ProductsPage() {
                                   }
                                 }}
                               >
-                                <Trash2 className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" />
+                                <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-500" />
                               </button>
                             )}
                           </div>
