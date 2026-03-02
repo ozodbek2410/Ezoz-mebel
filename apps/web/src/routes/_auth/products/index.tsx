@@ -389,11 +389,8 @@ export function ProductsPage() {
     const priceUsd = Number(detail.sellPriceUsd).toFixed(2);
     const _t = getT();
 
-    // Label size: 2.24in x 1.54in (56.9mm x 39.1mm)
-    const printWindow = window.open("", "_blank", "width=400,height=300");
-    if (!printWindow) return;
-
-    printWindow.document.write(`<!DOCTYPE html>
+    // Label size: 2.24in x 1.54in — print via iframe to avoid popup blocker
+    const html = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -427,27 +424,10 @@ export function ProductsPage() {
       flex: 1;
     }
     .qr img { width: 22mm; height: 22mm; }
-    .info {
-      text-align: center;
-    }
-    .price-uzs {
-      font-size: 10pt;
-      font-weight: 700;
-      color: #dc2626;
-      line-height: 1.3;
-    }
-    .price-usd {
-      font-size: 8pt;
-      font-weight: 600;
-      color: #2563eb;
-      line-height: 1.3;
-    }
-    .code {
-      font-size: 7pt;
-      color: #555;
-      text-align: center;
-      line-height: 1.2;
-    }
+    .info { text-align: center; }
+    .price-uzs { font-size: 10pt; font-weight: 700; color: #dc2626; line-height: 1.3; }
+    .price-usd { font-size: 8pt; font-weight: 600; color: #2563eb; line-height: 1.3; }
+    .code { font-size: 7pt; color: #555; text-align: center; line-height: 1.2; }
   </style>
 </head>
 <body>
@@ -461,12 +441,22 @@ export function ProductsPage() {
   </div>
   <div class="code">#${detail.code}</div>
 </body>
-</html>`);
-    printWindow.document.close();
-    printWindow.onload = () => {
-      printWindow.print();
-      printWindow.close();
-    };
+</html>`;
+
+    const frameId = "qr-label-print-frame";
+    let iframe = document.getElementById(frameId) as HTMLIFrameElement | null;
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.id = frameId;
+      iframe.style.cssText = "position:fixed;top:-10000px;left:-10000px;width:0;height:0;border:none;";
+      document.body.appendChild(iframe);
+    }
+    const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
+    if (!doc) return;
+    doc.open();
+    doc.write(html);
+    doc.close();
+    setTimeout(() => { iframe!.contentWindow?.print(); }, 300);
   }
 
   function handleCategorySubmit() {
