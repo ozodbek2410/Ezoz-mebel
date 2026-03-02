@@ -28,15 +28,11 @@ interface CompanyInfo {
   phone?: string;
 }
 
-/**
- * Print receipt for a completed sale.
- * Opens a new browser window with 80mm thermal printer format and triggers print.
- */
-export function printReceiptHtml(
+function buildReceiptHtml(
   sale: ReceiptSaleDetail,
-  company: CompanyInfo = {},
-  printerSize: "80mm" | "58mm" = "80mm",
-): void {
+  company: CompanyInfo,
+  printerSize: "80mm" | "58mm",
+): string {
   const t = getT();
   const width = printerSize === "58mm" ? "54mm" : "72mm";
   const fontSize = printerSize === "58mm" ? "10px" : "12px";
@@ -73,7 +69,7 @@ export function printReceiptHtml(
       ? `<div class="row" style="font-size:${smallFont};"><span>USD:</span><span>${formatUsd(Number(sale.totalUsd))}</span></div>`
       : "";
 
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -123,16 +119,50 @@ export function printReceiptHtml(
   </div>
 </body>
 </html>`;
+}
 
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
-  printWindow.document.write(html);
-  printWindow.document.close();
-  printWindow.focus();
+/**
+ * Print receipt using hidden iframe (avoids popup blocker).
+ */
+function printViaIframe(html: string): void {
+  const id = "receipt-print-frame";
+  let iframe = document.getElementById(id) as HTMLIFrameElement | null;
+  if (!iframe) {
+    iframe = document.createElement("iframe");
+    iframe.id = id;
+    iframe.style.position = "fixed";
+    iframe.style.top = "-10000px";
+    iframe.style.left = "-10000px";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+  }
+
+  const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
+  if (!doc) return;
+
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  // Wait for content to render, then print
   setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 300);
+    iframe!.contentWindow?.print();
+  }, 200);
+}
+
+/**
+ * Print receipt for a completed sale.
+ * Uses iframe to avoid popup blocker issues in async callbacks.
+ */
+export function printReceiptHtml(
+  sale: ReceiptSaleDetail,
+  company: CompanyInfo = {},
+  printerSize: "80mm" | "58mm" = "80mm",
+): void {
+  const html = buildReceiptHtml(sale, company, printerSize);
+  printViaIframe(html);
 }
 
 /**
