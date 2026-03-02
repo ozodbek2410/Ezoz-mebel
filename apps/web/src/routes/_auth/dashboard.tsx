@@ -70,8 +70,8 @@ export function DashboardPage() {
             value={String(stats?.todaySalesCount ?? 0)}
             sub={`${t("Hafta")}: ${stats?.weekSalesCount ?? 0} | ${t("Oy")}: ${stats?.monthSalesCount ?? 0}`}
             icon={ShoppingCart}
-            iconBg="bg-brand-50"
-            iconColor="text-brand-500"
+            iconBg="bg-indigo-50"
+            iconColor="text-indigo-500"
           />
           <StatCard
             to="/reports"
@@ -80,8 +80,8 @@ export function DashboardPage() {
             value={formatUzs(stats?.todayIncomeUzs ?? 0)}
             sub={`${t("Oy")}: ${formatUzs(stats?.monthIncomeUzs ?? 0)}`}
             icon={TrendingUp}
-            iconBg="bg-green-50"
-            iconColor="text-green-500"
+            iconBg="bg-emerald-50"
+            iconColor="text-emerald-500"
           />
           <StatCard
             to="/expenses"
@@ -89,8 +89,8 @@ export function DashboardPage() {
             value={formatUzs(stats?.todayExpensesUzs ?? 0)}
             sub={t("barcha kassalar")}
             icon={Wallet}
-            iconBg="bg-red-50"
-            iconColor="text-red-500"
+            iconBg="bg-cyan-50"
+            iconColor="text-cyan-500"
           />
           <StatCard
             to="/customers"
@@ -98,8 +98,8 @@ export function DashboardPage() {
             value={String(stats?.activeCustomers ?? 0)}
             sub={`${stats?.totalDebtors ?? 0} ${t("ta qarzdor")}`}
             icon={Users}
-            iconBg="bg-purple-50"
-            iconColor="text-purple-500"
+            iconBg="bg-amber-50"
+            iconColor="text-amber-500"
           />
         </div>
 
@@ -209,10 +209,10 @@ function RecentSalesCard({ sales }: { sales: RecentSale[] }) {
     <div className="card">
       <div className="card-header">
         <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-          <ShoppingCart size={16} className="text-brand-500" />
+          <ShoppingCart size={16} className="text-indigo-500" />
           {t("So'nggi sotuvlar")}
         </h3>
-        <Link to="/receipts" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors">
+        <Link to="/receipts" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors">
           {t("Barchasi")} <ChevronRight size={14} />
         </Link>
       </div>
@@ -309,7 +309,7 @@ function NotesCard() {
           <button
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending}
-            className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1"
+            className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
           >
             <Save size={12} />
             {saveMutation.isPending ? t("Saqlanmoqda...") : t("Saqlash")}
@@ -337,7 +337,7 @@ function WorkshopTasksCard() {
           <Wrench size={16} className="text-orange-500" />
           {t("Mening vazifalarim")}
         </h3>
-        <Link to="/workshop" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors">
+        <Link to="/workshop" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors">
           {t("Barchasi")} {tasks.length > 0 && <Badge variant="warning">{tasks.length}</Badge>}
           <ChevronRight size={14} />
         </Link>
@@ -383,7 +383,7 @@ function LowStockCard({ items }: { items: LowStockItem[] }) {
           <AlertTriangle size={16} className="text-amber-500" />
           {t("Kam qolgan mahsulotlar")}
         </h3>
-        <Link to="/products" className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1 transition-colors">
+        <Link to="/products" className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1 transition-colors">
           {t("Barchasi")} {items.length > 0 && <Badge variant="danger">{items.length}</Badge>}
           <ChevronRight size={14} />
         </Link>

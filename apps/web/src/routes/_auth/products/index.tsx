@@ -74,7 +74,7 @@ function CategoryTree({
           ) : (
             <span className="w-4.5" />
           )}
-          <FolderOpen className="w-4 h-4 text-brand-500 shrink-0" />
+          <FolderOpen className="w-4 h-4 text-indigo-500 shrink-0" />
           <span className="flex-1 truncate">{node.name}</span>
           <span className="text-xs text-slate-400">{node._count.products}</span>
           {isBoss && (
@@ -673,38 +673,38 @@ export function ProductsPage() {
                   <th className="whitespace-nowrap max-w-[200px]">
                     <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("code")}>
                       {t("Mahsulot")}
-                      {sortKey === "code" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                      {sortKey === "code" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("category")}>
                       <FolderOpen className="w-3.5 h-3.5" />
                       {t("Guruh")}
-                      {sortKey === "category" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                      {sortKey === "category" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-32 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("sellPrice")}>
                       {t("Sotish")}
-                      {sortKey === "sellPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                      {sortKey === "sellPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-32 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("minPrice")}>
                       {t("Min")}
-                      {sortKey === "minPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                      {sortKey === "minPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-32 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("costPrice")}>
                       {t("Tan")}
-                      {sortKey === "costPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                      {sortKey === "costPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-20 whitespace-nowrap">
                     <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("stock")}>
                       {t("Qoldiq")}
-                      {sortKey === "stock" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-brand-500" /> : <ArrowDown className="w-3 h-3 text-brand-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
+                      {sortKey === "stock" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-40" />}
                     </button>
                   </th>
                   <th className="w-10"></th>
@@ -776,7 +776,7 @@ export function ProductsPage() {
                             </button>
                             {can("product:update") && (
                               <button
-                                className="p-2 sm:p-1.5 hover:bg-brand-50 rounded-md transition-colors"
+                                className="p-2 sm:p-1.5 hover:bg-indigo-50 rounded-md transition-colors"
                                 title={t("Tahrirlash")}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -947,8 +947,8 @@ export function ProductsPage() {
         title={productDetailQuery.data?.name ?? ""}
         subtitle={productDetailQuery.data ? `${productDetailQuery.data.code} | ${unitOptions.find((u) => u.value === productDetailQuery.data?.unit)?.label ?? productDetailQuery.data.unit}` : ""}
         headerLeft={
-          <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center shrink-0">
-            <Package className="w-5 h-5 text-brand-600" />
+          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
+            <Package className="w-5 h-5 text-indigo-600" />
           </div>
         }
         footer={
@@ -1070,7 +1070,7 @@ export function ProductsPage() {
                   </div>
                 ))}
                 {can("product:update") && (
-                  <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition-colors">
+                  <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-colors">
                     <ImagePlus className="w-6 h-6 text-slate-400" />
                     <span className="text-xs text-slate-400 mt-1">{t("Qo'shish")}</span>
                     <input
@@ -1138,7 +1138,7 @@ export function ProductsPage() {
                       defaultValue=""
                     />
                     <button
-                      className="p-1.5 hover:bg-brand-50 rounded text-brand-600"
+                      className="p-1.5 hover:bg-indigo-50 rounded text-indigo-600"
                       onClick={() => {
                         const wSelect = document.getElementById("newStockWarehouse") as HTMLSelectElement;
                         const qtyInput = document.getElementById("newStockQty") as HTMLInputElement;

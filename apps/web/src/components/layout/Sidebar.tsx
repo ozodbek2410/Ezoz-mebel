@@ -148,8 +148,8 @@ function CollapsibleSection({
       {sectionIndex > 0 && <div className="sidebar-divider" />}
 
       <button onClick={onToggle} className="sidebar-section-header">
-        <section.icon size={16} className={hasActiveItem ? "text-brand-400" : "text-slate-400"} />
-        <span className={`flex-1 text-left ${hasActiveItem ? "!text-brand-400" : ""}`}>
+        <section.icon size={16} className={hasActiveItem ? "text-indigo-400" : "text-slate-400"} />
+        <span className={`flex-1 text-left ${hasActiveItem ? "!text-indigo-400" : ""}`}>
           {t(section.title)}
         </span>
         <ChevronDown
@@ -344,7 +344,7 @@ export function Sidebar() {
       <aside className={`sidebar ${mobileSidebarOpen ? "open" : ""} ${sidebarCollapsed ? "collapsed" : ""}`}>
         {/* Logo section — dark bg */}
         <div className={`sidebar-logo ${sidebarCollapsed ? "justify-center px-2" : ""}`}>
-          <div className="w-9 h-9 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">
+          <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">
             EZ
           </div>
           {!sidebarCollapsed && (
@@ -396,7 +396,7 @@ export function Sidebar() {
           <div className="px-3 pb-2">
             <button
               onClick={install}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm rounded-md transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-md transition-colors"
             >
               <Download size={14} />
               {t("Ilovani o'rnatish")}
@@ -406,7 +406,7 @@ export function Sidebar() {
 
         {/* User section (minimal — full controls in Topbar) */}
         <div className={`sidebar-user ${sidebarCollapsed ? "flex-col gap-2 px-2 py-2" : ""}`}>
-          <div className="w-8 h-8 bg-brand-700 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+          <div className="w-8 h-8 bg-indigo-700 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
             {user.fullName.charAt(0).toUpperCase()}
           </div>
           {!sidebarCollapsed && (

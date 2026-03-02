@@ -32,7 +32,6 @@ export function Topbar({ onEditProfile }: TopbarProps) {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
@@ -64,58 +63,54 @@ export function Topbar({ onEditProfile }: TopbarProps) {
   if (!user) return null;
 
   return (
-    <header className="topbar">
-      {/* Left: hamburger + brand */}
+    <header className="topbar border-b border-slate-200">
+      {/* Left */}
       <div className="flex items-center gap-3">
-        {/* Mobile hamburger */}
         <button
           onClick={toggleMobileSidebar}
-          className="lg:hidden p-2 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="lg:hidden p-2 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
         >
           <Menu size={20} />
         </button>
-        {/* Desktop sidebar toggle */}
         <button
           onClick={toggleSidebarCollapsed}
-          className="hidden lg:flex p-2 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="hidden lg:flex p-2 rounded-md text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
         >
           <Menu size={20} />
         </button>
 
         {/* Currency rate */}
         {rate && (
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400">
-            <span className="text-slate-500">$</span>
-            <span className="text-white font-medium">{rate.toLocaleString()}</span>
-            <span>{t("so'm")}</span>
+          <div className="hidden sm:flex items-center gap-1.5 text-xs">
+            <span className="text-green-600 font-semibold">$1</span>
+            <span className="text-slate-400">=</span>
+            <span className="text-slate-800 font-semibold">{rate.toLocaleString()}</span>
+            <span className="text-slate-400">{t("so'm")}</span>
           </div>
         )}
       </div>
 
-      {/* Right: actions */}
+      {/* Right */}
       <div className="flex items-center gap-1">
-        {/* Fullscreen */}
         <button
           onClick={toggleFullscreen}
-          className="hidden sm:flex p-2 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="hidden sm:flex p-2 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           title={isFullscreen ? t("Kichraytirish") : t("To'liq ekran")}
         >
           {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
         </button>
 
-        {/* Language toggle */}
         <button
           onClick={toggleLocale}
-          className="hidden sm:flex items-center gap-1 px-2 py-1.5 rounded-md text-sm text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-md text-sm hover:bg-slate-100 transition-colors"
           title={isCyrillic ? "Lotinchaga o'tish" : "Kirillga o'tish"}
         >
-          <span className={`text-xs font-semibold ${isCyrillic ? "text-slate-500" : "text-white"}`}>Uz</span>
-          <span className="text-slate-600">/</span>
-          <span className={`text-xs font-semibold ${isCyrillic ? "text-white" : "text-slate-500"}`}>Ўз</span>
+          <span className={`text-xs font-semibold ${isCyrillic ? "text-slate-400" : "text-brand-600"}`}>Uz</span>
+          <span className="text-slate-300">/</span>
+          <span className={`text-xs font-semibold ${isCyrillic ? "text-brand-600" : "text-slate-400"}`}>Ўз</span>
         </button>
 
-        {/* Notification bell */}
-        <button className="p-2 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors relative">
+        <button className="p-2 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors relative">
           <Bell size={18} />
         </button>
 
@@ -123,20 +118,20 @@ export function Topbar({ onEditProfile }: TopbarProps) {
         <div ref={avatarRef} className="relative ml-1">
           <button
             onClick={() => setAvatarOpen(!avatarOpen)}
-            className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-md hover:bg-white/10 transition-colors"
+            className="flex items-center gap-2 pl-2 pr-1 py-1 rounded-lg hover:bg-slate-100 transition-colors"
           >
-            <div className="w-8 h-8 bg-brand-600 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
+            <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-brand-700 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
               {user.fullName.charAt(0).toUpperCase()}
             </div>
             <div className="hidden md:block text-left">
-              <div className="text-sm font-medium text-white truncate max-w-[120px]">{user.fullName}</div>
+              <div className="text-sm font-medium text-slate-800 truncate max-w-[120px]">{user.fullName}</div>
               <div className="text-[10px] text-slate-400">{UserRoleLabels[user.role as UserRole]}</div>
             </div>
             <ChevronDown size={14} className={`text-slate-400 transition-transform ${avatarOpen ? "rotate-180" : ""}`} />
           </button>
 
           {avatarOpen && (
-            <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-md shadow-lg border border-slate-200 py-1 z-50">
+            <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50">
               <div className="px-3 py-2 border-b border-slate-100">
                 <p className="text-sm font-medium text-slate-900">{user.fullName}</p>
                 <p className="text-xs text-slate-500">{UserRoleLabels[user.role as UserRole]}</p>

@@ -96,7 +96,7 @@ export function WorkshopPage() {
 
   function getGroupColor(status: string) {
     switch (status) {
-      case "IN_PROGRESS": return "border-l-brand-400 bg-brand-50/30";
+      case "IN_PROGRESS": return "border-l-indigo-400 bg-indigo-50/30";
       case "COMPLETED": return "border-l-green-500 bg-green-50/20 opacity-75";
       default: return "border-l-amber-400";
     }
@@ -217,7 +217,7 @@ export function WorkshopPage() {
 
                           {/* Assigned master */}
                           <div className="flex items-center gap-2">
-                            <UserCheck className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                            <UserCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                             {task.assignedTo ? (
                               isBoss() && task.status !== "COMPLETED" ? (
                                 <select
@@ -233,7 +233,7 @@ export function WorkshopPage() {
                                   ))}
                                 </select>
                               ) : (
-                                <span className="text-xs font-medium text-brand-700">{task.assignedTo.fullName}</span>
+                                <span className="text-xs font-medium text-indigo-700">{task.assignedTo.fullName}</span>
                               )
                             ) : isBoss() ? (
                               <select

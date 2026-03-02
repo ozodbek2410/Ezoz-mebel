@@ -401,7 +401,7 @@ function SalesPageInner() {
                         <button
                           key={st.id}
                           onClick={() => addServiceToCart(st.name, Number(st.priceUzs), Number(st.priceUsd))}
-                          className={`pos-product-card relative ${inCart ? "!border-amber-400 ring-2 ring-amber-100" : ""}`}
+                          className={`pos-product-card relative ${inCart ? "!border-indigo-400 ring-2 ring-indigo-100" : ""}`}
                         >
                           <div className="flex items-center gap-2 mb-1">
                             <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
@@ -476,7 +476,7 @@ function SalesPageInner() {
                 <div className="card sticky top-20">
                   <div className="card-header">
                     <div className="flex items-center gap-2">
-                      <ShoppingCart className="w-5 h-5 text-brand-600" />
+                      <ShoppingCart className="w-5 h-5 text-indigo-600" />
                       <h3 className="font-semibold">{t("Savat")} ({cart.length})</h3>
                     </div>
                     {cart.length > 0 && (
@@ -532,7 +532,7 @@ function SalesPageInner() {
                               {item.serviceName ? (
                                 <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                               ) : (
-                                <Package className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                                <Package className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                               )}
                               <span className="text-sm font-semibold text-slate-900 truncate">{item.productName}</span>
                             </div>
@@ -552,7 +552,7 @@ function SalesPageInner() {
                                 className={`w-full text-xs py-1.5 px-2 border rounded-lg bg-white outline-none transition-colors ${
                                   !item.masterId
                                     ? "border-red-300 text-red-500 focus:border-red-400 focus:ring-1 focus:ring-red-200"
-                                    : "border-slate-200 text-slate-700 focus:border-brand-400 focus:ring-1 focus:ring-brand-200"
+                                    : "border-slate-200 text-slate-700 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200"
                                 }`}
                               >
                                 <option value="">{t("Usta tanlang")} *</option>
@@ -581,7 +581,7 @@ function SalesPageInner() {
                               type="number"
                               value={item.priceUzs}
                               onChange={(e) => updateCartPrice(idx, "priceUzs", Number(e.target.value))}
-                              className="w-24 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
+                              className="w-24 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                             />
                             <span className="text-sm font-bold text-slate-800 ml-auto whitespace-nowrap">
                               {formatUzs(item.priceUzs * item.quantity)}
@@ -675,7 +675,7 @@ function SalesPageInner() {
                 <div className="card">
                   <div className="card-header">
                     <div className="flex items-center gap-2">
-                      <ShoppingCart className="w-5 h-5 text-brand-600" />
+                      <ShoppingCart className="w-5 h-5 text-indigo-600" />
                       <h3 className="font-semibold">{t("Savat")} ({cart.length})</h3>
                     </div>
                     {cart.length > 0 && (
@@ -728,7 +728,7 @@ function SalesPageInner() {
                         <div key={idx} className="px-4 py-3">
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <Package className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                              <Package className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                               <span className="text-sm font-semibold text-slate-900 truncate">{item.productName}</span>
                             </div>
                             <button
@@ -757,7 +757,7 @@ function SalesPageInner() {
                               type="number"
                               value={item.priceUzs}
                               onChange={(e) => updateCartPrice(idx, "priceUzs", Number(e.target.value))}
-                              className="w-24 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none"
+                              className="w-24 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                             />
                             <span className="text-sm font-bold text-slate-800 ml-auto whitespace-nowrap">
                               {formatUzs(item.priceUzs * item.quantity)}
@@ -976,7 +976,7 @@ const ProductCard = memo(function ProductCard({ name, code, sellPriceUzs, stock,
     <button
       onClick={onAdd}
       disabled={stock <= 0}
-      className={`pos-product-card relative text-left ${cartQty > 0 ? "!border-brand-400 ring-2 ring-brand-100" : ""}`}
+      className={`pos-product-card relative text-left ${cartQty > 0 ? "!border-indigo-400 ring-2 ring-indigo-100" : ""}`}
     >
       <div className="h-20 rounded-md overflow-hidden bg-slate-100 mb-1.5">
         {thumb ? (
@@ -996,7 +996,7 @@ const ProductCard = memo(function ProductCard({ name, code, sellPriceUzs, stock,
         </span>
       </div>
       {cartQty > 0 && (
-        <div className="absolute top-1.5 right-1.5 w-6 h-6 bg-brand-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-sm">
+        <div className="absolute top-1.5 right-1.5 w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xs font-bold shadow-sm">
           {cartQty}
         </div>
       )}

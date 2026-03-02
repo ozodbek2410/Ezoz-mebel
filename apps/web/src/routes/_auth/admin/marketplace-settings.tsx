@@ -40,7 +40,7 @@ export function MarketplaceSettingsPage() {
             href="/marketplace"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand-50 text-brand-600 text-sm font-medium rounded-lg hover:bg-brand-100 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 text-indigo-600 text-sm font-medium rounded-lg hover:bg-indigo-100 transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
             {t("Marketplace'ni ko'rish")}
@@ -191,7 +191,7 @@ function ProductsTab() {
                     onClick={() => toggleShowPrice.mutate({ id: product.id, showPrice: !product.showPrice })}
                     className={`p-2 rounded-lg transition-colors ${
                       product.showPrice
-                        ? "bg-brand-100 text-brand-700 hover:bg-brand-200"
+                        ? "bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
                         : "bg-slate-100 text-slate-400 hover:bg-slate-200"
                     }`}
                   >
@@ -355,7 +355,7 @@ function BannersTab() {
                   )}
                   <button
                     onClick={() => setSelectingProduct(name)}
-                    className="text-xs text-brand-600 font-medium hover:text-brand-700 shrink-0"
+                    className="text-xs text-indigo-600 font-medium hover:text-indigo-700 shrink-0"
                   >
                     {linkedId ? t("O'zgartirish") : t("Mahsulot tanlash")}
                   </button>
@@ -388,7 +388,7 @@ function BannersTab() {
                 placeholder={t("Mahsulot qidirish...")}
                 value={productSearch}
                 onChange={(e) => setProductSearch(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 autoFocus
               />
             </div>

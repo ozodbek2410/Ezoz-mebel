@@ -3,66 +3,66 @@
 /* === EZOZ MEBEL Design System (Regos.online Style) === */
 
 @theme {
-  /* Brand — Gold/Amber scale (logo: E'ZOZ MEBEL) */
-  --color-brand-50: #fefbf3;
-  --color-brand-100: #fdf3dc;
-  --color-brand-200: #fbe5b6;
-  --color-brand-300: #f5d17a;
-  --color-brand-400: #e8b84a;
-  --color-brand-500: #c49a2e;
-  --color-brand-600: #a47e24;
-  --color-brand-700: #83641c;
-  --color-brand-800: #634b15;
-  --color-brand-900: #42320f;
+  /* Brand — Indigo (professional, modern) */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
 
   /* Marketplace */
-  --color-mkt-50: #fefbf3;
-  --color-mkt-100: #fdf3dc;
-  --color-mkt-200: #fbe5b6;
-  --color-mkt-300: #f5d17a;
-  --color-mkt-400: #e8b84a;
-  --color-mkt-500: #c49a2e;
-  --color-mkt-600: #a47e24;
-  --color-mkt-700: #83641c;
-  --color-mkt-800: #634b15;
-  --color-mkt-900: #42320f;
-  --color-mkt-accent: #c49a2e;
-  --color-mkt-accent-dark: #a47e24;
+  --color-mkt-50: #eef2ff;
+  --color-mkt-100: #e0e7ff;
+  --color-mkt-200: #c7d2fe;
+  --color-mkt-300: #a5b4fc;
+  --color-mkt-400: #818cf8;
+  --color-mkt-500: #6366f1;
+  --color-mkt-600: #4f46e5;
+  --color-mkt-700: #4338ca;
+  --color-mkt-800: #3730a3;
+  --color-mkt-900: #312e81;
+  --color-mkt-accent: #6366f1;
+  --color-mkt-accent-dark: #4f46e5;
 
   /* Sidebar */
-  --color-sidebar-bg: #1a1f2e;
-  --color-sidebar-bg-dark: #111524;
-  --color-sidebar-text: #8b95a8;
+  --color-sidebar-bg: #0f172a;
+  --color-sidebar-bg-dark: #020617;
+  --color-sidebar-text: #94a3b8;
   --color-sidebar-text-active: #ffffff;
-  --color-sidebar-hover: #252b3d;
-  --color-sidebar-active-bg: rgba(196, 154, 46, 0.12);
-  --color-sidebar-icon: #5c6478;
-  --color-sidebar-icon-active: #e8b84a;
+  --color-sidebar-hover: #1e293b;
+  --color-sidebar-active-bg: rgba(99, 102, 241, 0.15);
+  --color-sidebar-icon: #64748b;
+  --color-sidebar-icon-active: #818cf8;
 
   /* Header/Topbar */
-  --color-header-bg: #1a1f2e;
-  --color-header-text: #ffffff;
+  --color-header-bg: #ffffff;
+  --color-header-text: #1e293b;
 
   /* Page */
-  --color-page-bg: #f4f5f7;
+  --color-page-bg: #f1f5f9;
   --color-card-bg: #ffffff;
-  --color-card-border: #e5e7eb;
+  --color-card-border: #e2e8f0;
 
   /* Legacy aliases */
-  --color-sidebar: #111524;
-  --color-sidebar-active: rgba(196, 154, 46, 0.12);
+  --color-sidebar: #020617;
+  --color-sidebar-active: rgba(99, 102, 241, 0.15);
   --color-surface: #ffffff;
-  --color-surface-secondary: #f9fafb;
-  --color-surface-hover: #f4f5f7;
+  --color-surface-secondary: #f8fafc;
+  --color-surface-hover: #f1f5f9;
 
   /* Text */
-  --color-text-primary: #1a1f2e;
+  --color-text-primary: #0f172a;
   --color-text-secondary: #64748b;
   --color-text-muted: #94a3b8;
 
-  /* Primary — gold accent */
-  --color-primary: #c49a2e;
-  --color-primary-hover: #a47e24;
+  /* Primary — Indigo */
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
 
   /* Currency */
   --color-uzs: #dc2626;
@@ -407,7 +407,7 @@
     @apply bg-slate-50;
   }
   .data-table tbody tr.active {
-    @apply bg-brand-50;
+    @apply bg-indigo-50;
   }
 
   /* === Sidebar (Dark Navy) === */

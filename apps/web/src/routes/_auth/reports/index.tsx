@@ -162,7 +162,7 @@ export function ReportsPage() {
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard label={t("Sotuvlar soni")} value={String(cashierReport.data.salesCount)}
-                icon={<ShoppingBag className="w-5 h-5 text-brand-600" />} />
+                icon={<ShoppingBag className="w-5 h-5 text-indigo-600" />} />
               <StatCard label={t("Jami sotuvlar")} value={formatUzs(cashierReport.data.totalSalesUzs)}
                 sub={formatUsd(cashierReport.data.totalSalesUsd)}
                 icon={<DollarSign className="w-5 h-5 text-green-600" />} />
@@ -229,7 +229,7 @@ export function ReportsPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <StatCard label={t("Savdo kassa")} value={formatUzs(bossReport.data.salesCashUzs)}
                 sub={formatUsd(bossReport.data.salesCashUsd)}
-                icon={<Wallet className="w-5 h-5 text-brand-600" />} />
+                icon={<Wallet className="w-5 h-5 text-indigo-600" />} />
               <StatCard label={t("Xizmat kassa")} value={formatUzs(bossReport.data.serviceCashUzs)}
                 sub={formatUsd(bossReport.data.serviceCashUsd)}
                 icon={<Wallet className="w-5 h-5 text-cyan-600" />} />
@@ -306,7 +306,7 @@ export function ReportsPage() {
               </button>
             </div>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard label={t("Ombor qiymati (sotish)")} value={formatUzs(inventoryReport.data.totalValueUzs)} icon={<BarChart3 className="w-5 h-5 text-brand-600" />} />
+              <StatCard label={t("Ombor qiymati (sotish)")} value={formatUzs(inventoryReport.data.totalValueUzs)} icon={<BarChart3 className="w-5 h-5 text-indigo-600" />} />
               <StatCard label={t("Ombor qiymati (USD)")} value={formatUsd(inventoryReport.data.totalValueUsd)} icon={<DollarSign className="w-5 h-5 text-usd" />} />
               <StatCard label={t("Tan narxi")} value={formatUzs(inventoryReport.data.totalCostUzs)} icon={<BarChart3 className="w-5 h-5 text-slate-600" />} />
               <StatCard label={t("Potensial foyda")} value={formatUzs(inventoryReport.data.totalValueUzs - inventoryReport.data.totalCostUzs)} icon={<TrendingUp className="w-5 h-5 text-green-600" />} variant="success" />

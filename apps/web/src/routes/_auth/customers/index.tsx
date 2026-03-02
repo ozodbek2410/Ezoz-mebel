@@ -423,8 +423,8 @@ export function CustomersPage() {
         onClose={() => setDetailId(null)}
         title={detail?.fullName ?? ""}
         headerLeft={
-          <div className="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center shrink-0">
-            <User className="w-5 h-5 text-brand-600" />
+          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
+            <User className="w-5 h-5 text-indigo-600" />
           </div>
         }
         footer={
