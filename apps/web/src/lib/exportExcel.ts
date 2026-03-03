@@ -137,9 +137,10 @@ export function exportToExcel({ filename, sheetName = "Sheet1", title, columns, 
         style = { ...style, alignment: { ...style.alignment, horizontal: "center" } };
       }
 
+      const cellVal = val != null ? val : "";
       const cell: XLSX.CellObject = {
-        v: val != null ? val : "",
-        t: typeof val === "number" ? "n" : "s",
+        v: typeof cellVal === "number" ? cellVal : String(cellVal),
+        t: typeof cellVal === "number" ? "n" : "s",
         s: style,
       };
 
