@@ -299,6 +299,57 @@ export const reportRouter = router({
       };
     }),
 
+  productSalesReport: protectedProcedure
+    .input(z.object({
+      dateFrom: z.string(),
+      dateTo: z.string(),
+      productId: z.number().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const dateFrom = new Date(input.dateFrom);
+      const dateTo = new Date(input.dateTo + "T23:59:59");
+
+      const saleItems = await ctx.db.saleItem.findMany({
+        where: {
+          productId: input.productId ?? { not: null },
+          sale: {
+            createdAt: { gte: dateFrom, lte: dateTo },
+            status: { not: "CANCELLED" },
+          },
+        },
+        include: {
+          product: {
+            select: { id: true, name: true, code: true, unit: true, category: { select: { name: true } } },
+          },
+          sale: {
+            select: {
+              documentNo: true,
+              createdAt: true,
+              customer: { select: { fullName: true } },
+              cashier: { select: { fullName: true } },
+            },
+          },
+        },
+        orderBy: { sale: { createdAt: "desc" } },
+      });
+
+      return saleItems.map((item) => ({
+        saleDate: item.sale.createdAt,
+        documentNo: item.sale.documentNo,
+        customerName: item.sale.customer?.fullName ?? null,
+        cashierName: item.sale.cashier.fullName,
+        productId: item.product?.id ?? 0,
+        productName: item.product?.name ?? "Noma'lum",
+        productCode: item.product?.code ?? "",
+        categoryName: item.product?.category.name ?? "",
+        unit: item.product?.unit ?? "",
+        quantity: Number(item.quantity),
+        unitPriceUzs: Number(item.priceUzs),
+        totalUzs: Number(item.totalUzs),
+        totalUsd: Number(item.totalUsd),
+      }));
+    }),
+
   inventoryReport: protectedProcedure
     .input(z.object({ warehouseId: z.number().optional() }).optional())
     .query(async ({ ctx, input }) => {

@@ -1,13 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter } from "lucide-react";
+import { useSearch, useNavigate } from "@tanstack/react-router";
+import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter, ShoppingCart, Eye } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button, SearchInput, Modal, Input, CurrencyPairInput, Select, Badge, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, SlideOver, Pagination } from "@/components/ui";
+import { Button, SearchInput, Modal, Input, CurrencyPairInput, Select, Badge, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, SlideOver, Pagination, ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@/components/ui";
 import { CurrencyDisplay } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
 import { useT, getT } from "@/hooks/useT";
 import { useUIStore } from "@/store/ui.store";
+import { useCartStore } from "@/store/cart.store";
 import { uploadProductImage } from "@/lib/upload";
 import QRCode from "qrcode";
 import toast from "react-hot-toast";
@@ -160,6 +162,9 @@ export function ProductsPage() {
   const t = useT();
   const queryClient = useQueryClient();
   const { setSidebarCollapsed } = useUIStore();
+  const { fromSale } = useSearch({ strict: false }) as { fromSale?: boolean };
+  const navigate = useNavigate();
+  const cartStore = useCartStore();
 
   // Auto-collapse sidebar on mount for more product table space
   useEffect(() => {
@@ -179,6 +184,66 @@ export function ProductsPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showCategories, setShowCategories] = useState(false);
   const [page, setPage] = useState(1);
+
+  // Right-click context menu
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; productId: number } | null>(null);
+
+  // Cart modal (fromSale mode)
+  interface CartModalProduct {
+    id: number;
+    name: string;
+    code: string;
+    categoryName: string;
+    unit: string;
+    sellPriceUzs: number;
+    sellPriceUsd: number;
+  }
+  const [cartModalProduct, setCartModalProduct] = useState<CartModalProduct | null>(null);
+  const [cartModalQty, setCartModalQty] = useState("1");
+  const [cartModalPrice, setCartModalPrice] = useState("0");
+  const cartModalQtyRef = useRef<HTMLInputElement>(null);
+
+  function openCartModal(product: { id: number; name: string; code: string; category: { name: string }; unit: string; sellPriceUzs: string | number; sellPriceUsd: string | number }) {
+    setCartModalProduct({
+      id: product.id,
+      name: product.name,
+      code: product.code,
+      categoryName: product.category.name,
+      unit: product.unit,
+      sellPriceUzs: Number(product.sellPriceUzs),
+      sellPriceUsd: Number(product.sellPriceUsd),
+    });
+    setCartModalQty("1");
+    setCartModalPrice(String(Number(product.sellPriceUzs)));
+  }
+
+  function confirmCartModal() {
+    if (!cartModalProduct) return;
+    const qty = Number(cartModalQty);
+    const price = Number(cartModalPrice);
+    if (qty <= 0) { toast.error(getT()("Miqdorni kiriting")); return; }
+    if (price <= 0) { toast.error(getT()("Narxni kiriting")); return; }
+    cartStore.addProduct({
+      id: cartModalProduct.id,
+      name: cartModalProduct.name,
+      code: cartModalProduct.code,
+      categoryName: cartModalProduct.categoryName,
+      unit: cartModalProduct.unit,
+      sellPriceUzs: price,
+      sellPriceUsd: cartModalProduct.sellPriceUsd,
+    });
+    const cartItems = useCartStore.getState().items;
+    const itemIndex = cartItems.findIndex((item) => item.productId === cartModalProduct.id);
+    if (itemIndex >= 0) {
+      cartStore.updateQuantity(itemIndex, qty);
+      if (price !== cartModalProduct.sellPriceUzs) {
+        cartStore.updatePrice(itemIndex, "priceUzs", price);
+      }
+    }
+    toast.success(getT()(`"${cartModalProduct.name}" savatga qo'shildi`));
+    setCartModalProduct(null);
+    void navigate({ to: "/sales" });
+  }
 
   function toggleSort(key: typeof sortKey) {
     if (sortKey === key) {
@@ -504,7 +569,6 @@ export function ProductsPage() {
       case "code": return a.code.localeCompare(b.code) * dir;
       case "category": return a.category.name.localeCompare(b.category.name) * dir;
       case "sellPrice": return (Number(a.sellPriceUzs) - Number(b.sellPriceUzs)) * dir;
-      case "minPrice": return (Number(a.minPriceUzs) - Number(b.minPriceUzs)) * dir;
       case "costPrice": return (Number(a.costPriceUzs) - Number(b.costPriceUzs)) * dir;
       case "stock": return (getStockTotal(a) - getStockTotal(b)) * dir;
       default: return 0;
@@ -568,6 +632,24 @@ export function ProductsPage() {
           ) : undefined
         }
       />
+
+      {fromSale && (
+        <div className="mb-4 flex items-center justify-between bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3">
+          <p className="text-sm text-indigo-700">
+            {t("Mahsulotni ikki marta bosing — savatga qo'shiladi")}
+            {cartStore.items.length > 0 && (
+              <span className="ml-2 font-semibold">({t("Savat")}: {cartStore.items.length})</span>
+            )}
+          </p>
+          <button
+            onClick={() => navigate({ to: "/sales" })}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+          >
+            <ShoppingCart className="w-4 h-4" />
+            {t("Savatga qaytish")}
+          </button>
+        </div>
+      )}
 
       <div className="page-body">
         <div className="flex gap-6">
@@ -703,14 +785,13 @@ export function ProductsPage() {
                       {sortKey === "costPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
                     </button>
                   </th>
-                  <th className="w-24"></th>
                 </tr>
               </TableHead>
               <TableBody>
                 {productsQuery.isLoading ? (
-                  <TableLoading colSpan={8} />
+                  <TableLoading colSpan={7} />
                 ) : products.length === 0 ? (
-                  <TableEmpty colSpan={8} message={t("Mahsulot topilmadi")} />
+                  <TableEmpty colSpan={7} message={t("Mahsulot topilmadi")} />
                 ) : (
                   products.map((product, idx) => {
                     const stock = getStockTotal(product);
@@ -722,7 +803,16 @@ export function ProductsPage() {
                       <TableRow
                         key={product.id}
                         active={selectedProductId === product.id}
-                        onClick={() => setSelectedProductId(selectedProductId === product.id ? null : product.id)}
+                        onClick={() => {
+                          if (fromSale) return;
+                          setSelectedProductId(selectedProductId === product.id ? null : product.id);
+                        }}
+                        onDoubleClick={fromSale ? () => openCartModal(product) : undefined}
+                        onContextMenu={(e) => {
+                          if (fromSale) return;
+                          e.preventDefault();
+                          setContextMenu({ x: e.clientX, y: e.clientY, productId: product.id });
+                        }}
                       >
                         <td className="!px-2 !py-1.5 text-xs text-slate-400 text-center">{(page - 1) * 50 + idx + 1}</td>
                         <td className="!py-1.5">
@@ -753,50 +843,10 @@ export function ProductsPage() {
                           <span className={stockClass}>{stock}</span>
                         </td>
                         <td>
-                          <CurrencyDisplay amountUzs={product.sellPriceUzs} amountUsd={product.sellPriceUsd} />
+                          <CurrencyDisplay amountUzs={product.sellPriceUzs} amountUsd={product.sellPriceUsd} variant="neutral" />
                         </td>
                         <td>
-                          <CurrencyDisplay amountUzs={product.costPriceUzs} amountUsd={product.costPriceUsd} />
-                        </td>
-                        <td className="!p-1">
-                          <div className="flex items-center justify-end gap-0.5">
-                            <button
-                              className="p-1.5 hover:bg-slate-100 rounded-md transition-colors"
-                              title={t("QR yorliq chop etish")}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePrintLabel(product);
-                              }}
-                            >
-                              <QrCode className="w-4 h-4 text-slate-400 hover:text-indigo-500" />
-                            </button>
-                            {can("product:update") && (
-                              <button
-                                className="p-1.5 hover:bg-indigo-50 rounded-md transition-colors"
-                                title={t("Tahrirlash")}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedProductId(product.id);
-                                }}
-                              >
-                                <Edit2 className="w-4 h-4 text-slate-400 hover:text-indigo-500" />
-                              </button>
-                            )}
-                            {can("product:delete") && (
-                              <button
-                                className="p-1.5 hover:bg-red-50 rounded-md transition-colors"
-                                title={t("O'chirish")}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (confirm(getT()(`"${product.name}" mahsulotini o'chirmoqchimisiz?`))) {
-                                    deleteProduct.mutate(product.id);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-500" />
-                              </button>
-                            )}
-                          </div>
+                          <CurrencyDisplay amountUzs={product.costPriceUzs} amountUsd={product.costPriceUsd} variant="neutral" />
                         </td>
                       </TableRow>
                     );
@@ -809,6 +859,44 @@ export function ProductsPage() {
           </div>
         </div>
       </div>
+
+      {/* Cart Add Modal (fromSale mode) */}
+      {fromSale && (
+        <Modal
+          open={!!cartModalProduct}
+          onClose={() => setCartModalProduct(null)}
+          title={cartModalProduct?.name ?? ""}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setCartModalProduct(null)}>{t("Bekor")}</Button>
+              <Button onClick={confirmCartModal}>
+                <ShoppingCart className="w-4 h-4" /> {t("Savatga qo'shish")}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <Input
+              ref={cartModalQtyRef}
+              label={t("Miqdori")}
+              type="number"
+              min="1"
+              value={cartModalQty}
+              onChange={(e) => setCartModalQty(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => { if (e.key === "Enter") confirmCartModal(); }}
+            />
+            <Input
+              label={t("Sotish narxi (UZS)")}
+              type="number"
+              min="0"
+              value={cartModalPrice}
+              onChange={(e) => setCartModalPrice(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") confirmCartModal(); }}
+            />
+          </div>
+        </Modal>
+      )}
 
       {/* Product Modal (yangi mahsulot) */}
       <Modal
@@ -1157,6 +1245,56 @@ export function ProductsPage() {
           </div>
         )}
       </SlideOver>
+
+      {/* Right-click Context Menu */}
+      <ContextMenu
+        open={!!contextMenu}
+        x={contextMenu?.x ?? 0}
+        y={contextMenu?.y ?? 0}
+        onClose={() => setContextMenu(null)}
+      >
+        {(() => {
+          const product = products.find((p) => p.id === contextMenu?.productId);
+          if (!product) return null;
+          return (
+            <>
+              <ContextMenuItem
+                icon={<Eye className="w-4 h-4" />}
+                label={t("Ko'rish")}
+                onClick={() => { setSelectedProductId(product.id); setContextMenu(null); }}
+              />
+              {can("product:update") && (
+                <ContextMenuItem
+                  icon={<Edit2 className="w-4 h-4" />}
+                  label={t("Tahrirlash")}
+                  onClick={() => { setSelectedProductId(product.id); setContextMenu(null); }}
+                />
+              )}
+              <ContextMenuItem
+                icon={<QrCode className="w-4 h-4" />}
+                label={t("QR yorliq chop etish")}
+                onClick={() => { handlePrintLabel(product); setContextMenu(null); }}
+              />
+              {can("product:delete") && (
+                <>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem
+                    icon={<Trash2 className="w-4 h-4" />}
+                    label={t("O'chirish")}
+                    variant="danger"
+                    onClick={() => {
+                      setContextMenu(null);
+                      if (confirm(getT()(`"${product.name}" mahsulotini o'chirmoqchimisiz?`))) {
+                        deleteProduct.mutate(product.id);
+                      }
+                    }}
+                  />
+                </>
+              )}
+            </>
+          );
+        })()}
+      </ContextMenu>
     </div>
   );
 }

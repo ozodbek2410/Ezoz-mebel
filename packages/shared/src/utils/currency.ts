@@ -7,7 +7,18 @@ export function convertToUsd(amountUzs: number, rate: number): number {
 }
 
 export function formatUzs(amount: number): string {
-  return new Intl.NumberFormat("uz-UZ").format(Math.round(amount)) + " so'm";
+  const formatted = Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  return formatted + " so'm";
+}
+
+export function formatNumber(value: number | string): string {
+  const num = String(value).replace(/[^\d]/g, "");
+  if (!num) return "";
+  return num.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+}
+
+export function parseFormattedNumber(value: string): number {
+  return Number(value.replace(/\s/g, "")) || 0;
 }
 
 export function formatUsd(amount: number): string {

@@ -32,12 +32,14 @@ interface TableRowProps {
   children: ReactNode;
   active?: boolean;
   onClick?: () => void;
+  onDoubleClick?: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   className?: string;
 }
 
-export function TableRow({ children, active, onClick, className = "" }: TableRowProps) {
+export function TableRow({ children, active, onClick, onDoubleClick, onContextMenu, className = "" }: TableRowProps) {
   return (
-    <tr className={`${active ? "active" : ""} ${className}`} onClick={onClick}>
+    <tr className={`${active ? "active" : ""} ${className}`} onClick={onClick} onDoubleClick={onDoubleClick} onContextMenu={onContextMenu}>
       {children}
     </tr>
   );

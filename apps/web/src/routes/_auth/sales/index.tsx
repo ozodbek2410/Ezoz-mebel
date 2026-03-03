@@ -1,10 +1,11 @@
 import { useState, useCallback, useMemo, useRef, useEffect, memo } from "react";
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
-import { useLocation } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "@tanstack/react-router";
 import {
   Plus, ShoppingCart, Trash2, Check, X,
   User, Package, Banknote, Wrench, UserCheck,
 } from "lucide-react";
+import { useCartStore } from "@/store/cart.store";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
@@ -16,19 +17,9 @@ import { CurrencyDisplay, StatusBadge } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
 import { useSocket, useSocketEvent } from "@/hooks/useSocket";
 import { useT, getT } from "@/hooks/useT";
-import { formatUzs, formatUsd } from "@ezoz/shared";
+import { formatUzs, formatUsd, formatNumber, parseFormattedNumber } from "@ezoz/shared";
 import toast from "react-hot-toast";
 import { fetchAndPrintReceipt } from "@/lib/printReceipt";
-
-interface CartItem {
-  productId: number | null;
-  productName: string;
-  serviceName: string | null;
-  quantity: number;
-  priceUzs: number;
-  priceUsd: number;
-  masterId: number | null;
-}
 
 export function SalesPage() {
   const location = useLocation();
@@ -49,8 +40,11 @@ function SalesPageInner() {
     queryClient.invalidateQueries({ queryKey: ["product"] });
   }, [queryClient]));
 
+  const navigate = useNavigate();
+  const cartStore = useCartStore();
+  const cart = cartStore.items;
+
   const [activeTab, setActiveTab] = useState("pos");
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<{ id: number; fullName: string } | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerDropdownOpen, setCustomerDropdownOpen] = useState(false);
@@ -129,7 +123,7 @@ function SalesPageInner() {
   const customerSearchQuery = useQuery({
     queryKey: ["customer", "search", debouncedCustomerSearch],
     queryFn: () => trpc.customer.search.query({ query: debouncedCustomerSearch }),
-    enabled: customerDropdownOpen && !selectedCustomer && debouncedCustomerSearch.length >= 1,
+    enabled: customerDropdownOpen && !selectedCustomer,
     staleTime: 30 * 1000,
   });
 
@@ -177,7 +171,7 @@ function SalesPageInner() {
       queryClient.invalidateQueries({ queryKey: ["sale"] });
       queryClient.invalidateQueries({ queryKey: ["product"] });
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
-      setCart([]);
+      cartStore.clear();
       setSelectedCustomer(null);
       setSaleNotes("");
       toast.success(getT()("Sotuv yaratildi"));
@@ -240,7 +234,7 @@ function SalesPageInner() {
       setPaymentOpen(false);
       setPaymentSaleId(null);
       if (!paymentSaleId) {
-        setCart([]);
+        cartStore.clear();
         setSelectedCustomer(null);
         setSaleNotes("");
       }
@@ -250,67 +244,14 @@ function SalesPageInner() {
     onError: (err) => toast.error(err.message),
   });
 
-  // Cart
-  const addToCart = useCallback(
-    (product: NonNullable<typeof productsQuery.data>["items"][number]) => {
-      setCart((prev) => {
-        const existing = prev.find((i) => i.productId === product.id);
-        if (existing) {
-          return prev.map((i) =>
-            i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i,
-          );
-        }
-        return [...prev, {
-          productId: product.id,
-          productName: product.name,
-          serviceName: null,
-          quantity: 1,
-          priceUzs: Number(product.sellPriceUzs),
-          priceUsd: Number(product.sellPriceUsd),
-          masterId: null,
-        }];
-      });
-    },
-    [],
-  );
-
+  // Cart helpers (delegate to store)
   function addServiceToCart(name: string, uzs: number, usd: number) {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.serviceName === name);
-      if (existing) {
-        return prev.map((i) => i.serviceName === name ? { ...i, quantity: i.quantity + 1 } : i);
-      }
-      return [...prev, {
-        productId: null,
-        productName: name,
-        serviceName: name,
-        quantity: 1,
-        priceUzs: uzs,
-        priceUsd: usd,
-        masterId: null,
-      }];
-    });
+    cartStore.addService(name, uzs, usd);
   }
 
   // Custom service modal
   const [customServiceOpen, setCustomServiceOpen] = useState(false);
   const [customServiceForm, setCustomServiceForm] = useState({ name: "", price: "" });
-
-  const updateCartQuantity = (index: number, qty: number, fromButton = false) => {
-    if (fromButton && qty <= 0) {
-      setCart((prev) => prev.filter((_, i) => i !== index));
-      return;
-    }
-    setCart((prev) => prev.map((item, i) => (i === index ? { ...item, quantity: qty } : item)));
-  };
-
-  const updateCartPrice = (index: number, field: "priceUzs" | "priceUsd", value: number) => {
-    setCart((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
-  };
-
-  const updateCartMaster = (index: number, masterId: number | null) => {
-    setCart((prev) => prev.map((item, i) => (i === index ? { ...item, masterId } : item)));
-  };
 
   const cartTotal = useMemo(
     () => cart.reduce(
@@ -320,15 +261,9 @@ function SalesPageInner() {
     [cart],
   );
 
-  // Map for O(1) cart lookup in product cards
-  const cartMap = useMemo(
-    () => new Map(cart.filter((i) => i.productId).map((i) => [i.productId, i.quantity])),
-    [cart],
-  );
-
   const allProducts = productsQuery.data?.items ?? [];
 
-  // Client-side search + stock filter (no API call on search)
+  // Client-side search + stock filter (for service mode products panel)
   const products = useMemo(() => {
     if (!productSearch) return allProducts;
     const q = productSearch.toLowerCase();
@@ -345,6 +280,12 @@ function SalesPageInner() {
     [products],
   );
   const sales = salesQuery.data?.sales ?? [];
+
+  // Map for O(1) cart lookup in service mode product cards
+  const cartMap = useMemo(
+    () => new Map(cart.filter((i) => i.productId).map((i) => [i.productId, i.quantity])),
+    [cart],
+  );
 
   function getMasterName(id: number | null) {
     if (!id) return null;
@@ -462,7 +403,7 @@ function SalesPageInner() {
                             unit={product.unit.toLowerCase()}
                             thumb={product.images[0]?.filePath ?? null}
                             cartQty={cartMap.get(product.id) ?? 0}
-                            onAdd={() => addToCart(product)}
+                            onAdd={() => cartStore.addProduct({ id: product.id, name: product.name, code: product.code, categoryName: product.category?.name ?? "", unit: product.unit, sellPriceUzs: Number(product.sellPriceUzs), sellPriceUsd: Number(product.sellPriceUsd) })}
                           />
                         ))}
                       </div>
@@ -480,13 +421,13 @@ function SalesPageInner() {
                       <h3 className="font-semibold">{t("Savat")} ({cart.length})</h3>
                     </div>
                     {cart.length > 0 && (
-                      <button onClick={() => setCart([])} className="text-xs text-slate-400 hover:text-red-500 transition-colors">
+                      <button onClick={() => cartStore.clear()} className="text-xs text-slate-400 hover:text-red-500 transition-colors">
                         {t("Tozalash")}
                       </button>
                     )}
                   </div>
 
-                  <div className="px-4 py-3 border-b border-slate-100">
+                  <div className="px-4 py-3 border-b border-slate-200">
                     <div className="relative">
                       <SearchInput
                         placeholder={t("Mijoz tanlash (ixtiyoriy)...")}
@@ -496,20 +437,22 @@ function SalesPageInner() {
                         onFocus={() => setCustomerDropdownOpen(true)}
                         onBlur={() => setTimeout(() => setCustomerDropdownOpen(false), 150)}
                       />
-                      {customerDropdownOpen && !selectedCustomer && customerSearchQuery.data && (
-                        <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border max-h-48 overflow-y-auto">
-                          {customerSearchQuery.data.length === 0 ? (
-                            <div className="px-3 py-2 text-sm text-slate-400">{t("Mijoz topilmadi")}</div>
+                      {customerDropdownOpen && !selectedCustomer && (
+                        <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 max-h-56 overflow-y-auto">
+                          {customerSearchQuery.isLoading ? (
+                            <div className="px-3 py-3 text-sm text-slate-400 text-center">{t("Yuklanmoqda...")}</div>
+                          ) : !customerSearchQuery.data || customerSearchQuery.data.length === 0 ? (
+                            <div className="px-3 py-3 text-sm text-slate-400 text-center">{t("Mijoz topilmadi")}</div>
                           ) : (
                             customerSearchQuery.data.map((c) => (
                               <button
                                 key={c.id}
-                                className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm flex items-center gap-2"
+                                className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 text-sm flex items-center gap-2 border-b border-slate-50 last:border-0 transition-colors"
                                 onMouseDown={() => { setSelectedCustomer({ id: c.id, fullName: c.fullName }); setCustomerSearch(""); setCustomerDropdownOpen(false); }}
                               >
-                                <User className="w-3.5 h-3.5 text-slate-400" />
-                                <span>{c.fullName}</span>
-                                {c.phone && <span className="text-xs text-slate-400">{c.phone}</span>}
+                                <User className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span className="font-medium text-slate-700">{c.fullName}</span>
+                                {c.phone && <span className="text-xs text-slate-400 ml-auto">{c.phone}</span>}
                               </button>
                             ))
                           )}
@@ -518,7 +461,7 @@ function SalesPageInner() {
                     </div>
                   </div>
 
-                  <div className="divide-y divide-slate-100">
+                  <div className="divide-y divide-slate-200/70">
                     {cart.length === 0 ? (
                       <div className="text-center py-10 text-slate-400 text-sm">
                         <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
@@ -538,7 +481,7 @@ function SalesPageInner() {
                             </div>
                             <button
                               className="text-slate-300 hover:text-red-500 p-0.5 transition-colors"
-                              onClick={() => setCart((prev) => prev.filter((_, i) => i !== idx))}
+                              onClick={() => cartStore.removeItem(idx)}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -548,7 +491,7 @@ function SalesPageInner() {
                             <div className="ml-[22px] mb-1.5">
                               <select
                                 value={item.masterId ?? ""}
-                                onChange={(e) => updateCartMaster(idx, e.target.value ? Number(e.target.value) : null)}
+                                onChange={(e) => cartStore.updateMaster(idx, e.target.value ? Number(e.target.value) : null)}
                                 className={`w-full text-xs py-1.5 px-2 border rounded-lg bg-white outline-none transition-colors ${
                                   !item.masterId
                                     ? "border-red-300 text-red-500 focus:border-red-400 focus:ring-1 focus:ring-red-200"
@@ -564,24 +507,25 @@ function SalesPageInner() {
                           )}
                           <div className="flex items-center gap-2 ml-[22px]">
                             <div className="pos-qty-control">
-                              <button onClick={() => updateCartQuantity(idx, item.quantity - 1, true)}>-</button>
+                              <button onClick={() => cartStore.updateQuantity(idx, item.quantity - 1)}>-</button>
                               <input
                                 type="text"
                                 inputMode="numeric"
                                 value={item.quantity || ""}
                                 onChange={(e) => {
                                   const val = e.target.value.replace(/\D/g, "");
-                                  updateCartQuantity(idx, val === "" ? 0 : Number(val));
+                                  cartStore.updateQuantity(idx, val === "" ? 0 : Number(val));
                                 }}
                               />
-                              <button onClick={() => updateCartQuantity(idx, item.quantity + 1)}>+</button>
+                              <button onClick={() => cartStore.updateQuantity(idx, item.quantity + 1)}>+</button>
                             </div>
                             <span className="text-slate-300">x</span>
                             <input
-                              type="number"
-                              value={item.priceUzs}
-                              onChange={(e) => updateCartPrice(idx, "priceUzs", Number(e.target.value))}
-                              className="w-24 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                              type="text"
+                              inputMode="numeric"
+                              value={formatNumber(item.priceUzs)}
+                              onChange={(e) => cartStore.updatePrice(idx, "priceUzs", parseFormattedNumber(e.target.value))}
+                              className="w-28 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                             />
                             <span className="text-sm font-bold text-slate-800 ml-auto whitespace-nowrap">
                               {formatUzs(item.priceUzs * item.quantity)}
@@ -628,166 +572,170 @@ function SalesPageInner() {
 
           ) : (
             /* =============================================
-               PRODUCT MODE — horizontal layout (unchanged)
+               PRODUCT MODE — cart table
             ============================================= */
-            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-              <div className="flex-1 min-w-0">
-                <div className="mb-4">
+            <div className="space-y-4">
+              {/* Top bar: customer search + actions */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="relative flex-1 w-full sm:max-w-sm">
                   <SearchInput
-                    placeholder={t("Mahsulot qidirish...")}
-                    value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
-                    onClear={() => setProductSearch("")}
+                    placeholder={t("Mijoz tanlash (ixtiyoriy)...")}
+                    value={selectedCustomer ? selectedCustomer.fullName : customerSearch}
+                    onChange={(e) => { setCustomerSearch(e.target.value); setSelectedCustomer(null); }}
+                    onClear={() => { setCustomerSearch(""); setSelectedCustomer(null); setCustomerDropdownOpen(false); }}
+                    onFocus={() => setCustomerDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setCustomerDropdownOpen(false), 150)}
                   />
-                </div>
-                {productsQuery.isLoading ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <div key={i} className="pos-product-card animate-pulse">
-                        <div className="h-20 bg-slate-200 rounded-md mb-1.5" />
-                        <div className="h-4 bg-slate-200 rounded w-3/4 mb-1.5" />
-                        <div className="h-3 bg-slate-200 rounded w-1/2" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {products.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        id={product.id}
-                        name={product.name}
-                        code={product.code}
-                        sellPriceUzs={Number(product.sellPriceUzs)}
-                        stock={product.stockItems[0] ? Number(product.stockItems[0].quantity) : 0}
-                        unit={product.unit.toLowerCase()}
-                        thumb={product.images[0]?.filePath ?? null}
-                        cartQty={cartMap.get(product.id) ?? 0}
-                        onAdd={() => addToCart(product)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* RIGHT: CART (product mode) */}
-              <div className="w-full lg:w-[400px] shrink-0">
-                <div className="card">
-                  <div className="card-header">
-                    <div className="flex items-center gap-2">
-                      <ShoppingCart className="w-5 h-5 text-indigo-600" />
-                      <h3 className="font-semibold">{t("Savat")} ({cart.length})</h3>
-                    </div>
-                    {cart.length > 0 && (
-                      <button onClick={() => setCart([])} className="text-xs text-slate-400 hover:text-red-500 transition-colors">
-                        {t("Tozalash")}
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="px-4 py-3 border-b border-slate-100">
-                    <div className="relative">
-                      <SearchInput
-                        placeholder={t("Mijoz tanlash (ixtiyoriy)...")}
-                        value={selectedCustomer ? selectedCustomer.fullName : customerSearch}
-                        onChange={(e) => { setCustomerSearch(e.target.value); setSelectedCustomer(null); }}
-                        onClear={() => { setCustomerSearch(""); setSelectedCustomer(null); setCustomerDropdownOpen(false); }}
-                        onFocus={() => setCustomerDropdownOpen(true)}
-                        onBlur={() => setTimeout(() => setCustomerDropdownOpen(false), 150)}
-                      />
-                      {customerDropdownOpen && !selectedCustomer && customerSearchQuery.data && (
-                        <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border max-h-48 overflow-y-auto">
-                          {customerSearchQuery.data.length === 0 ? (
-                            <div className="px-3 py-2 text-sm text-slate-400">{t("Mijoz topilmadi")}</div>
-                          ) : (
-                            customerSearchQuery.data.map((c) => (
-                              <button
-                                key={c.id}
-                                className="w-full text-left px-3 py-2 hover:bg-slate-50 text-sm flex items-center gap-2"
-                                onMouseDown={() => { setSelectedCustomer({ id: c.id, fullName: c.fullName }); setCustomerSearch(""); setCustomerDropdownOpen(false); }}
-                              >
-                                <User className="w-3.5 h-3.5 text-slate-400" />
-                                <span>{c.fullName}</span>
-                                {c.phone && <span className="text-xs text-slate-400">{c.phone}</span>}
-                              </button>
-                            ))
-                          )}
-                        </div>
+                  {customerDropdownOpen && !selectedCustomer && (
+                    <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 max-h-56 overflow-y-auto">
+                      {customerSearchQuery.isLoading ? (
+                        <div className="px-3 py-3 text-sm text-slate-400 text-center">{t("Yuklanmoqda...")}</div>
+                      ) : !customerSearchQuery.data || customerSearchQuery.data.length === 0 ? (
+                        <div className="px-3 py-3 text-sm text-slate-400 text-center">{t("Mijoz topilmadi")}</div>
+                      ) : (
+                        customerSearchQuery.data.map((c) => (
+                          <button
+                            key={c.id}
+                            className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 text-sm flex items-center gap-2 border-b border-slate-50 last:border-0 transition-colors"
+                            onMouseDown={() => { setSelectedCustomer({ id: c.id, fullName: c.fullName }); setCustomerSearch(""); setCustomerDropdownOpen(false); }}
+                          >
+                            <User className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="font-medium text-slate-700">{c.fullName}</span>
+                            {c.phone && <span className="text-xs text-slate-400 ml-auto">{c.phone}</span>}
+                          </button>
+                        ))
                       )}
                     </div>
-                  </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  {cart.length > 0 && (
+                    <button onClick={() => cartStore.clear()} className="text-sm text-slate-400 hover:text-red-500 transition-colors">
+                      {t("Tozalash")}
+                    </button>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={() => navigate({ to: "/products", search: { fromSale: true } as Record<string, unknown> })}
+                  >
+                    <Plus className="w-4 h-4" />
+                    {t("Mahsulot qo'shish")}
+                  </Button>
+                </div>
+              </div>
 
-                  <div className="divide-y divide-slate-100">
+              {/* Cart table */}
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHead>
+                    <tr>
+                      <th className="w-8 !px-2">#</th>
+                      <th>{t("Mahsulot")}</th>
+                      <th>{t("Guruh")}</th>
+                      <th className="text-center">{t("Birlik")}</th>
+                      <th className="text-center">{t("Miqdor")}</th>
+                      <th className="text-right">{t("Sotish narxi")}</th>
+                      <th className="text-right">{t("Jami")}</th>
+                      <th className="w-10"></th>
+                    </tr>
+                  </TableHead>
+                  <TableBody>
                     {cart.length === 0 ? (
-                      <div className="text-center py-10 text-slate-400 text-sm">
-                        <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        {t("Savat bo'sh")}
-                      </div>
+                      <TableEmpty
+                        colSpan={8}
+                        message={t("Savat bo'sh")}
+                        icon={<ShoppingCart className="w-8 h-8" />}
+                      />
                     ) : (
-                      cart.map((item, idx) => (
-                        <div key={idx} className="px-4 py-3">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <Package className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                              <span className="text-sm font-semibold text-slate-900 truncate">{item.productName}</span>
-                            </div>
-                            <button
-                              className="text-slate-300 hover:text-red-500 p-0.5 transition-colors"
-                              onClick={() => setCart((prev) => prev.filter((_, i) => i !== idx))}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2 ml-[22px]">
-                            <div className="pos-qty-control">
-                              <button onClick={() => updateCartQuantity(idx, item.quantity - 1, true)}>-</button>
+                      <>
+                        {cart.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50">
+                            <td className="!px-2 !py-2 text-xs text-slate-400 text-center">{idx + 1}</td>
+                            <td className="!py-2">
+                              <div className="min-w-0">
+                                <span className="font-medium text-slate-900 text-[13px] leading-tight">{item.productName}</span>
+                                {item.productCode && <span className="block text-[11px] text-slate-400 font-mono">{item.productCode}</span>}
+                              </div>
+                            </td>
+                            <td className="!py-2">
+                              {item.categoryName && (
+                                <Badge variant="neutral">{item.categoryName}</Badge>
+                              )}
+                            </td>
+                            <td className="text-center !py-2">
+                              <span className="text-xs text-slate-500">{item.unit}</span>
+                            </td>
+                            <td className="text-center !py-2">
+                              <div className="pos-qty-control inline-flex">
+                                <button onClick={() => cartStore.updateQuantity(idx, item.quantity - 1)}>-</button>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={item.quantity || ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, "");
+                                    cartStore.updateQuantity(idx, val === "" ? 0 : Number(val));
+                                  }}
+                                />
+                                <button onClick={() => cartStore.updateQuantity(idx, item.quantity + 1)}>+</button>
+                              </div>
+                            </td>
+                            <td className="text-right !py-2">
                               <input
                                 type="text"
                                 inputMode="numeric"
-                                value={item.quantity || ""}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/\D/g, "");
-                                  updateCartQuantity(idx, val === "" ? 0 : Number(val));
-                                }}
+                                value={formatNumber(item.priceUzs)}
+                                onChange={(e) => cartStore.updatePrice(idx, "priceUzs", parseFormattedNumber(e.target.value))}
+                                className="w-32 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                               />
-                              <button onClick={() => updateCartQuantity(idx, item.quantity + 1)}>+</button>
-                            </div>
-                            <span className="text-slate-300">x</span>
-                            <input
-                              type="number"
-                              value={item.priceUzs}
-                              onChange={(e) => updateCartPrice(idx, "priceUzs", Number(e.target.value))}
-                              className="w-24 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                            />
-                            <span className="text-sm font-bold text-slate-800 ml-auto whitespace-nowrap">
-                              {formatUzs(item.priceUzs * item.quantity)}
-                            </span>
-                          </div>
-                        </div>
-                      ))
+                            </td>
+                            <td className="text-right !py-2">
+                              <span className="text-sm font-bold text-slate-800 whitespace-nowrap">
+                                {formatUzs(item.priceUzs * item.quantity)}
+                              </span>
+                            </td>
+                            <td className="!p-1 text-center">
+                              <button
+                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                                onClick={() => cartStore.removeItem(idx)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </>
                     )}
-                  </div>
+                  </TableBody>
+                </Table>
+              </div>
 
-                  <div className="pos-cart-total">
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm text-slate-500">{t("Jami")}:</span>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold currency-uzs">{formatUzs(cartTotal.uzs)}</p>
-                        {cartTotal.usd > 0 && <p className="text-sm currency-usd mt-0.5">{formatUsd(cartTotal.usd)}</p>}
-                      </div>
+              {/* Bottom bar: total + notes + sell */}
+              {cart.length > 0 && (
+                <div className="card !p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="flex-1 w-full sm:w-auto">
+                      <Input placeholder={t("Izoh...")} value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} />
                     </div>
-                    <Input placeholder={t("Izoh...")} value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} className="mb-3" />
-                    <button
-                      className="btn-pos-sell"
-                      disabled={cart.length === 0}
-                      onClick={openPaymentModal}
-                    >
-                      <Banknote className="w-6 h-6" />
-                      {t("SOTISH")}
-                    </button>
+                    <div className="flex items-center gap-4 shrink-0 w-full sm:w-auto justify-between sm:justify-end">
+                      <div className="text-right">
+                        <span className="text-xs text-slate-500">{t("Jami")}:</span>
+                        <p className="text-xl font-bold text-slate-900">{formatUzs(cartTotal.uzs)}</p>
+                        {cartTotal.usd > 0 && <p className="text-xs text-slate-500">{formatUsd(cartTotal.usd)}</p>}
+                      </div>
+                      <Button
+                        variant="success"
+                        onClick={openPaymentModal}
+                        disabled={cart.length === 0}
+                        className="!px-6 !py-2.5"
+                      >
+                        <Banknote className="w-5 h-5" />
+                        {t("SOTISH")}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           )
         ) : (
@@ -899,18 +847,18 @@ function SalesPageInner() {
               </div>
               <Input
                 label={t("Naqd")}
-                type="number"
-                min="0"
-                value={paymentForm.cashUzs}
-                onChange={(e) => setPaymentForm((f) => ({ ...f, cashUzs: e.target.value }))}
+                type="text"
+                inputMode="numeric"
+                value={formatNumber(paymentForm.cashUzs)}
+                onChange={(e) => setPaymentForm((f) => ({ ...f, cashUzs: String(parseFormattedNumber(e.target.value)) }))}
                 rightIcon={<span className="text-xs">so'm</span>}
               />
               <Input
                 label={t("Karta")}
-                type="number"
-                min="0"
-                value={paymentForm.cardUzs}
-                onChange={(e) => setPaymentForm((f) => ({ ...f, cardUzs: e.target.value }))}
+                type="text"
+                inputMode="numeric"
+                value={formatNumber(paymentForm.cardUzs)}
+                onChange={(e) => setPaymentForm((f) => ({ ...f, cardUzs: String(parseFormattedNumber(e.target.value)) }))}
                 rightIcon={<span className="text-xs">so'm</span>}
               />
               {paymentCustomerId ? (
@@ -951,7 +899,7 @@ function SalesPageInner() {
       >
         <div className="space-y-4">
           <Input label={t("Xizmat nomi")} value={customServiceForm.name} onChange={(e) => setCustomServiceForm((f) => ({ ...f, name: e.target.value }))} placeholder={t("Masalan: Maxsus kesish")} />
-          <Input label={t("Narx (UZS)")} type="number" value={customServiceForm.price} onChange={(e) => setCustomServiceForm((f) => ({ ...f, price: e.target.value }))} placeholder="0" />
+          <Input label={t("Narx (UZS)")} type="text" inputMode="numeric" value={formatNumber(customServiceForm.price)} onChange={(e) => setCustomServiceForm((f) => ({ ...f, price: String(parseFormattedNumber(e.target.value)) }))} placeholder="0" />
         </div>
       </Modal>
     </div>

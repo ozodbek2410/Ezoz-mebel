@@ -1,14 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, ShoppingBag, Wallet, Download } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown, DollarSign, ShoppingBag, Wallet, Download, Package } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Input, Select, Tabs, Badge } from "@/components/ui";
+import { Input, Select, Tabs, Badge, SearchInput } from "@/components/ui";
 import { useAuth } from "@/hooks/useAuth";
 import { useT } from "@/hooks/useT";
 import { formatUzs, formatUsd } from "@ezoz/shared";
@@ -75,6 +75,12 @@ export function ReportsPage() {
     enabled: activeTab === "charts",
   });
 
+  const productSalesReport = useQuery({
+    queryKey: ["report", "productSales", dateFrom, dateTo],
+    queryFn: () => trpc.report.productSalesReport.query({ dateFrom, dateTo }),
+    enabled: activeTab === "products",
+  });
+
   return (
     <div className="page-enter">
       <PageHeader title={t("Hisobotlar")} />
@@ -85,6 +91,7 @@ export function ReportsPage() {
             tabs={[
               ...(isBoss() ? [{ id: "boss", label: t("Umumiy hisobot") }] : []),
               { id: "cashier", label: t("Kassir hisoboti") },
+              { id: "products", label: t("Mahsulotlar") },
               { id: "charts", label: t("Diagrammalar") },
               { id: "inventory", label: t("Inventar") },
             ]}
@@ -94,7 +101,7 @@ export function ReportsPage() {
         </div>
 
         {/* Date filters */}
-        {activeTab !== "inventory" && activeTab !== "charts" && (
+        {activeTab !== "inventory" && activeTab !== "charts" && activeTab !== "products" && (
           <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 mb-6">
             <Input label={t("Dan")} type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
             <Input label={t("Gacha")} type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
@@ -264,6 +271,18 @@ export function ReportsPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Product Sales Report */}
+        {activeTab === "products" && (
+          <ProductSalesTab
+            data={productSalesReport.data ?? []}
+            isLoading={productSalesReport.isLoading}
+            dateFrom={dateFrom}
+            dateTo={dateTo}
+            setDateFrom={setDateFrom}
+            setDateTo={setDateTo}
+          />
         )}
 
         {/* Inventory Report */}
@@ -528,6 +547,182 @@ function ChartsTab({
               </PieChart>
             </ResponsiveContainer>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===== Product Sales Tab =====
+interface ProductSaleItem {
+  saleDate: string;
+  documentNo: string;
+  customerName: string | null;
+  cashierName: string;
+  productId: number;
+  productName: string;
+  productCode: string;
+  categoryName: string;
+  unit: string;
+  quantity: number;
+  unitPriceUzs: number;
+  totalUzs: number;
+  totalUsd: number;
+}
+
+function ProductSalesTab({
+  data,
+  isLoading,
+  dateFrom,
+  dateTo,
+  setDateFrom,
+  setDateTo,
+}: {
+  data: ProductSaleItem[];
+  isLoading: boolean;
+  dateFrom: string;
+  dateTo: string;
+  setDateFrom: (d: string) => void;
+  setDateTo: (d: string) => void;
+}) {
+  const t = useT();
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!search) return data;
+    const q = search.toLowerCase();
+    return data.filter((item) =>
+      item.productName.toLowerCase().includes(q) ||
+      item.productCode.toLowerCase().includes(q) ||
+      item.documentNo.toLowerCase().includes(q) ||
+      (item.customerName && item.customerName.toLowerCase().includes(q))
+    );
+  }, [data, search]);
+
+  const totals = useMemo(() => filtered.reduce(
+    (acc, item) => ({
+      qty: acc.qty + item.quantity,
+      uzs: acc.uzs + item.totalUzs,
+      usd: acc.usd + item.totalUsd,
+    }),
+    { qty: 0, uzs: 0, usd: 0 },
+  ), [filtered]);
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
+        <Input label={t("Dan")} type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        <Input label={t("Gacha")} type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        <div className="flex-1">
+          <SearchInput
+            placeholder={t("Mahsulot, mijoz, hujjat qidirish...")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onClear={() => setSearch("")}
+          />
+        </div>
+        <button
+          className="flex items-center gap-1.5 text-xs bg-green-600 text-white hover:bg-green-700 px-3 py-2 rounded-lg transition-colors shrink-0"
+          onClick={() => {
+            exportToExcel({
+              filename: `mahsulot-sotuvlar_${dateFrom}_${dateTo}`,
+              sheetName: t("Mahsulotlar hisoboti"),
+              columns: [
+                { header: "#", key: "idx", width: 5 },
+                { header: t("Sana"), key: "date", width: 18 },
+                { header: t("Hujjat"), key: "doc", width: 12 },
+                { header: t("Mijoz"), key: "customer", width: 20 },
+                { header: t("Kassir"), key: "cashier", width: 15 },
+                { header: t("Mahsulot"), key: "product", width: 25 },
+                { header: t("Kod"), key: "code", width: 10 },
+                { header: t("Guruh"), key: "category", width: 15 },
+                { header: t("Miqdor"), key: "qty", width: 10 },
+                { header: t("Narx (UZS)"), key: "price", width: 18 },
+                { header: t("Jami (UZS)"), key: "total", width: 18 },
+              ],
+              data: filtered.map((item, idx) => ({
+                idx: idx + 1,
+                date: new Date(item.saleDate).toLocaleDateString("uz"),
+                doc: item.documentNo,
+                customer: item.customerName ?? t("Oddiy mijoz"),
+                cashier: item.cashierName,
+                product: item.productName,
+                code: item.productCode,
+                category: item.categoryName,
+                qty: item.quantity,
+                price: item.unitPriceUzs,
+                total: item.totalUzs,
+              })),
+            });
+          }}
+        >
+          <Download size={14} />
+          Excel
+        </button>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label={t("Sotuvlar soni")} value={String(filtered.length)} icon={<ShoppingBag className="w-5 h-5 text-indigo-600" />} />
+        <StatCard label={t("Jami miqdor")} value={String(Math.round(totals.qty))} icon={<Package className="w-5 h-5 text-cyan-600" />} />
+        <StatCard label={t("Jami summa")} value={formatUzs(totals.uzs)} icon={<DollarSign className="w-5 h-5 text-green-600" />} />
+        {totals.usd > 0 && <StatCard label={t("Jami (USD)")} value={formatUsd(totals.usd)} icon={<DollarSign className="w-5 h-5 text-blue-600" />} />}
+      </div>
+
+      {/* Table */}
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th className="w-8">#</th>
+                <th>{t("Sana")}</th>
+                <th>{t("Hujjat")}</th>
+                <th className="hidden md:table-cell">{t("Mijoz")}</th>
+                <th>{t("Mahsulot")}</th>
+                <th className="hidden sm:table-cell">{t("Guruh")}</th>
+                <th className="text-center">{t("Miqdor")}</th>
+                <th className="text-right">{t("Narx")}</th>
+                <th className="text-right">{t("Jami")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr><td colSpan={9} className="text-center py-8 text-slate-400">{t("Yuklanmoqda...")}</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={9} className="text-center py-8 text-slate-400">{t("Ma'lumot topilmadi")}</td></tr>
+              ) : (
+                <>
+                  {filtered.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="text-xs text-slate-400 text-center">{idx + 1}</td>
+                      <td className="text-sm whitespace-nowrap">{new Date(item.saleDate).toLocaleDateString("uz")}</td>
+                      <td className="font-mono text-xs">{item.documentNo}</td>
+                      <td className="text-sm hidden md:table-cell">{item.customerName ?? <span className="text-slate-400">{t("Oddiy mijoz")}</span>}</td>
+                      <td>
+                        <div className="min-w-0">
+                          <span className="font-medium text-slate-900 text-[13px]">{item.productName}</span>
+                          <span className="block text-[11px] text-slate-400 font-mono">{item.productCode}</span>
+                        </div>
+                      </td>
+                      <td className="hidden sm:table-cell"><Badge variant="neutral">{item.categoryName}</Badge></td>
+                      <td className="text-center font-medium">{item.quantity} <span className="text-xs text-slate-400">{item.unit.toLowerCase()}</span></td>
+                      <td className="text-right text-sm">{formatUzs(item.unitPriceUzs)}</td>
+                      <td className="text-right font-medium">{formatUzs(item.totalUzs)}</td>
+                    </tr>
+                  ))}
+                  {/* Summary row */}
+                  <tr className="bg-slate-50 font-semibold border-t-2 border-slate-300">
+                    <td colSpan={6} className="text-right text-sm text-slate-600">{t("Jami")}:</td>
+                    <td className="text-center">{Math.round(totals.qty)}</td>
+                    <td></td>
+                    <td className="text-right text-slate-900">{formatUzs(totals.uzs)}</td>
+                  </tr>
+                </>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

@@ -16,3 +16,4 @@ export { ColumnToggle } from "./ColumnToggle";
 export { SlideOver } from "./SlideOver";
 export { PhoneInput } from "./PhoneInput";
 export { LocaleToggle } from "./LocaleToggle";
+export { ContextMenu, ContextMenuItem, ContextMenuSeparator } from "./ContextMenu";
