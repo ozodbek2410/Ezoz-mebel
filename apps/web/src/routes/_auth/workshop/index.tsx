@@ -151,7 +151,7 @@ export function WorkshopPage() {
               ) : filteredGroups.length === 0 ? (
                 <TableEmpty colSpan={colCount} message={t("Vazifalar yo'q")} icon={<CheckCircle className="w-8 h-8" />} />
               ) : (
-                filteredGroups.map((groupTasks) => {
+                filteredGroups.map((groupTasks, groupIdx) => {
                   const firstTask = groupTasks[0]!;
                   const sale = firstTask.sale;
                   const gStatus = groupStatus(groupTasks);
@@ -164,20 +164,20 @@ export function WorkshopPage() {
                     return (
                       <tr
                         key={task.id}
-                        className={`${isFirstInGroup && taskIdx > 0 ? "" : ""} ${
+                        className={`${
                           gStatus === "COMPLETED" ? "opacity-60" : ""
                         } ${isFirstInGroup ? "border-t-2 !border-t-slate-300" : ""}`}
                       >
                         {/* # — only on first task in group */}
                         {isFirstInGroup ? (
-                          <td rowSpan={groupTasks.length} className="text-center text-slate-400 align-top pt-4">
-                            {firstTask.saleId}
+                          <td rowSpan={groupTasks.length} className="text-center text-slate-400 align-middle">
+                            {groupIdx + 1}
                           </td>
                         ) : null}
 
                         {/* Buyurtma — only on first task in group */}
                         {isFirstInGroup ? (
-                          <td rowSpan={groupTasks.length} className="align-top pt-4">
+                          <td rowSpan={groupTasks.length} className="align-middle">
                             <div className="flex items-center gap-2 mb-1">
                               <User className="w-4 h-4 text-slate-400 shrink-0" />
                               <span className="font-semibold text-slate-900">
