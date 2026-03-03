@@ -410,6 +410,40 @@
     @apply bg-indigo-50 border-l-2 border-l-indigo-500;
   }
 
+  /* Report table — bordered grid with larger text */
+  .report-table {
+    @apply w-full min-w-[700px] sm:min-w-0;
+    border-collapse: collapse;
+    font-size: 15px;
+  }
+  .report-table thead {
+    @apply bg-slate-800 text-white;
+  }
+  .report-table th {
+    @apply px-3.5 py-3 text-left font-bold uppercase tracking-wider border border-slate-600;
+    font-size: 12px;
+  }
+  .report-table th button {
+    @apply text-white/90 hover:text-white;
+  }
+  .report-table th svg {
+    @apply text-white/50;
+  }
+  .report-table td {
+    @apply px-3.5 py-3 text-slate-900 border border-slate-200 font-medium;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .report-table tbody tr {
+    @apply transition-colors duration-100;
+  }
+  .report-table tbody tr:hover {
+    @apply bg-indigo-50/50;
+  }
+  .report-table tfoot td {
+    @apply font-bold bg-slate-100 border-t-2 border-slate-400 text-slate-900;
+  }
+
   /* === Sidebar (Dark Navy) === */
   .sidebar {
     @apply fixed left-0 top-0 bottom-0 w-64 bg-sidebar-bg text-sidebar-text flex flex-col z-30 overflow-hidden;

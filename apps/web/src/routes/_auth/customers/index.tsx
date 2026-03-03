@@ -422,6 +422,7 @@ export function CustomersPage() {
         open={detailId !== null && !!detail}
         onClose={() => setDetailId(null)}
         title={detail?.fullName ?? ""}
+        width="3xl"
         headerLeft={
           <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
             <User className="w-5 h-5 text-indigo-600" />
@@ -567,6 +568,9 @@ export function CustomersPage() {
                             >
                               <span className="flex items-center gap-1.5">
                                 <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${expandedSaleId === sale.id ? "rotate-180" : ""}`} />
+                                <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
+                                  {sale.saleType === "PRODUCT" ? t("Mahsulot") : t("Xizmat")}
+                                </Badge>
                                 <span className="text-slate-500">{new Date(sale.createdAt).toLocaleDateString("uz")}</span>
                               </span>
                               <span className="text-slate-500">{t("Jami:")} {formatUzs(sale.totalUzs)}</span>
@@ -613,53 +617,71 @@ export function CustomersPage() {
                   {detail.sales.length === 0 ? (
                     <EmptyState title={t("Sotuvlar yo'q")} description={t("Bu mijoz hali xarid qilmagan")} />
                   ) : (
-                    detail.sales.map((sale) => (
-                      <div key={sale.id}>
-                        <button
-                          type="button"
-                          className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                          onClick={() => setExpandedSaleId(expandedSaleId === sale.id ? null : sale.id)}
-                        >
-                          <div className="flex items-center gap-2">
-                            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedSaleId === sale.id ? "rotate-180" : ""}`} />
-                            <div className="text-left">
-                              <p className="text-sm font-medium">
-                                {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}
-                              </p>
-                              <p className="text-xs text-slate-400">
-                                {new Date(sale.createdAt).toLocaleDateString("uz")}
-                              </p>
-                            </div>
-                          </div>
-                          <CurrencyDisplay amountUzs={sale.totalUzs} amountUsd={sale.totalUsd} size="sm" />
-                        </button>
-                        {expandedSaleId === sale.id && (
-                          <div className="ml-6 mt-1 mb-1 border-l-2 border-slate-200 pl-3 space-y-1">
-                            {(sale.items?.length ?? 0) > 0 ? sale.items.map((item) => (
-                              <div key={item.id} className="flex justify-between text-xs text-slate-600 py-0.5">
-                                <span>
-                                  {item.product?.name ?? item.serviceName ?? "—"}
-                                  <span className="text-slate-400 ml-1">x{Number(item.quantity)}</span>
-                                </span>
-                                <span>{formatUzs(Number(item.totalUzs))}</span>
-                              </div>
-                            )) : (
-                              <p className="text-xs text-slate-400 italic">{t("Batafsil ma'lumot yo'q")}</p>
-                            )}
-                            {(sale.payments?.length ?? 0) > 0 && (
-                              <div className="border-t border-slate-200 pt-1 mt-1">
-                                {sale.payments.map((p) => (
-                                  <div key={p.id} className="flex justify-between text-xs text-green-600 py-0.5">
-                                    <span>{p.paymentType === "CASH_UZS" ? t("Naqd") : p.paymentType === "CARD" ? t("Karta") : t("O'tkazma")}</span>
-                                    <span>{formatUzs(Number(p.amountUzs))}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                    <>
+                      {/* Summary badges */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge variant="info">
+                          {t("Mahsulot")}: {detail.sales.filter((s) => s.saleType === "PRODUCT").length}
+                        </Badge>
+                        <Badge variant="warning">
+                          {t("Xizmat")}: {detail.sales.filter((s) => s.saleType === "SERVICE").length}
+                        </Badge>
+                        <Badge variant="neutral">
+                          {t("Jami")}: {detail.sales.length}
+                        </Badge>
                       </div>
-                    ))
+                      {detail.sales.map((sale) => (
+                        <div key={sale.id}>
+                          <button
+                            type="button"
+                            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer ${
+                              sale.saleType === "PRODUCT"
+                                ? "bg-blue-50 hover:bg-blue-100 border border-blue-100"
+                                : "bg-amber-50 hover:bg-amber-100 border border-amber-100"
+                            }`}
+                            onClick={() => setExpandedSaleId(expandedSaleId === sale.id ? null : sale.id)}
+                          >
+                            <div className="flex items-center gap-2">
+                              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${expandedSaleId === sale.id ? "rotate-180" : ""}`} />
+                              <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
+                                {sale.saleType === "PRODUCT" ? t("Mahsulot") : t("Xizmat")}
+                              </Badge>
+                              <div className="text-left">
+                                <p className="text-xs text-slate-500">
+                                  {new Date(sale.createdAt).toLocaleDateString("uz")}
+                                </p>
+                              </div>
+                            </div>
+                            <CurrencyDisplay amountUzs={sale.totalUzs} amountUsd={sale.totalUsd} size="sm" />
+                          </button>
+                          {expandedSaleId === sale.id && (
+                            <div className="ml-6 mt-1 mb-1 border-l-2 border-slate-200 pl-3 space-y-1">
+                              {(sale.items?.length ?? 0) > 0 ? sale.items.map((item) => (
+                                <div key={item.id} className="flex justify-between text-xs text-slate-600 py-0.5">
+                                  <span>
+                                    {item.product?.name ?? item.serviceName ?? "—"}
+                                    <span className="text-slate-400 ml-1">x{Number(item.quantity)}</span>
+                                  </span>
+                                  <span>{formatUzs(Number(item.totalUzs))}</span>
+                                </div>
+                              )) : (
+                                <p className="text-xs text-slate-400 italic">{t("Batafsil ma'lumot yo'q")}</p>
+                              )}
+                              {(sale.payments?.length ?? 0) > 0 && (
+                                <div className="border-t border-slate-200 pt-1 mt-1">
+                                  {sale.payments.map((p) => (
+                                    <div key={p.id} className="flex justify-between text-xs text-green-600 py-0.5">
+                                      <span>{p.paymentType === "CASH_UZS" ? t("Naqd") : p.paymentType === "CARD" ? t("Karta") : t("O'tkazma")}</span>
+                                      <span>{formatUzs(Number(p.amountUzs))}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </>
                   )}
                 </div>
               )}

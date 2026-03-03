@@ -6,7 +6,10 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Button, Modal, Input, Tabs } from "@/components/ui";
+import {
+  Button, Modal, Input, Tabs,
+  Table, TableHead, TableBody, TableLoading, TableEmpty,
+} from "@/components/ui";
 import { StatusBadge } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
 import { useT, getT } from "@/hooks/useT";
@@ -94,14 +97,6 @@ export function WorkshopPage() {
     });
   }
 
-  function getGroupColor(status: string) {
-    switch (status) {
-      case "IN_PROGRESS": return "border-l-indigo-400 bg-indigo-50/30";
-      case "COMPLETED": return "border-l-green-500 bg-green-50/20 opacity-75";
-      default: return "border-l-amber-400";
-    }
-  }
-
   // Clean up old-format descriptions like "Sotuv #cuid - kesish/xizmat"
   function getServiceName(description: string, saleItems: Array<{ serviceName: string | null }>) {
     if (description.startsWith("Sotuv #")) {
@@ -109,6 +104,9 @@ export function WorkshopPage() {
     }
     return description;
   }
+
+  const boss = isBoss();
+  const colCount = 8;
 
   return (
     <div className="page-enter">
@@ -132,157 +130,172 @@ export function WorkshopPage() {
           />
         </div>
 
-        {/* Sale group cards */}
-        {tasksQuery.isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="card card-body animate-pulse">
-                <div className="h-4 bg-slate-200 rounded w-3/4 mb-3" />
-                <div className="h-3 bg-slate-200 rounded w-1/2 mb-2" />
-                <div className="h-3 bg-slate-200 rounded w-full" />
-              </div>
-            ))}
-          </div>
-        ) : filteredGroups.length === 0 ? (
-          <div className="card card-body text-center py-12">
-            <CheckCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-400">{t("Vazifalar yo'q")}</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredGroups.map((groupTasks) => {
-              const firstTask = groupTasks[0]!;
-              const sale = firstTask.sale;
-              const gStatus = groupStatus(groupTasks);
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <Table variant="report">
+            <TableHead>
+              <tr>
+                <th className="w-10 text-center">#</th>
+                <th>{t("Buyurtma")}</th>
+                <th>{t("Xizmat")}</th>
+                <th>{t("Usta")}</th>
+                <th className="text-center">{t("Holat")}</th>
+                <th>{t("Sana")}</th>
+                <th>{t("Izoh")}</th>
+                <th className="w-28 text-center">{t("Amallar")}</th>
+              </tr>
+            </TableHead>
+            <TableBody>
+              {tasksQuery.isLoading ? (
+                <TableLoading colSpan={colCount} />
+              ) : filteredGroups.length === 0 ? (
+                <TableEmpty colSpan={colCount} message={t("Vazifalar yo'q")} icon={<CheckCircle className="w-8 h-8" />} />
+              ) : (
+                filteredGroups.map((groupTasks) => {
+                  const firstTask = groupTasks[0]!;
+                  const sale = firstTask.sale;
+                  const gStatus = groupStatus(groupTasks);
 
-              return (
-                <div
-                  key={firstTask.saleId}
-                  className={`card overflow-hidden border-l-4 ${getGroupColor(gStatus)}`}
-                >
-                  {/* Header */}
-                  <div className="px-4 py-3 border-b border-slate-100">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-slate-400" />
-                        <span className="font-semibold text-sm text-slate-900">
-                          {sale?.customer?.fullName ?? t("Oddiy mijoz")}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400 font-mono">#{firstTask.saleId}</span>
-                        <StatusBadge status={gStatus} />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-slate-400">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {sale ? formatDate(sale.createdAt) : "—"}
-                      </span>
-                      {sale?.customer?.phone && <span>{sale.customer.phone}</span>}
-                    </div>
-                  </div>
+                  return groupTasks.map((task, taskIdx) => {
+                    const isMyTask = isMaster() && task.assignedToId === user?.userId;
+                    const serviceName = getServiceName(task.description, sale?.items ?? []);
+                    const isFirstInGroup = taskIdx === 0;
 
-                  {/* Sale items (products + services) */}
-                  {sale && sale.items.length > 0 && (
-                    <div className="px-4 py-2 bg-slate-50/50 border-b border-slate-100">
-                      <div className="flex flex-wrap gap-1.5">
-                        {sale.items.map((item) => (
-                          <span key={item.id} className="inline-flex items-center gap-1 text-xs bg-white border border-slate-200 rounded-md px-2 py-0.5">
-                            <ShoppingBag className="w-3 h-3 text-slate-400" />
-                            <span className="text-slate-700">{item.product?.name ?? item.serviceName ?? "—"}</span>
-                            <span className="text-slate-400">x{Number(item.quantity)}</span>
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    return (
+                      <tr
+                        key={task.id}
+                        className={`${isFirstInGroup && taskIdx > 0 ? "" : ""} ${
+                          gStatus === "COMPLETED" ? "opacity-60" : ""
+                        } ${isFirstInGroup ? "border-t-2 !border-t-slate-300" : ""}`}
+                      >
+                        {/* # — only on first task in group */}
+                        {isFirstInGroup ? (
+                          <td rowSpan={groupTasks.length} className="text-center text-slate-400 align-top pt-4">
+                            {firstTask.saleId}
+                          </td>
+                        ) : null}
 
-                  {/* Tasks list */}
-                  <div className="divide-y divide-slate-100">
-                    {groupTasks.map((task) => {
-                      const isMyTask = isMaster() && task.assignedToId === user?.userId;
-                      const serviceName = getServiceName(task.description, sale?.items ?? []);
-
-                      return (
-                        <div key={task.id} className="p-4 space-y-2.5">
-                          {/* Service name + status */}
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
-                              <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                              <span className="text-sm font-medium text-slate-900 truncate">{serviceName}</span>
+                        {/* Buyurtma — only on first task in group */}
+                        {isFirstInGroup ? (
+                          <td rowSpan={groupTasks.length} className="align-top pt-4">
+                            <div className="flex items-center gap-2 mb-1">
+                              <User className="w-4 h-4 text-slate-400 shrink-0" />
+                              <span className="font-semibold text-slate-900">
+                                {sale?.customer?.fullName ?? t("Oddiy mijoz")}
+                              </span>
                             </div>
-                            <StatusBadge status={task.status} />
-                          </div>
+                            {sale?.customer?.phone && (
+                              <span className="text-xs text-slate-400 block ml-6">{sale.customer.phone}</span>
+                            )}
+                            {sale && sale.items.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2 ml-6">
+                                {sale.items.map((item) => (
+                                  <span key={item.id} className="inline-flex items-center gap-1 text-[11px] bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5">
+                                    <ShoppingBag className="w-3 h-3 text-slate-400" />
+                                    <span className="text-slate-600">{item.product?.name ?? item.serviceName ?? "—"}</span>
+                                    <span className="text-slate-400">x{Number(item.quantity)}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                        ) : null}
 
-                          {/* Assigned master */}
+                        {/* Xizmat */}
+                        <td>
                           <div className="flex items-center gap-2">
-                            <UserCheck className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                            {task.assignedTo ? (
-                              isBoss() && task.status !== "COMPLETED" ? (
-                                <select
-                                  className="select-field text-xs py-0.5 flex-1"
-                                  value={task.assignedToId ?? ""}
-                                  onChange={(e) => {
-                                    const val = e.target.value ? Number(e.target.value) : null;
-                                    assignTask.mutate({ taskId: task.id, assignedToId: val });
-                                  }}
-                                >
-                                  {masters.map((m) => (
-                                    <option key={m.id} value={m.id}>{m.fullName}</option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <span className="text-xs font-medium text-indigo-700">{task.assignedTo.fullName}</span>
-                              )
-                            ) : isBoss() ? (
+                            <Wrench className="w-4 h-4 text-amber-500 shrink-0" />
+                            <span className="font-medium">{serviceName}</span>
+                          </div>
+                        </td>
+
+                        {/* Usta */}
+                        <td>
+                          {task.assignedTo ? (
+                            boss && task.status !== "COMPLETED" ? (
                               <select
-                                className="select-field text-xs py-0.5 flex-1"
-                                value=""
+                                className="select-field text-sm py-1 w-full"
+                                value={task.assignedToId ?? ""}
                                 onChange={(e) => {
-                                  if (e.target.value) assignTask.mutate({ taskId: task.id, assignedToId: Number(e.target.value) });
+                                  const val = e.target.value ? Number(e.target.value) : null;
+                                  assignTask.mutate({ taskId: task.id, assignedToId: val });
                                 }}
                               >
-                                <option value="">{t("Usta tayinlash...")} </option>
                                 {masters.map((m) => (
                                   <option key={m.id} value={m.id}>{m.fullName}</option>
                                 ))}
                               </select>
                             ) : (
-                              <span className="text-xs text-slate-400 italic">{t("Tayinlanmagan")}</span>
+                              <div className="flex items-center gap-1.5">
+                                <UserCheck className="w-4 h-4 text-indigo-400 shrink-0" />
+                                <span className="font-medium text-indigo-700">{task.assignedTo.fullName}</span>
+                              </div>
+                            )
+                          ) : boss ? (
+                            <select
+                              className="select-field text-sm py-1 w-full"
+                              value=""
+                              onChange={(e) => {
+                                if (e.target.value) assignTask.mutate({ taskId: task.id, assignedToId: Number(e.target.value) });
+                              }}
+                            >
+                              <option value="">{t("Usta tanlang...")}</option>
+                              {masters.map((m) => (
+                                <option key={m.id} value={m.id}>{m.fullName}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-slate-400 italic">{t("Tayinlanmagan")}</span>
+                          )}
+                        </td>
+
+                        {/* Holat */}
+                        <td className="text-center">
+                          <StatusBadge status={task.status} />
+                        </td>
+
+                        {/* Sana */}
+                        <td>
+                          <div className="text-sm text-slate-600">
+                            <div className="flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                              {sale ? formatDate(sale.createdAt) : "—"}
+                            </div>
+                            {task.startedAt && (
+                              <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
+                                <Clock className="w-3 h-3" />
+                                {t("Boshlangan")}: {formatDate(task.startedAt)}
+                              </div>
+                            )}
+                            {task.completedAt && (
+                              <div className="flex items-center gap-1.5 text-xs text-green-600 mt-1">
+                                <CheckCircle className="w-3 h-3" />
+                                {t("Yakunlangan")}: {formatDate(task.completedAt)}
+                              </div>
                             )}
                           </div>
+                        </td>
 
-                          {/* Time info */}
-                          {task.startedAt && (
-                            <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                              <Clock className="w-3 h-3" />
-                              <span>{t("Boshlangan")}: {formatDate(task.startedAt)}</span>
+                        {/* Izoh */}
+                        <td>
+                          {task.notes ? (
+                            <div className="flex items-start gap-1.5">
+                              <MessageSquare className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+                              <span className="text-sm text-amber-700">{task.notes}</span>
                             </div>
+                          ) : (
+                            <span className="text-slate-300">—</span>
                           )}
-                          {task.completedAt && (
-                            <div className="flex items-center gap-1.5 text-xs text-green-600">
-                              <CheckCircle className="w-3 h-3" />
-                              <span>{t("Yakunlangan")}: {formatDate(task.completedAt)}</span>
-                            </div>
-                          )}
+                        </td>
 
-                          {/* Notes */}
-                          {task.notes && (
-                            <div className="flex items-start gap-2 p-2 bg-amber-50 rounded-md">
-                              <MessageSquare className="w-3 h-3 text-amber-500 mt-0.5 shrink-0" />
-                              <p className="text-xs text-amber-700">{task.notes}</p>
-                            </div>
-                          )}
-
-                          {/* Action buttons — master only sees their own task */}
-                          {isMyTask && task.status !== "COMPLETED" && (
-                            <div className="flex gap-2 pt-1">
-                              {task.status === "PENDING" && (
+                        {/* Amallar */}
+                        <td className="text-center">
+                          {(isMyTask || (boss && task.status !== "COMPLETED")) && task.status !== "COMPLETED" && (
+                            <div className="flex items-center justify-center gap-1">
+                              {task.status === "PENDING" && (isMyTask || boss) && (
                                 <Button
                                   variant="primary"
                                   size="sm"
-                                  className="flex-1"
                                   loading={updateStatus.isPending}
                                   onClick={() => updateStatus.mutate({ taskId: task.id, status: "IN_PROGRESS" })}
                                 >
@@ -290,11 +303,10 @@ export function WorkshopPage() {
                                   {t("Boshlash")}
                                 </Button>
                               )}
-                              {task.status === "IN_PROGRESS" && (
+                              {task.status === "IN_PROGRESS" && (isMyTask || boss) && (
                                 <Button
                                   variant="success"
                                   size="sm"
-                                  className="flex-1"
                                   onClick={() => { setNotesTaskId(task.id); setNotes(""); setNotesOpen(true); }}
                                 >
                                   <CheckCircle className="w-3.5 h-3.5" />
@@ -303,15 +315,15 @@ export function WorkshopPage() {
                               )}
                             </div>
                           )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                        </td>
+                      </tr>
+                    );
+                  });
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Complete with notes modal */}

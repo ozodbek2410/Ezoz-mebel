@@ -9,13 +9,15 @@ interface SlideOverProps {
   children: ReactNode;
   headerLeft?: ReactNode;
   footer?: ReactNode;
-  width?: "md" | "lg" | "xl";
+  width?: "md" | "lg" | "xl" | "2xl" | "3xl";
 }
 
 const widthClasses = {
   md: "max-w-md",
   lg: "max-w-lg",
   xl: "max-w-xl",
+  "2xl": "max-w-2xl",
+  "3xl": "max-w-3xl",
 };
 
 export function SlideOver({ open, onClose, title, subtitle, children, headerLeft, footer, width = "lg" }: SlideOverProps) {

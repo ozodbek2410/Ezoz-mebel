@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useSearch } from "@tanstack/react-router";
+import { useSearch, useNavigate } from "@tanstack/react-router";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, ShoppingBag, Wallet, Download, Package } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown, DollarSign, ShoppingBag, Wallet, Download, Package, ArrowLeft } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input, Select, Tabs, Badge, SearchInput } from "@/components/ui";
@@ -16,25 +16,37 @@ import { exportToExcel } from "@/lib/exportExcel";
 
 const CHART_COLORS = ["#4f46e5", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#6366f1"];
 
+function getLocalDateStr(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function getToday(): string {
-  return new Date().toISOString().split("T")[0]!;
+  return getLocalDateStr(new Date());
 }
 
 function getMonthAgo(): string {
   const d = new Date();
   d.setMonth(d.getMonth() - 1);
-  return d.toISOString().split("T")[0]!;
+  return getLocalDateStr(d);
 }
 
 export function ReportsPage() {
   const { isBoss } = useAuth();
   const t = useT();
+  const navigate = useNavigate();
   const search = useSearch({ strict: false }) as Record<string, string>;
   const [activeTab, setActiveTab] = useState(search?.tab ?? (isBoss() ? "boss" : "cashier"));
+  const [filterProductId, setFilterProductId] = useState<number | undefined>(
+    search?.productId ? Number(search.productId) : undefined,
+  );
 
   useEffect(() => {
     if (search?.tab) setActiveTab(search.tab);
-  }, [search?.tab]);
+    if (search?.productId) setFilterProductId(Number(search.productId));
+  }, [search?.tab, search?.productId]);
   const [dateFrom, setDateFrom] = useState(getMonthAgo());
   const [dateTo, setDateTo] = useState(getToday());
   const [cashRegister, setCashRegister] = useState<string>("");
@@ -76,8 +88,8 @@ export function ReportsPage() {
   });
 
   const productSalesReport = useQuery({
-    queryKey: ["report", "productSales", dateFrom, dateTo],
-    queryFn: () => trpc.report.productSalesReport.query({ dateFrom, dateTo }),
+    queryKey: ["report", "productSales", dateFrom, dateTo, filterProductId],
+    queryFn: () => trpc.report.productSalesReport.query({ dateFrom, dateTo, productId: filterProductId }),
     enabled: activeTab === "products",
   });
 
@@ -282,6 +294,11 @@ export function ReportsPage() {
             dateTo={dateTo}
             setDateFrom={setDateFrom}
             setDateTo={setDateTo}
+            productId={filterProductId}
+            onClearProduct={() => {
+              setFilterProductId(undefined);
+              navigate({ to: "/reports", search: { tab: "products" } });
+            }}
           />
         )}
 
@@ -570,6 +587,116 @@ interface ProductSaleItem {
   totalUsd: number;
 }
 
+type GroupBy = "none" | "category" | "product" | "customer" | "date" | "month";
+
+interface GroupedRow {
+  key: string;
+  label: string;
+  category: string;
+  unit: string;
+  quantity: number;
+  totalUzs: number;
+  totalUsd: number;
+  count: number;
+}
+
+interface CategorySection {
+  category: string;
+  products: GroupedRow[];
+  totalQty: number;
+  totalUzs: number;
+  totalUsd: number;
+  count: number;
+}
+
+function groupByCategories(data: ProductSaleItem[]): CategorySection[] {
+  const catMap = new Map<string, Map<number, { name: string; code: string; unit: string; qty: number; uzs: number; usd: number; count: number }>>();
+  for (const item of data) {
+    let productMap = catMap.get(item.categoryName);
+    if (!productMap) {
+      productMap = new Map();
+      catMap.set(item.categoryName, productMap);
+    }
+    const existing = productMap.get(item.productId);
+    if (existing) {
+      existing.qty += item.quantity;
+      existing.uzs += item.totalUzs;
+      existing.usd += item.totalUsd;
+      existing.count += 1;
+    } else {
+      productMap.set(item.productId, { name: item.productName, code: item.productCode, unit: item.unit, qty: item.quantity, uzs: item.totalUzs, usd: item.totalUsd, count: 1 });
+    }
+  }
+  const sections: CategorySection[] = [];
+  for (const [category, productMap] of catMap) {
+    const products: GroupedRow[] = Array.from(productMap.entries())
+      .map(([id, p]) => ({ key: String(id), label: `${p.name} (${p.code})`, category, unit: p.unit, quantity: p.qty, totalUzs: p.uzs, totalUsd: p.usd, count: p.count }))
+      .sort((a, b) => b.totalUzs - a.totalUzs);
+    sections.push({
+      category,
+      products,
+      totalQty: products.reduce((s, p) => s + p.quantity, 0),
+      totalUzs: products.reduce((s, p) => s + p.totalUzs, 0),
+      totalUsd: products.reduce((s, p) => s + p.totalUsd, 0),
+      count: products.reduce((s, p) => s + p.count, 0),
+    });
+  }
+  sections.sort((a, b) => b.totalUzs - a.totalUzs);
+  return sections;
+}
+
+function groupData(data: ProductSaleItem[], groupBy: GroupBy): GroupedRow[] {
+  if (groupBy === "none" || groupBy === "category") return [];
+  const map = new Map<string, GroupedRow>();
+  for (const item of data) {
+    let key: string;
+    let label: string;
+    switch (groupBy) {
+      case "product":
+        key = `${item.productId}`;
+        label = `${item.productName} (${item.productCode})`;
+        break;
+      case "customer":
+        key = item.customerName ?? "__no_customer__";
+        label = item.customerName ?? "Oddiy mijoz";
+        break;
+      case "date":
+        key = new Date(item.saleDate).toISOString().split("T")[0] ?? "";
+        label = new Date(item.saleDate).toLocaleDateString("uz");
+        break;
+      case "month": {
+        const d = new Date(item.saleDate);
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        label = d.toLocaleDateString("uz", { year: "numeric", month: "long" });
+        break;
+      }
+    }
+    const existing = map.get(key);
+    if (existing) {
+      existing.quantity += item.quantity;
+      existing.totalUzs += item.totalUzs;
+      existing.totalUsd += item.totalUsd;
+      existing.count += 1;
+    } else {
+      map.set(key, { key, label, category: item.categoryName, unit: item.unit, quantity: item.quantity, totalUzs: item.totalUzs, totalUsd: item.totalUsd, count: 1 });
+    }
+  }
+  const rows = Array.from(map.values());
+  if (groupBy === "date" || groupBy === "month") {
+    rows.sort((a, b) => a.key.localeCompare(b.key));
+  } else {
+    rows.sort((a, b) => b.totalUzs - a.totalUzs);
+    if (groupBy === "customer") {
+      const noCustomer = rows.findIndex((r) => r.key === "__no_customer__");
+      if (noCustomer > -1) {
+        const [removed] = rows.splice(noCustomer, 1);
+        if (removed) rows.push(removed);
+      }
+    }
+  }
+  return rows;
+}
+
 function ProductSalesTab({
   data,
   isLoading,
@@ -577,6 +704,8 @@ function ProductSalesTab({
   dateTo,
   setDateFrom,
   setDateTo,
+  productId,
+  onClearProduct,
 }: {
   data: ProductSaleItem[];
   isLoading: boolean;
@@ -584,9 +713,14 @@ function ProductSalesTab({
   dateTo: string;
   setDateFrom: (d: string) => void;
   setDateTo: (d: string) => void;
+  productId?: number;
+  onClearProduct: () => void;
 }) {
   const t = useT();
   const [search, setSearch] = useState("");
+  const [groupBy, setGroupBy] = useState<GroupBy>("category");
+
+  const productName = productId && data.length > 0 ? data[0]?.productName : undefined;
 
   const filtered = useMemo(() => {
     if (!search) return data;
@@ -594,10 +728,12 @@ function ProductSalesTab({
     return data.filter((item) =>
       item.productName.toLowerCase().includes(q) ||
       item.productCode.toLowerCase().includes(q) ||
-      item.documentNo.toLowerCase().includes(q) ||
       (item.customerName && item.customerName.toLowerCase().includes(q))
     );
   }, [data, search]);
+
+  const grouped = useMemo(() => groupData(filtered, groupBy), [filtered, groupBy]);
+  const categoryGroups = useMemo(() => groupBy === "category" ? groupByCategories(filtered) : [], [filtered, groupBy]);
 
   const totals = useMemo(() => filtered.reduce(
     (acc, item) => ({
@@ -608,53 +744,146 @@ function ProductSalesTab({
     { qty: 0, uzs: 0, usd: 0 },
   ), [filtered]);
 
+  const groupByOptions: Array<{ value: GroupBy; label: string }> = [
+    { value: "category", label: t("Guruh bo'yicha") },
+    { value: "product", label: t("Mahsulot bo'yicha") },
+    { value: "customer", label: t("Mijoz bo'yicha") },
+    { value: "date", label: t("Kun bo'yicha") },
+    { value: "month", label: t("Oy bo'yicha") },
+    { value: "none", label: t("Batafsil ro'yxat") },
+  ];
+
   return (
     <div className="space-y-4">
+      {/* Product filter header */}
+      {productId && (
+        <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-3">
+          <button
+            onClick={onClearProduct}
+            className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
+          >
+            <ArrowLeft size={16} />
+            {t("Barcha mahsulotlar")}
+          </button>
+          <span className="text-slate-300">|</span>
+          <span className="text-sm font-medium text-slate-900">
+            {productName ?? `#${productId}`}
+          </span>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4">
         <Input label={t("Dan")} type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         <Input label={t("Gacha")} type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        <div className="flex-1">
-          <SearchInput
-            placeholder={t("Mahsulot, mijoz, hujjat qidirish...")}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onClear={() => setSearch("")}
-          />
-        </div>
+        <Select
+          label={t("Guruhlash")}
+          options={groupByOptions.map((o) => ({ value: o.value, label: o.label }))}
+          value={groupBy}
+          onChange={(e) => setGroupBy(e.target.value as GroupBy)}
+        />
+        {!productId && (
+          <div className="flex-1">
+            <SearchInput
+              placeholder={t("Mahsulot, mijoz qidirish...")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onClear={() => setSearch("")}
+            />
+          </div>
+        )}
         <button
           className="flex items-center gap-1.5 text-xs bg-green-600 text-white hover:bg-green-700 px-3 py-2 rounded-lg transition-colors shrink-0"
           onClick={() => {
-            exportToExcel({
-              filename: `mahsulot-sotuvlar_${dateFrom}_${dateTo}`,
-              sheetName: t("Mahsulotlar hisoboti"),
-              columns: [
-                { header: "#", key: "idx", width: 5 },
-                { header: t("Sana"), key: "date", width: 18 },
-                { header: t("Hujjat"), key: "doc", width: 12 },
-                { header: t("Mijoz"), key: "customer", width: 20 },
-                { header: t("Kassir"), key: "cashier", width: 15 },
-                { header: t("Mahsulot"), key: "product", width: 25 },
-                { header: t("Kod"), key: "code", width: 10 },
-                { header: t("Guruh"), key: "category", width: 15 },
-                { header: t("Miqdor"), key: "qty", width: 10 },
-                { header: t("Narx (UZS)"), key: "price", width: 18 },
-                { header: t("Jami (UZS)"), key: "total", width: 18 },
-              ],
-              data: filtered.map((item, idx) => ({
+            const titleText = `${t("Mahsulotlar hisoboti")} (${dateFrom} — ${dateTo})`;
+            if (groupBy === "category") {
+              const excelRows: Array<Record<string, string | number>> = [];
+              let num = 0;
+              for (const section of categoryGroups) {
+                excelRows.push({ idx: "", product: `>>> ${section.category}`, category: section.category, unit: "", count: section.count, qty: Math.round(section.totalQty), uzs: section.totalUzs, usd: section.totalUsd });
+                for (const p of section.products) {
+                  num++;
+                  excelRows.push({ idx: num, product: p.label, category: p.category, unit: p.unit, count: p.count, qty: Math.round(p.quantity), uzs: p.totalUzs, usd: p.totalUsd });
+                }
+              }
+              excelRows.push({ idx: "", product: t("JAMI"), category: "", unit: "", count: filtered.length, qty: Math.round(totals.qty), uzs: totals.uzs, usd: totals.usd });
+              exportToExcel({
+                filename: `mahsulot-hisobot_${dateFrom}_${dateTo}`,
+                sheetName: t("Mahsulotlar hisoboti"),
+                title: titleText,
+                columns: [
+                  { header: "#", key: "idx", width: 6 },
+                  { header: t("Mahsulot nomi"), key: "product", width: 32 },
+                  { header: t("Guruh"), key: "category", width: 18 },
+                  { header: t("O'lchov"), key: "unit", width: 10 },
+                  { header: t("Sotuvlar"), key: "count", width: 12 },
+                  { header: t("Miqdor"), key: "qty", width: 12 },
+                  { header: t("Jami (UZS)"), key: "uzs", width: 22 },
+                  { header: t("Jami ($)"), key: "usd", width: 16 },
+                ],
+                data: excelRows,
+              });
+            } else if (groupBy !== "none") {
+              const excelData = grouped.map((row, idx) => ({
+                idx: idx + 1,
+                label: row.label,
+                ...(groupBy === "product" ? { category: row.category, unit: row.unit } : {}),
+                count: row.count,
+                qty: Math.round(row.quantity),
+                uzs: row.totalUzs,
+                usd: row.totalUsd,
+              }));
+              excelData.push({ idx: "" as unknown as number, label: t("JAMI"), ...(groupBy === "product" ? { category: "", unit: "" } : {}), count: filtered.length, qty: Math.round(totals.qty), uzs: totals.uzs, usd: totals.usd });
+              exportToExcel({
+                filename: `mahsulot-hisobot_${dateFrom}_${dateTo}`,
+                sheetName: t("Mahsulotlar hisoboti"),
+                title: titleText,
+                columns: [
+                  { header: "#", key: "idx", width: 6 },
+                  { header: t("Nomi"), key: "label", width: 32 },
+                  ...(groupBy === "product" ? [{ header: t("Guruh"), key: "category", width: 18 }, { header: t("O'lchov"), key: "unit", width: 10 }] : []),
+                  { header: t("Sotuvlar"), key: "count", width: 12 },
+                  { header: t("Miqdor"), key: "qty", width: 12 },
+                  { header: t("Jami (UZS)"), key: "uzs", width: 22 },
+                  { header: t("Jami ($)"), key: "usd", width: 16 },
+                ],
+                data: excelData,
+              });
+            } else {
+              const excelData = filtered.map((item, idx) => ({
                 idx: idx + 1,
                 date: new Date(item.saleDate).toLocaleDateString("uz"),
-                doc: item.documentNo,
                 customer: item.customerName ?? t("Oddiy mijoz"),
-                cashier: item.cashierName,
                 product: item.productName,
                 code: item.productCode,
                 category: item.categoryName,
+                unit: item.unit,
                 qty: item.quantity,
                 price: item.unitPriceUzs,
-                total: item.totalUzs,
-              })),
-            });
+                uzs: item.totalUzs,
+                usd: item.totalUsd,
+              }));
+              excelData.push({ idx: "" as unknown as number, date: "", customer: "", product: t("JAMI"), code: "", category: "", unit: "", qty: Math.round(totals.qty), price: 0, uzs: totals.uzs, usd: totals.usd });
+              exportToExcel({
+                filename: `mahsulot-sotuvlar_${dateFrom}_${dateTo}`,
+                sheetName: t("Mahsulotlar hisoboti"),
+                title: titleText,
+                columns: [
+                  { header: "#", key: "idx", width: 6 },
+                  { header: t("Sana"), key: "date", width: 14 },
+                  { header: t("Mijoz"), key: "customer", width: 22 },
+                  { header: t("Mahsulot nomi"), key: "product", width: 28 },
+                  { header: t("Kod"), key: "code", width: 10 },
+                  { header: t("Guruh"), key: "category", width: 16 },
+                  { header: t("O'lchov"), key: "unit", width: 10 },
+                  { header: t("Miqdor"), key: "qty", width: 10 },
+                  { header: t("Narx (UZS)"), key: "price", width: 20 },
+                  { header: t("Jami (UZS)"), key: "uzs", width: 22 },
+                  { header: t("Jami ($)"), key: "usd", width: 16 },
+                ],
+                data: excelData,
+              });
+            }
           }}
         >
           <Download size={14} />
@@ -673,56 +902,171 @@ function ProductSalesTab({
       {/* Table */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th className="w-8">#</th>
-                <th>{t("Sana")}</th>
-                <th>{t("Hujjat")}</th>
-                <th className="hidden md:table-cell">{t("Mijoz")}</th>
-                <th>{t("Mahsulot")}</th>
-                <th className="hidden sm:table-cell">{t("Guruh")}</th>
-                <th className="text-center">{t("Miqdor")}</th>
-                <th className="text-right">{t("Narx")}</th>
-                <th className="text-right">{t("Jami")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr><td colSpan={9} className="text-center py-8 text-slate-400">{t("Yuklanmoqda...")}</td></tr>
-              ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="text-center py-8 text-slate-400">{t("Ma'lumot topilmadi")}</td></tr>
-              ) : (
-                <>
-                  {filtered.map((item, idx) => (
-                    <tr key={idx}>
-                      <td className="text-xs text-slate-400 text-center">{idx + 1}</td>
-                      <td className="text-sm whitespace-nowrap">{new Date(item.saleDate).toLocaleDateString("uz")}</td>
-                      <td className="font-mono text-xs">{item.documentNo}</td>
-                      <td className="text-sm hidden md:table-cell">{item.customerName ?? <span className="text-slate-400">{t("Oddiy mijoz")}</span>}</td>
-                      <td>
-                        <div className="min-w-0">
-                          <span className="font-medium text-slate-900 text-[13px]">{item.productName}</span>
-                          <span className="block text-[11px] text-slate-400 font-mono">{item.productCode}</span>
-                        </div>
-                      </td>
-                      <td className="hidden sm:table-cell"><Badge variant="neutral">{item.categoryName}</Badge></td>
-                      <td className="text-center font-medium">{item.quantity} <span className="text-xs text-slate-400">{item.unit.toLowerCase()}</span></td>
-                      <td className="text-right text-sm">{formatUzs(item.unitPriceUzs)}</td>
-                      <td className="text-right font-medium">{formatUzs(item.totalUzs)}</td>
-                    </tr>
-                  ))}
-                  {/* Summary row */}
-                  <tr className="bg-slate-50 font-semibold border-t-2 border-slate-300">
-                    <td colSpan={6} className="text-right text-sm text-slate-600">{t("Jami")}:</td>
+          {groupBy === "category" ? (
+            /* Category grouped table — full columns with borders */
+            <table className="report-table">
+              <thead>
+                <tr>
+                  <th className="w-10 text-center">#</th>
+                  <th>{t("Mahsulot nomi")}</th>
+                  <th>{t("Guruh")}</th>
+                  <th className="text-center">{t("O'lchov")}</th>
+                  <th className="text-center">{t("Sotuvlar")}</th>
+                  <th className="text-center">{t("Miqdor")}</th>
+                  <th className="text-right">{t("Jami (UZS)")}</th>
+                  <th className="text-right">{t("Jami ($)")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr><td colSpan={8} className="text-center py-8 text-slate-400">{t("Yuklanmoqda...")}</td></tr>
+                ) : categoryGroups.length === 0 ? (
+                  <tr><td colSpan={8} className="text-center py-8 text-slate-400">{t("Ma'lumot topilmadi")}</td></tr>
+                ) : (
+                  <>
+                    {categoryGroups.map((section) => (
+                      <>
+                        <tr key={`cat-${section.category}`} className="!bg-indigo-100">
+                          <td className="font-bold text-center text-indigo-800"></td>
+                          <td className="font-bold text-indigo-900 uppercase tracking-wide" colSpan={2}>{section.category} <span className="text-xs font-semibold text-indigo-500 normal-case tracking-normal">({section.products.length} {t("mahsulot")})</span></td>
+                          <td className="text-center font-bold text-indigo-800"></td>
+                          <td className="text-center font-bold text-indigo-800">{section.count}</td>
+                          <td className="text-center font-bold text-indigo-800">{Math.round(section.totalQty)}</td>
+                          <td className="text-right font-bold text-indigo-800">{formatUzs(section.totalUzs)}</td>
+                          <td className="text-right font-bold text-indigo-800">{section.totalUsd > 0 ? formatUsd(section.totalUsd) : ""}</td>
+                        </tr>
+                        {section.products.map((p, pIdx) => (
+                          <tr key={`p-${p.key}`}>
+                            <td className="text-center text-slate-500">{pIdx + 1}</td>
+                            <td className="font-medium">{p.label}</td>
+                            <td className="text-slate-500">{p.category}</td>
+                            <td className="text-center">{p.unit}</td>
+                            <td className="text-center">{p.count}</td>
+                            <td className="text-center font-medium">{Math.round(p.quantity)}</td>
+                            <td className="text-right font-semibold">{formatUzs(p.totalUzs)}</td>
+                            <td className="text-right text-blue-600">{p.totalUsd > 0 ? formatUsd(p.totalUsd) : ""}</td>
+                          </tr>
+                        ))}
+                      </>
+                    ))}
+                  </>
+                )}
+              </tbody>
+              {categoryGroups.length > 0 && (
+                <tfoot>
+                  <tr>
+                    <td colSpan={4} className="text-right">{t("Jami")}:</td>
+                    <td className="text-center">{filtered.length}</td>
+                    <td className="text-center">{Math.round(totals.qty)}</td>
+                    <td className="text-right">{formatUzs(totals.uzs)}</td>
+                    <td className="text-right text-blue-700">{totals.usd > 0 ? formatUsd(totals.usd) : ""}</td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          ) : groupBy !== "none" ? (
+            /* Other grouped tables (product, customer, date, month) */
+            <table className="report-table">
+              <thead>
+                <tr>
+                  <th className="w-10 text-center">#</th>
+                  <th>{groupBy === "product" ? t("Mahsulot") : groupBy === "customer" ? t("Mijoz") : groupBy === "date" ? t("Sana") : t("Oy")}</th>
+                  {groupBy === "product" && <th>{t("Guruh")}</th>}
+                  {groupBy === "product" && <th className="text-center">{t("O'lchov")}</th>}
+                  <th className="text-center">{t("Sotuvlar")}</th>
+                  <th className="text-center">{t("Miqdor")}</th>
+                  <th className="text-right">{t("Jami (UZS)")}</th>
+                  <th className="text-right">{t("Jami ($)")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr><td colSpan={groupBy === "product" ? 8 : 6} className="text-center py-8 text-slate-400">{t("Yuklanmoqda...")}</td></tr>
+                ) : grouped.length === 0 ? (
+                  <tr><td colSpan={groupBy === "product" ? 8 : 6} className="text-center py-8 text-slate-400">{t("Ma'lumot topilmadi")}</td></tr>
+                ) : (
+                  <>
+                    {grouped.map((row, idx) => (
+                      <tr key={row.key}>
+                        <td className="text-center text-slate-500">{idx + 1}</td>
+                        <td className="font-medium">{row.label}</td>
+                        {groupBy === "product" && <td className="text-slate-500">{row.category}</td>}
+                        {groupBy === "product" && <td className="text-center">{row.unit}</td>}
+                        <td className="text-center">{row.count}</td>
+                        <td className="text-center font-medium">{Math.round(row.quantity)}</td>
+                        <td className="text-right font-semibold">{formatUzs(row.totalUzs)}</td>
+                        <td className="text-right text-blue-600">{row.totalUsd > 0 ? formatUsd(row.totalUsd) : ""}</td>
+                      </tr>
+                    ))}
+                  </>
+                )}
+              </tbody>
+              {grouped.length > 0 && (
+                <tfoot>
+                  <tr>
+                    <td colSpan={groupBy === "product" ? 4 : 2} className="text-right">{t("Jami")}:</td>
+                    <td className="text-center">{filtered.length}</td>
+                    <td className="text-center">{Math.round(totals.qty)}</td>
+                    <td className="text-right">{formatUzs(totals.uzs)}</td>
+                    <td className="text-right text-blue-700">{totals.usd > 0 ? formatUsd(totals.usd) : ""}</td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          ) : (
+            /* Detailed table (no grouping) */
+            <table className="report-table">
+              <thead>
+                <tr>
+                  <th className="w-10 text-center">#</th>
+                  <th>{t("Sana")}</th>
+                  <th>{t("Mijoz")}</th>
+                  <th>{t("Mahsulot nomi")}</th>
+                  <th>{t("Guruh")}</th>
+                  <th className="text-center">{t("O'lchov")}</th>
+                  <th className="text-center">{t("Miqdor")}</th>
+                  <th className="text-right">{t("Narx (UZS)")}</th>
+                  <th className="text-right">{t("Jami (UZS)")}</th>
+                  <th className="text-right">{t("Jami ($)")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr><td colSpan={10} className="text-center py-8 text-slate-400">{t("Yuklanmoqda...")}</td></tr>
+                ) : filtered.length === 0 ? (
+                  <tr><td colSpan={10} className="text-center py-8 text-slate-400">{t("Ma'lumot topilmadi")}</td></tr>
+                ) : (
+                  <>
+                    {filtered.map((item, idx) => (
+                      <tr key={idx}>
+                        <td className="text-center text-slate-500">{idx + 1}</td>
+                        <td className="whitespace-nowrap">{new Date(item.saleDate).toLocaleDateString("uz")}</td>
+                        <td>{item.customerName ?? <span className="text-slate-400">{t("Oddiy mijoz")}</span>}</td>
+                        <td className="font-medium">{item.productName} <span className="text-xs text-slate-400 font-mono">({item.productCode})</span></td>
+                        <td className="text-slate-500">{item.categoryName}</td>
+                        <td className="text-center">{item.unit}</td>
+                        <td className="text-center font-medium">{item.quantity}</td>
+                        <td className="text-right">{formatUzs(item.unitPriceUzs)}</td>
+                        <td className="text-right font-semibold">{formatUzs(item.totalUzs)}</td>
+                        <td className="text-right text-blue-600">{item.totalUsd > 0 ? formatUsd(item.totalUsd) : ""}</td>
+                      </tr>
+                    ))}
+                  </>
+                )}
+              </tbody>
+              {filtered.length > 0 && (
+                <tfoot>
+                  <tr>
+                    <td colSpan={6} className="text-right">{t("Jami")}:</td>
                     <td className="text-center">{Math.round(totals.qty)}</td>
                     <td></td>
-                    <td className="text-right text-slate-900">{formatUzs(totals.uzs)}</td>
+                    <td className="text-right">{formatUzs(totals.uzs)}</td>
+                    <td className="text-right text-blue-700">{totals.usd > 0 ? formatUsd(totals.usd) : ""}</td>
                   </tr>
-                </>
+                </tfoot>
               )}
-            </tbody>
-          </table>
+            </table>
+          )}
         </div>
       </div>
     </div>

@@ -5,13 +5,15 @@ import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 interface TableProps {
   children: ReactNode;
   className?: string;
+  variant?: "default" | "report";
 }
 
-export function Table({ children, className = "" }: TableProps) {
+export function Table({ children, className = "", variant = "default" }: TableProps) {
+  const tableClass = variant === "report" ? "report-table" : "data-table";
   return (
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">
-        <table className={`data-table ${className}`}>{children}</table>
+        <table className={`${tableClass} ${className}`}>{children}</table>
       </div>
     </div>
   );

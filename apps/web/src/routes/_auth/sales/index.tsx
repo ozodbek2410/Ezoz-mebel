@@ -51,8 +51,8 @@ function SalesPageInner() {
   const [productSearch, setProductSearch] = useState("");
   const [saleNotes, setSaleNotes] = useState("");
 
-  // Service mode
-  const [servicePanel, setServicePanel] = useState<"services" | "products">("services");
+  // Service mode — modal for picking service types
+  const [servicePickerOpen, setServicePickerOpen] = useState(false);
 
   // Payment
   const [paymentOpen, setPaymentOpen] = useState(false);
@@ -310,264 +310,214 @@ function SalesPageInner() {
         {activeTab === "pos" ? (
           isServiceMode ? (
             /* =============================================
-               SERVICE MODE — horizontal layout (like product mode)
-               LEFT: Services / Products
-               RIGHT: Cart with master selection per item
+               SERVICE MODE — same layout as product mode
+               Top: customer search + add buttons
+               Cart table with Usta column
+               Bottom: total + notes + sell
             ============================================= */
-            <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
-              {/* ===== LEFT: Services / Products ===== */}
-              <div className="flex-1 min-w-0">
-                <div className="toggle-group mb-4">
-                  <button
-                    onClick={() => setServicePanel("services")}
-                    className={servicePanel === "services" ? "toggle-group-btn toggle-group-btn-active" : "toggle-group-btn toggle-group-btn-inactive"}
-                  >
-                    <Wrench className="w-4 h-4" />
-                    {t("Xizmatlar")}
-                  </button>
-                  <button
-                    onClick={() => setServicePanel("products")}
-                    className={servicePanel === "products" ? "toggle-group-btn toggle-group-btn-active" : "toggle-group-btn toggle-group-btn-inactive"}
-                  >
-                    <Package className="w-4 h-4" />
-                    {t("Mahsulotlar")} ({availableProducts.length})
-                  </button>
-                </div>
-
-                {servicePanel === "services" ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {serviceTypes.map((st) => {
-                      const inCart = cart.find((i) => i.serviceName === st.name);
-                      return (
-                        <button
-                          key={st.id}
-                          onClick={() => addServiceToCart(st.name, Number(st.priceUzs), Number(st.priceUsd))}
-                          className={`pos-product-card relative ${inCart ? "!border-indigo-400 ring-2 ring-indigo-100" : ""}`}
-                        >
-                          <div className="flex items-center gap-2 mb-1">
-                            <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            <p className="font-medium text-sm text-slate-900 truncate">{st.name}</p>
-                          </div>
-                          <span className="currency-uzs text-sm">{formatUzs(Number(st.priceUzs))}</span>
-                          {inCart && (
-                            <div className="absolute top-1.5 right-1.5 w-5 h-5 bg-amber-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold">
-                              {inCart.quantity}
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                    {/* Custom service card */}
-                    <button
-                      onClick={() => setCustomServiceOpen(true)}
-                      className="pos-product-card border-dashed !border-slate-300 flex flex-col items-center justify-center gap-1 min-h-[72px]"
-                    >
-                      <Plus className="w-5 h-5 text-slate-400" />
-                      <span className="text-xs text-slate-500 font-medium">{t("Boshqa xizmat")}</span>
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="mb-4">
-                      <SearchInput
-                        placeholder={t("Mahsulot qidirish...")}
-                        value={productSearch}
-                        onChange={(e) => setProductSearch(e.target.value)}
-                        onClear={() => setProductSearch("")}
-                      />
-                    </div>
-                    {productsQuery.isLoading ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {Array.from({ length: 8 }).map((_, i) => (
-                          <div key={i} className="pos-product-card animate-pulse">
-                            <div className="h-4 bg-slate-200 rounded w-3/4 mb-2" />
-                            <div className="h-3 bg-slate-200 rounded w-1/2" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : availableProducts.length === 0 ? (
-                      <div className="text-center py-12 text-slate-400">
-                        <Package className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        <p className="text-sm">{t("Mahsulotlar topilmadi")}</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {availableProducts.map((product) => (
-                          <ProductCard
-                            key={product.id}
-                            id={product.id}
-                            name={product.name}
-                            code={product.code}
-                            sellPriceUzs={Number(product.sellPriceUzs)}
-                            stock={product.stockItems[0] ? Number(product.stockItems[0].quantity) : 0}
-                            unit={product.unit.toLowerCase()}
-                            thumb={product.images[0]?.filePath ?? null}
-                            cartQty={cartMap.get(product.id) ?? 0}
-                            onAdd={() => cartStore.addProduct({ id: product.id, name: product.name, code: product.code, categoryName: product.category?.name ?? "", unit: product.unit, sellPriceUzs: Number(product.sellPriceUzs), sellPriceUsd: Number(product.sellPriceUsd) })}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* ===== RIGHT: CART ===== */}
-              <div className="w-full lg:w-[400px] shrink-0">
-                <div className="card sticky top-20">
-                  <div className="card-header">
-                    <div className="flex items-center gap-2">
-                      <ShoppingCart className="w-5 h-5 text-indigo-600" />
-                      <h3 className="font-semibold">{t("Savat")} ({cart.length})</h3>
-                    </div>
-                    {cart.length > 0 && (
-                      <button onClick={() => cartStore.clear()} className="text-xs text-slate-400 hover:text-red-500 transition-colors">
-                        {t("Tozalash")}
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="px-4 py-3 border-b border-slate-200">
-                    <div className="relative">
-                      <SearchInput
-                        placeholder={t("Mijoz tanlash (ixtiyoriy)...")}
-                        value={selectedCustomer ? selectedCustomer.fullName : customerSearch}
-                        onChange={(e) => { setCustomerSearch(e.target.value); setSelectedCustomer(null); }}
-                        onClear={() => { setCustomerSearch(""); setSelectedCustomer(null); setCustomerDropdownOpen(false); }}
-                        onFocus={() => setCustomerDropdownOpen(true)}
-                        onBlur={() => setTimeout(() => setCustomerDropdownOpen(false), 150)}
-                      />
-                      {customerDropdownOpen && !selectedCustomer && (
-                        <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 max-h-56 overflow-y-auto">
-                          {customerSearchQuery.isLoading ? (
-                            <div className="px-3 py-3 text-sm text-slate-400 text-center">{t("Yuklanmoqda...")}</div>
-                          ) : !customerSearchQuery.data || customerSearchQuery.data.length === 0 ? (
-                            <div className="px-3 py-3 text-sm text-slate-400 text-center">{t("Mijoz topilmadi")}</div>
-                          ) : (
-                            customerSearchQuery.data.map((c) => (
-                              <button
-                                key={c.id}
-                                className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 text-sm flex items-center gap-2 border-b border-slate-50 last:border-0 transition-colors"
-                                onMouseDown={() => { setSelectedCustomer({ id: c.id, fullName: c.fullName }); setCustomerSearch(""); setCustomerDropdownOpen(false); }}
-                              >
-                                <User className="w-4 h-4 text-slate-400 shrink-0" />
-                                <span className="font-medium text-slate-700">{c.fullName}</span>
-                                {c.phone && <span className="text-xs text-slate-400 ml-auto">{c.phone}</span>}
-                              </button>
-                            ))
-                          )}
-                        </div>
+            <div className="space-y-4">
+              {/* Top bar: customer search + actions */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="relative flex-1 w-full sm:max-w-sm">
+                  <SearchInput
+                    placeholder={t("Mijoz tanlash (ixtiyoriy)...")}
+                    value={selectedCustomer ? selectedCustomer.fullName : customerSearch}
+                    onChange={(e) => { setCustomerSearch(e.target.value); setSelectedCustomer(null); }}
+                    onClear={() => { setCustomerSearch(""); setSelectedCustomer(null); setCustomerDropdownOpen(false); }}
+                    onFocus={() => setCustomerDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setCustomerDropdownOpen(false), 150)}
+                  />
+                  {customerDropdownOpen && !selectedCustomer && (
+                    <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 max-h-56 overflow-y-auto">
+                      {customerSearchQuery.isLoading ? (
+                        <div className="px-3 py-3 text-sm text-slate-400 text-center">{t("Yuklanmoqda...")}</div>
+                      ) : !customerSearchQuery.data || customerSearchQuery.data.length === 0 ? (
+                        <div className="px-3 py-3 text-sm text-slate-400 text-center">{t("Mijoz topilmadi")}</div>
+                      ) : (
+                        customerSearchQuery.data.map((c) => (
+                          <button
+                            key={c.id}
+                            className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 text-sm flex items-center gap-2 border-b border-slate-50 last:border-0 transition-colors"
+                            onMouseDown={() => { setSelectedCustomer({ id: c.id, fullName: c.fullName }); setCustomerSearch(""); setCustomerDropdownOpen(false); }}
+                          >
+                            <User className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="font-medium text-slate-700">{c.fullName}</span>
+                            {c.phone && <span className="text-xs text-slate-400 ml-auto">{c.phone}</span>}
+                          </button>
+                        ))
                       )}
                     </div>
-                  </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  {cart.length > 0 && (
+                    <button onClick={() => cartStore.clear()} className="text-sm text-slate-400 hover:text-red-500 transition-colors">
+                      {t("Tozalash")}
+                    </button>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={() => setServicePickerOpen(true)}
+                  >
+                    <Wrench className="w-4 h-4" />
+                    {t("Xizmat qo'shish")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => navigate({ to: "/products", search: { fromSale: true } as Record<string, unknown> })}
+                  >
+                    <Package className="w-4 h-4" />
+                    {t("Mahsulot qo'shish")}
+                  </Button>
+                </div>
+              </div>
 
-                  <div className="divide-y divide-slate-200/70">
+              {/* Cart table */}
+              <div className="overflow-x-auto">
+                <Table variant="report">
+                  <TableHead>
+                    <tr>
+                      <th className="w-10 text-center">#</th>
+                      <th>{t("Nomi")}</th>
+                      <th className="text-center">{t("Turi")}</th>
+                      <th>{t("Usta")}</th>
+                      <th className="text-center">{t("Miqdor")}</th>
+                      <th className="text-right">{t("Narx")}</th>
+                      <th className="text-right">{t("Jami")}</th>
+                      <th className="w-10"></th>
+                    </tr>
+                  </TableHead>
+                  <TableBody>
                     {cart.length === 0 ? (
-                      <div className="text-center py-10 text-slate-400 text-sm">
-                        <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                        {t("Xizmat yoki mahsulot tanlang")}
-                      </div>
+                      <TableEmpty
+                        colSpan={8}
+                        message={t("Savat bo'sh")}
+                        icon={<ShoppingCart className="w-8 h-8" />}
+                      />
                     ) : (
-                      cart.map((item, idx) => (
-                        <div key={idx} className="px-4 py-3">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <>
+                        {cart.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50">
+                            <td className="!px-2 !py-2 text-xs text-slate-400 text-center">{idx + 1}</td>
+                            <td className="!py-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {item.serviceName ? (
+                                  <Wrench className="w-4 h-4 text-amber-500 shrink-0" />
+                                ) : (
+                                  <Package className="w-4 h-4 text-indigo-400 shrink-0" />
+                                )}
+                                <span className="font-medium text-slate-900 text-[13px]">{item.productName}</span>
+                              </div>
+                            </td>
+                            <td className="text-center !py-2">
+                              <Badge variant={item.serviceName ? "warning" : "info"}>
+                                {item.serviceName ? t("Xizmat") : t("Mahsulot")}
+                              </Badge>
+                            </td>
+                            <td className="!py-2">
                               {item.serviceName ? (
-                                <Wrench className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                <select
+                                  value={item.masterId ?? ""}
+                                  onChange={(e) => cartStore.updateMaster(idx, e.target.value ? Number(e.target.value) : null)}
+                                  className={`w-full text-sm py-1 px-2 border rounded-lg bg-white outline-none transition-colors ${
+                                    !item.masterId
+                                      ? "border-red-300 text-red-500"
+                                      : "border-slate-200 text-slate-700"
+                                  }`}
+                                >
+                                  <option value="">{t("Usta tanlang")} *</option>
+                                  {masters.map((m) => (
+                                    <option key={m.id} value={m.id}>{m.fullName}</option>
+                                  ))}
+                                </select>
                               ) : (
-                                <Package className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                <span className="text-slate-300">—</span>
                               )}
-                              <span className="text-sm font-semibold text-slate-900 truncate">{item.productName}</span>
-                            </div>
-                            <button
-                              className="text-slate-300 hover:text-red-500 p-0.5 transition-colors"
-                              onClick={() => cartStore.removeItem(idx)}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          {/* Master selection for service items */}
-                          {item.serviceName && (
-                            <div className="ml-[22px] mb-1.5">
-                              <select
-                                value={item.masterId ?? ""}
-                                onChange={(e) => cartStore.updateMaster(idx, e.target.value ? Number(e.target.value) : null)}
-                                className={`w-full text-xs py-1.5 px-2 border rounded-lg bg-white outline-none transition-colors ${
-                                  !item.masterId
-                                    ? "border-red-300 text-red-500 focus:border-red-400 focus:ring-1 focus:ring-red-200"
-                                    : "border-slate-200 text-slate-700 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-200"
-                                }`}
-                              >
-                                <option value="">{t("Usta tanlang")} *</option>
-                                {masters.map((m) => (
-                                  <option key={m.id} value={m.id}>{m.fullName}</option>
-                                ))}
-                              </select>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-2 ml-[22px]">
-                            <div className="pos-qty-control">
-                              <button onClick={() => cartStore.updateQuantity(idx, item.quantity - 1)}>-</button>
+                            </td>
+                            <td className="text-center !py-2">
+                              <div className="pos-qty-control inline-flex">
+                                <button onClick={() => cartStore.updateQuantity(idx, item.quantity - 1)}>-</button>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={item.quantity || ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, "");
+                                    cartStore.updateQuantity(idx, val === "" ? 0 : Number(val));
+                                  }}
+                                />
+                                <button onClick={() => cartStore.updateQuantity(idx, item.quantity + 1)}>+</button>
+                              </div>
+                            </td>
+                            <td className="text-right !py-2">
                               <input
                                 type="text"
                                 inputMode="numeric"
-                                value={item.quantity || ""}
-                                onChange={(e) => {
-                                  const val = e.target.value.replace(/\D/g, "");
-                                  cartStore.updateQuantity(idx, val === "" ? 0 : Number(val));
-                                }}
+                                value={formatNumber(item.priceUzs)}
+                                onChange={(e) => cartStore.updatePrice(idx, "priceUzs", parseFormattedNumber(e.target.value))}
+                                className="w-32 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right font-semibold text-slate-800 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                               />
-                              <button onClick={() => cartStore.updateQuantity(idx, item.quantity + 1)}>+</button>
-                            </div>
-                            <span className="text-slate-300">x</span>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              value={formatNumber(item.priceUzs)}
-                              onChange={(e) => cartStore.updatePrice(idx, "priceUzs", parseFormattedNumber(e.target.value))}
-                              className="w-28 text-sm px-2 py-1 border border-slate-200 rounded-lg text-right currency-uzs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                            />
-                            <span className="text-sm font-bold text-slate-800 ml-auto whitespace-nowrap">
-                              {formatUzs(item.priceUzs * item.quantity)}
-                            </span>
-                          </div>
-                        </div>
-                      ))
+                            </td>
+                            <td className="text-right !py-2">
+                              <span className="text-sm font-bold text-slate-800 whitespace-nowrap">
+                                {formatUzs(item.priceUzs * item.quantity)}
+                              </span>
+                            </td>
+                            <td className="!p-1 text-center">
+                              <button
+                                className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                                onClick={() => cartStore.removeItem(idx)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </>
                     )}
-                  </div>
+                  </TableBody>
+                </Table>
+              </div>
 
-                  <div className="pos-cart-total">
-                    {hasUnassignedService && (
-                      <div className="flex items-center gap-2 text-xs text-red-600 font-medium mb-3 bg-red-50 px-3 py-1.5 rounded-lg">
-                        <UserCheck className="w-3.5 h-3.5" />
-                        {t("Barcha xizmatlarga usta tanlang")}
-                      </div>
-                    )}
-                    {hasWorkshopItems && (
-                      <div className="flex items-center gap-2 text-xs text-amber-700 font-medium mb-3 bg-amber-50 px-3 py-1.5 rounded-lg">
-                        <Wrench className="w-3.5 h-3.5" />
-                        {t("Ustaxonaga yuboriladi")}
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm text-slate-500">{t("Jami")}:</span>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold currency-uzs">{formatUzs(cartTotal.uzs)}</p>
-                        {cartTotal.usd > 0 && <p className="text-sm currency-usd mt-0.5">{formatUsd(cartTotal.usd)}</p>}
-                      </div>
+              {/* Bottom bar: total + notes + sell */}
+              {cart.length > 0 && (
+                <div className="card !p-4">
+                  {hasUnassignedService && (
+                    <div className="flex items-center gap-2 text-xs text-red-600 font-medium mb-3 bg-red-50 px-3 py-1.5 rounded-lg">
+                      <UserCheck className="w-3.5 h-3.5" />
+                      {t("Barcha xizmatlarga usta tanlang")}
                     </div>
-                    <Input placeholder={t("Izoh...")} value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} className="mb-3" />
-                    <button
-                      className="btn-pos-sell"
-                      disabled={cart.length === 0 || hasUnassignedService || createServiceSale.isPending}
-                      onClick={() => createServiceSale.mutate()}
-                    >
-                      <Banknote className="w-6 h-6" />
-                      {t("XIZMAT SOTISH")}
-                    </button>
+                  )}
+                  {hasWorkshopItems && (
+                    <div className="flex items-center gap-2 text-xs text-amber-700 font-medium mb-3 bg-amber-50 px-3 py-1.5 rounded-lg">
+                      <Wrench className="w-3.5 h-3.5" />
+                      {t("Ustaxonaga yuboriladi")}
+                    </div>
+                  )}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    <div className="flex-1 w-full sm:w-auto">
+                      <Input placeholder={t("Izoh...")} value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} />
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0 w-full sm:w-auto justify-between sm:justify-end">
+                      <div className="text-right">
+                        <span className="text-xs text-slate-500">{t("Jami")}:</span>
+                        <p className="text-xl font-bold currency-uzs">{formatUzs(cartTotal.uzs)}</p>
+                        {cartTotal.usd > 0 && <p className="text-xs currency-usd mt-0.5">{formatUsd(cartTotal.usd)}</p>}
+                      </div>
+                      <Button
+                        variant="success"
+                        onClick={() => createServiceSale.mutate()}
+                        disabled={cart.length === 0 || hasUnassignedService || createServiceSale.isPending}
+                        className="!px-6 !py-2.5"
+                      >
+                        <Banknote className="w-5 h-5" />
+                        {t("XIZMAT SOTISH")}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
           ) : (
@@ -626,10 +576,10 @@ function SalesPageInner() {
 
               {/* Cart table */}
               <div className="overflow-x-auto">
-                <Table>
+                <Table variant="report">
                   <TableHead>
                     <tr>
-                      <th className="w-8 !px-2">#</th>
+                      <th className="w-10 text-center">#</th>
                       <th>{t("Mahsulot")}</th>
                       <th>{t("Guruh")}</th>
                       <th className="text-center">{t("Birlik")}</th>
@@ -741,16 +691,16 @@ function SalesPageInner() {
         ) : (
           /* ===== HISTORY ===== */
           <div className="overflow-x-auto">
-          <Table>
+          <Table variant="report">
             <TableHead>
               <tr>
                 <th>{t("Hujjat")}</th>
-                <th className="hidden sm:table-cell">{t("Sana")}</th>
-                <th className="hidden md:table-cell">{t("Mijoz")}</th>
-                <th className="hidden sm:table-cell">{t("Turi")}</th>
-                <th>{t("Summa")}</th>
-                <th>{t("Holat")}</th>
-                <th className="w-28">{t("Amallar")}</th>
+                <th>{t("Sana")}</th>
+                <th>{t("Mijoz")}</th>
+                <th className="text-center">{t("Turi")}</th>
+                <th className="text-right">{t("Summa")}</th>
+                <th className="text-center">{t("Holat")}</th>
+                <th className="w-28 text-center">{t("Amallar")}</th>
               </tr>
             </TableHead>
             <TableBody>
@@ -762,15 +712,15 @@ function SalesPageInner() {
                 sales.map((sale) => (
                   <TableRow key={sale.id}>
                     <td className="font-mono text-xs">{sale.documentNo}</td>
-                    <td className="text-sm text-slate-500 hidden sm:table-cell">{new Date(sale.createdAt).toLocaleString("uz")}</td>
-                    <td className="hidden md:table-cell">{sale.customer?.fullName || t("Oddiy mijoz")}</td>
-                    <td className="hidden sm:table-cell">
+                    <td className="text-slate-600">{new Date(sale.createdAt).toLocaleString("uz")}</td>
+                    <td>{sale.customer?.fullName || <span className="text-slate-400">{t("Oddiy mijoz")}</span>}</td>
+                    <td className="text-center">
                       <Badge variant={sale.saleType === "PRODUCT" ? "info" : "warning"}>
                         {sale.saleType === "PRODUCT" ? t("Savdo") : t("Xizmat")}
                       </Badge>
                     </td>
-                    <td><CurrencyDisplay amountUzs={sale.totalUzs} amountUsd={sale.totalUsd} size="sm" /></td>
-                    <td><StatusBadge status={sale.status} /></td>
+                    <td className="text-right"><CurrencyDisplay amountUzs={sale.totalUzs} amountUsd={sale.totalUsd} size="sm" /></td>
+                    <td className="text-center"><StatusBadge status={sale.status} /></td>
                     <td>
                       <div className="flex items-center gap-1">
                         {sale.status === "OPEN" && (
@@ -875,6 +825,64 @@ function SalesPageInner() {
             </div>
           );
         })()}
+      </Modal>
+
+      {/* Service picker modal */}
+      <Modal
+        open={servicePickerOpen}
+        onClose={() => setServicePickerOpen(false)}
+        title={t("Xizmat tanlang")}
+        size="md"
+      >
+        <div className="space-y-3">
+          {serviceTypes.length === 0 ? (
+            <div className="text-center py-8 text-slate-400">
+              <Wrench className="w-10 h-10 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">{t("Xizmatlar topilmadi")}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {serviceTypes.map((st) => {
+                const inCart = cart.find((i) => i.serviceName === st.name);
+                return (
+                  <button
+                    key={st.id}
+                    onClick={() => {
+                      addServiceToCart(st.name, Number(st.priceUzs), Number(st.priceUsd));
+                    }}
+                    className={`text-left p-3 rounded-lg border transition-colors ${
+                      inCart
+                        ? "border-indigo-400 bg-indigo-50"
+                        : "border-slate-200 hover:border-indigo-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Wrench className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span className="font-medium text-sm text-slate-900 truncate">{st.name}</span>
+                      </div>
+                      {inCart && (
+                        <span className="w-5 h-5 bg-indigo-600 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">
+                          {inCart.quantity}
+                        </span>
+                      )}
+                    </div>
+                    <span className="currency-uzs text-sm mt-1 block ml-6">{formatUzs(Number(st.priceUzs))}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="pt-2 border-t border-slate-200">
+            <button
+              onClick={() => { setServicePickerOpen(false); setCustomServiceOpen(true); }}
+              className="w-full text-left p-3 rounded-lg border border-dashed border-slate-300 hover:border-indigo-300 hover:bg-slate-50 transition-colors flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4 text-slate-400" />
+              <span className="text-sm text-slate-500 font-medium">{t("Boshqa xizmat qo'shish")}</span>
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {/* Custom service modal */}

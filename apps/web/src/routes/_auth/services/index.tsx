@@ -121,15 +121,15 @@ export function ServicesPage() {
 
       <div className="page-body">
         <div className="overflow-x-auto">
-        <Table>
+        <Table variant="report">
           <TableHead>
             <tr>
-              <th className="w-12">#</th>
+              <th className="w-10 text-center">#</th>
               <th>{t("Nomi")}</th>
-              <th>{t("Narx")} (UZS)</th>
-              <th className="hidden sm:table-cell">{t("Narx")} (USD)</th>
-              <th className="w-16 hidden sm:table-cell">{t("Tartib")}</th>
-              {boss && <th className="w-28">{t("Amallar")}</th>}
+              <th className="text-right">{t("Narx")} (UZS)</th>
+              <th className="text-right">{t("Narx")} (USD)</th>
+              <th className="w-16 text-center">{t("Tartib")}</th>
+              {boss && <th className="w-28 text-center">{t("Amallar")}</th>}
             </tr>
           </TableHead>
           <TableBody>
@@ -140,16 +140,16 @@ export function ServicesPage() {
             ) : (
               services.map((service, idx) => (
                 <TableRow key={service.id}>
-                  <td className="text-slate-400 text-sm">{idx + 1}</td>
+                  <td className="text-center text-slate-500">{idx + 1}</td>
                   <td>
                     <div className="flex items-center gap-2">
                       <Wrench className="w-4 h-4 text-amber-500" />
                       <span className="font-medium">{service.name}</span>
                     </div>
                   </td>
-                  <td className="currency-uzs">{formatUzs(Number(service.priceUzs))}</td>
-                  <td className="currency-usd hidden sm:table-cell">{formatUsd(Number(service.priceUsd))}</td>
-                  <td className="text-slate-400 text-sm hidden sm:table-cell">{service.sortOrder}</td>
+                  <td className="text-right font-semibold">{formatUzs(Number(service.priceUzs))}</td>
+                  <td className="text-right text-blue-600">{formatUsd(Number(service.priceUsd))}</td>
+                  <td className="text-center text-slate-500">{service.sortOrder}</td>
                   {boss && (
                     <td>
                       <div className="flex items-center gap-1">

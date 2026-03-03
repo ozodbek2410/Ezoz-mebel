@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { router, protectedProcedure, bossProcedure } from "../trpc";
+import { uzbStartOfDay, uzbEndOfDay, getUzbDateStr } from "../../lib/timezone";
+
+const UZB_TZ = "+05:00";
 
 const dateRangeInput = z.object({
   dateFrom: z.string(),
@@ -10,20 +13,21 @@ const dateRangeInput = z.object({
 
 export const reportRouter = router({
   dashboardStats: protectedProcedure.query(async ({ ctx }) => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    // Use Uzbekistan timezone for day boundaries
+    const todayStr = getUzbDateStr();
+    const todayStart = uzbStartOfDay(todayStr);
+    const todayEnd = uzbEndOfDay(todayStr);
 
-    // Week start (Monday)
-    const weekStart = new Date();
-    weekStart.setHours(0, 0, 0, 0);
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay() + (weekStart.getDay() === 0 ? -6 : 1));
+    // Week start (Monday) in Uzbekistan time
+    const todayLocal = new Date(todayStr + "T12:00:00" + UZB_TZ);
+    const dayOfWeek = todayLocal.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const weekStartDate = new Date(todayLocal);
+    weekStartDate.setDate(weekStartDate.getDate() - daysToMonday);
+    const weekStart = uzbStartOfDay(getUzbDateStr(weekStartDate));
 
-    // Month start
-    const monthStart = new Date();
-    monthStart.setHours(0, 0, 0, 0);
-    monthStart.setDate(1);
+    // Month start in Uzbekistan time
+    const monthStart = uzbStartOfDay(todayStr.slice(0, 7) + "-01");
 
     const [
       todaySales, todayIncome, todayExpenses,
@@ -127,26 +131,29 @@ export const reportRouter = router({
   salesChart: protectedProcedure
     .input(z.object({ days: z.number().min(7).max(90).default(30) }))
     .query(async ({ ctx, input }) => {
-      const startDate = new Date();
-      startDate.setHours(0, 0, 0, 0);
-      startDate.setDate(startDate.getDate() - input.days + 1);
-      const endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
+      // Compute date range in Uzbekistan timezone
+      const todayStr = getUzbDateStr();
+      const startD = new Date(todayStr + "T12:00:00" + UZB_TZ);
+      startD.setDate(startD.getDate() - input.days + 1);
+      const startDateStr = getUzbDateStr(startD);
 
-      // Get all sales in range grouped by date
+      const startDate = uzbStartOfDay(startDateStr);
+      const endDate = uzbEndOfDay(todayStr);
+
+      // Group by Uzbekistan local date using AT TIME ZONE
       const salesRaw = await ctx.db.$queryRaw<Array<{ date: string; total_uzs: Prisma.Decimal; cnt: bigint }>>`
-        SELECT DATE("createdAt") as date, COALESCE(SUM("totalUzs"), 0) as total_uzs, COUNT(*) as cnt
+        SELECT DATE("createdAt" AT TIME ZONE 'Asia/Tashkent') as date, COALESCE(SUM("totalUzs"), 0) as total_uzs, COUNT(*) as cnt
         FROM "Sale"
         WHERE "createdAt" >= ${startDate} AND "createdAt" <= ${endDate} AND "status" != 'CANCELLED'
-        GROUP BY DATE("createdAt")
+        GROUP BY DATE("createdAt" AT TIME ZONE 'Asia/Tashkent')
         ORDER BY date
       `;
 
       const expensesRaw = await ctx.db.$queryRaw<Array<{ date: string; total_uzs: Prisma.Decimal }>>`
-        SELECT DATE("createdAt") as date, COALESCE(SUM("amountUzs"), 0) as total_uzs
+        SELECT DATE("createdAt" AT TIME ZONE 'Asia/Tashkent') as date, COALESCE(SUM("amountUzs"), 0) as total_uzs
         FROM "Expense"
         WHERE "createdAt" >= ${startDate} AND "createdAt" <= ${endDate}
-        GROUP BY DATE("createdAt")
+        GROUP BY DATE("createdAt" AT TIME ZONE 'Asia/Tashkent')
         ORDER BY date
       `;
 
@@ -159,12 +166,12 @@ export const reportRouter = router({
         Number(r.total_uzs),
       ]));
 
-      // Build complete date range
+      // Build complete date range using Uzbekistan dates
       const data: Array<{ date: string; salesUzs: number; expensesUzs: number; count: number }> = [];
       for (let i = 0; i < input.days; i++) {
-        const d = new Date(startDate);
-        d.setDate(d.getDate() + i);
-        const key = d.toISOString().split("T")[0]!;
+        const d = new Date(startD);
+        d.setDate(startD.getDate() + i);
+        const key = getUzbDateStr(d);
         const sale = salesMap.get(key);
         data.push({
           date: key,
@@ -183,8 +190,8 @@ export const reportRouter = router({
       limit: z.number().default(10),
     }))
     .query(async ({ ctx, input }) => {
-      const dateFrom = new Date(input.dateFrom);
-      const dateTo = new Date(input.dateTo + "T23:59:59");
+      const dateFrom = uzbStartOfDay(input.dateFrom);
+      const dateTo = uzbEndOfDay(input.dateTo);
 
       const items = await ctx.db.saleItem.groupBy({
         by: ["productId"],
@@ -215,8 +222,8 @@ export const reportRouter = router({
   dailyCashier: protectedProcedure
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
-      const dateFrom = new Date(input.dateFrom);
-      const dateTo = new Date(input.dateTo + "T23:59:59");
+      const dateFrom = uzbStartOfDay(input.dateFrom);
+      const dateTo = uzbEndOfDay(input.dateTo);
       const registerFilter = input.cashRegister ? { cashRegister: input.cashRegister as "SALES" | "SERVICE" } : {};
 
       const [sales, payments, expenses] = await Promise.all([
@@ -255,8 +262,8 @@ export const reportRouter = router({
   bossOverview: bossProcedure
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
-      const dateFrom = new Date(input.dateFrom);
-      const dateTo = new Date(input.dateTo + "T23:59:59");
+      const dateFrom = uzbStartOfDay(input.dateFrom);
+      const dateTo = uzbEndOfDay(input.dateTo);
 
       const [salesCash, serviceCash, salesExpenses, serviceExpenses, advances] = await Promise.all([
         ctx.db.payment.aggregate({
@@ -306,8 +313,8 @@ export const reportRouter = router({
       productId: z.number().optional(),
     }))
     .query(async ({ ctx, input }) => {
-      const dateFrom = new Date(input.dateFrom);
-      const dateTo = new Date(input.dateTo + "T23:59:59");
+      const dateFrom = uzbStartOfDay(input.dateFrom);
+      const dateTo = uzbEndOfDay(input.dateTo);
 
       const saleItems = await ctx.db.saleItem.findMany({
         where: {

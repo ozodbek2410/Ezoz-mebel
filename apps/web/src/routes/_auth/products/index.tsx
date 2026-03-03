@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useSearch, useNavigate } from "@tanstack/react-router";
-import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter, ShoppingCart, Eye } from "lucide-react";
+import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter, ShoppingCart, Eye, BarChart3 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button, SearchInput, Modal, Input, CurrencyPairInput, Select, Badge, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, SlideOver, Pagination, ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@/components/ui";
@@ -750,39 +750,39 @@ export function ProductsPage() {
             </div>
 
             <div className={`overflow-x-auto transition-opacity${productsQuery.isFetching && productsQuery.isPlaceholderData ? " opacity-60 pointer-events-none" : ""}`}>
-            <Table>
+            <Table variant="report">
               <TableHead>
                 <tr>
-                  <th className="w-8 !px-2">#</th>
-                  <th className="whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("code")}>
+                  <th className="w-10 text-center">#</th>
+                  <th>
+                    <button className="inline-flex items-center gap-1" onClick={() => toggleSort("code")}>
                       {t("Mahsulot")}
-                      {sortKey === "code" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
+                      {sortKey === "code" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3" />}
                     </button>
                   </th>
-                  <th className="whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("category")}>
+                  <th>
+                    <button className="inline-flex items-center gap-1" onClick={() => toggleSort("category")}>
                       {t("Guruh")}
-                      {sortKey === "category" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
+                      {sortKey === "category" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3" />}
                     </button>
                   </th>
-                  <th className="whitespace-nowrap text-center">{t("Birlik")}</th>
-                  <th className="whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("stock")}>
+                  <th className="text-center">{t("Birlik")}</th>
+                  <th>
+                    <button className="inline-flex items-center gap-1" onClick={() => toggleSort("stock")}>
                       {t("Qoldiq")}
-                      {sortKey === "stock" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
+                      {sortKey === "stock" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3" />}
                     </button>
                   </th>
-                  <th className="whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("sellPrice")}>
+                  <th>
+                    <button className="inline-flex items-center gap-1" onClick={() => toggleSort("sellPrice")}>
                       {t("Sotish narxi")}
-                      {sortKey === "sellPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
+                      {sortKey === "sellPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3" />}
                     </button>
                   </th>
-                  <th className="whitespace-nowrap">
-                    <button className="inline-flex items-center gap-1 hover:text-slate-900" onClick={() => toggleSort("costPrice")}>
+                  <th>
+                    <button className="inline-flex items-center gap-1" onClick={() => toggleSort("costPrice")}>
                       {t("Tan narxi")}
-                      {sortKey === "costPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3 text-indigo-500" /> : <ArrowDown className="w-3 h-3 text-indigo-500" />) : <ArrowUpDown className="w-3 h-3 opacity-30" />}
+                      {sortKey === "costPrice" ? (sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-3 h-3" />}
                     </button>
                   </th>
                 </tr>
@@ -1262,6 +1262,11 @@ export function ProductsPage() {
                 icon={<Eye className="w-4 h-4" />}
                 label={t("Ko'rish")}
                 onClick={() => { setSelectedProductId(product.id); setContextMenu(null); }}
+              />
+              <ContextMenuItem
+                icon={<BarChart3 className="w-4 h-4" />}
+                label={t("Sotuv hisoboti")}
+                onClick={() => { navigate({ to: "/reports", search: { tab: "products", productId: String(product.id) } }); setContextMenu(null); }}
               />
               {can("product:update") && (
                 <ContextMenuItem

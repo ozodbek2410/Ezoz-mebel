@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../trpc";
 import { createSaleSchema, createPaymentSchema } from "@ezoz/shared";
+import { uzbStartOfDay, uzbEndOfDay } from "../../lib/timezone";
 
 export const saleRouter = router({
   create: protectedProcedure
@@ -119,8 +120,8 @@ export const saleRouter = router({
       if (input?.customerId) where["customerId"] = input.customerId;
       if (input?.dateFrom || input?.dateTo) {
         where["createdAt"] = {
-          ...(input.dateFrom ? { gte: new Date(input.dateFrom) } : {}),
-          ...(input.dateTo ? { lte: new Date(input.dateTo + "T23:59:59") } : {}),
+          ...(input.dateFrom ? { gte: uzbStartOfDay(input.dateFrom) } : {}),
+          ...(input.dateTo ? { lte: uzbEndOfDay(input.dateTo) } : {}),
         };
       }
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure, bossProcedure } from "../trpc";
 import { createExpenseSchema, createExpenseCategorySchema } from "@ezoz/shared";
+import { uzbStartOfDay, uzbEndOfDay } from "../../lib/timezone";
 
 export const expenseRouter = router({
   create: protectedProcedure
@@ -48,8 +49,8 @@ export const expenseRouter = router({
           ...(input?.cashRegister ? { cashRegister: input.cashRegister } : {}),
           ...(input?.dateFrom || input?.dateTo ? {
             createdAt: {
-              ...(input.dateFrom ? { gte: new Date(input.dateFrom) } : {}),
-              ...(input.dateTo ? { lte: new Date(input.dateTo + "T23:59:59") } : {}),
+              ...(input.dateFrom ? { gte: uzbStartOfDay(input.dateFrom) } : {}),
+              ...(input.dateTo ? { lte: uzbEndOfDay(input.dateTo) } : {}),
             },
           } : {}),
         },

@@ -166,6 +166,7 @@ export const customerRouter = router({
           const debtUzs = Number(sale.totalUzs) - paidUzs;
           return {
             id: sale.id,
+            saleType: sale.saleType,
             createdAt: sale.createdAt,
             totalUzs: Number(sale.totalUzs),
             paidUzs,

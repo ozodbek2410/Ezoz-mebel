@@ -1,11 +1,11 @@
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure, protectedProcedure } from "../trpc";
 import { setExchangeRateSchema } from "@ezoz/shared";
+import { uzbStartOfDay, getUzbDateStr } from "../../lib/timezone";
 
 export const currencyRouter = router({
   getToday: publicProcedure.query(async ({ ctx }) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = uzbStartOfDay(getUzbDateStr());
 
     const rate = await ctx.db.exchangeRate.findUnique({
       where: { date: today },
@@ -17,8 +17,7 @@ export const currencyRouter = router({
   setRate: protectedProcedure
     .input(setExchangeRateSchema)
     .mutation(async ({ ctx, input }) => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const today = uzbStartOfDay(getUzbDateStr());
 
       const rate = await ctx.db.exchangeRate.upsert({
         where: { date: today },
