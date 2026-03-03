@@ -365,7 +365,7 @@ function SalesPageInner() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => navigate({ to: "/products", search: { fromSale: true } as Record<string, unknown> })}
+                    onClick={() => navigate({ to: "/products", search: { fromSale: true, warehouseId: targetWarehouse?.id, returnTo: "/sales/service" } as Record<string, unknown> })}
                   >
                     <Package className="w-4 h-4" />
                     {t("Mahsulot qo'shish")}

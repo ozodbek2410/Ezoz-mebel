@@ -162,7 +162,7 @@ export function ProductsPage() {
   const t = useT();
   const queryClient = useQueryClient();
   const { setSidebarCollapsed } = useUIStore();
-  const { fromSale } = useSearch({ strict: false }) as { fromSale?: boolean };
+  const { fromSale, warehouseId: saleWarehouseId, returnTo } = useSearch({ strict: false }) as { fromSale?: boolean; warehouseId?: number; returnTo?: string };
   const navigate = useNavigate();
   const cartStore = useCartStore();
 
@@ -242,7 +242,7 @@ export function ProductsPage() {
     }
     toast.success(getT()(`"${cartModalProduct.name}" savatga qo'shildi`));
     setCartModalProduct(null);
-    void navigate({ to: "/sales" });
+    void navigate({ to: (returnTo ?? "/sales") as "/" });
   }
 
   function toggleSort(key: typeof sortKey) {
@@ -266,10 +266,11 @@ export function ProductsPage() {
   });
 
   const productsQuery = useQuery({
-    queryKey: ["product", "list", selectedCategory, search, page],
+    queryKey: ["product", "list", selectedCategory, search, page, saleWarehouseId],
     queryFn: () =>
       trpc.product.list.query({
         categoryId: selectedCategory ?? undefined,
+        warehouseId: saleWarehouseId ?? undefined,
         search: search || undefined,
         page,
       }),
