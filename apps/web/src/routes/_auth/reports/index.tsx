@@ -71,7 +71,7 @@ export function ReportsPage() {
 
   const inventoryReport = useQuery({
     queryKey: ["report", "inventory"],
-    queryFn: () => trpc.report.inventoryReport.query({}),
+    queryFn: () => trpc.report.inventoryReport.query(),
     enabled: activeTab === "inventory",
   });
 
