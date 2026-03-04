@@ -292,7 +292,7 @@ function PurchaseTab() {
     value: String(p.id),
     label: `${p.code} — ${p.name} (${p.unit})`,
   }));
-  const supplierOptions = (suppliersQuery.data ?? []).map((s) => ({ value: String(s.id), label: s.name }));
+  const supplierOptions = (suppliersQuery.data?.suppliers ?? []).map((s) => ({ value: String(s.id), label: s.name }));
 
   const validItems = items.filter((i) => i.productId && Number(i.quantity) > 0);
 
