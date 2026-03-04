@@ -10,7 +10,6 @@ export const productRouter = router({
   list: protectedProcedure
     .input(z.object({
       categoryId: z.number().optional(),
-      warehouseId: z.number().optional(),
       search: z.string().optional(),
       cursor: z.number().optional(),
       page: z.number().min(1).default(1),
@@ -39,9 +38,7 @@ export const productRouter = router({
           include: {
             category: true,
             images: { orderBy: { sortOrder: "asc" }, take: 1 },
-            stockItems: input?.warehouseId
-              ? { where: { warehouseId: input.warehouseId } }
-              : true,
+            stockItems: true,
           },
           orderBy: { id: "asc" },
           skip: (page - 1) * limit,

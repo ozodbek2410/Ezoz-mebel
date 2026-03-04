@@ -1,22 +1,31 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { PrismaClient } from "@prisma/client";
 import { router, protectedProcedure, bossProcedure, cashierSalesProcedure } from "../trpc";
 
+/** Get the single warehouse ID (auto-detect) */
+async function getWarehouseId(db: PrismaClient): Promise<number> {
+  const wh = await db.warehouse.findFirst({ where: { isActive: true }, select: { id: true } });
+  if (!wh) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Ombor topilmadi" });
+  return wh.id;
+}
+
 export const warehouseRouter = router({
-  listWarehouses: protectedProcedure.query(async ({ ctx }) => {
-    return ctx.db.warehouse.findMany({ where: { isActive: true } });
+  /** Returns the single warehouse ID for frontend use */
+  getWarehouseId: protectedProcedure.query(async ({ ctx }) => {
+    return getWarehouseId(ctx.db);
   }),
 
   getStock: protectedProcedure
     .input(z.object({
-      warehouseId: z.number().optional(),
       categoryId: z.number().optional(),
       lowStockOnly: z.boolean().optional(),
     }).optional())
     .query(async ({ ctx, input }) => {
+      const warehouseId = await getWarehouseId(ctx.db);
       const stockItems = await ctx.db.stockItem.findMany({
         where: {
-          ...(input?.warehouseId ? { warehouseId: input.warehouseId } : {}),
+          warehouseId,
           product: {
             isActive: true,
             ...(input?.categoryId ? { categoryId: input.categoryId } : {}),
@@ -65,7 +74,6 @@ export const warehouseRouter = router({
   purchase: cashierSalesProcedure
     .input(z.object({
       supplierId: z.number().optional(),
-      warehouseId: z.number(),
       items: z.array(z.object({
         productId: z.number(),
         quantity: z.number().positive(),
@@ -77,6 +85,7 @@ export const warehouseRouter = router({
       paymentType: z.enum(["CASH_UZS", "CASH_USD", "CARD", "TRANSFER"]).default("CASH_UZS"),
     }))
     .mutation(async ({ ctx, input }) => {
+      const warehouseId = await getWarehouseId(ctx.db);
       const todayRate = await ctx.db.exchangeRate.findFirst({ orderBy: { date: "desc" } });
       if (!todayRate) throw new TRPCError({ code: "BAD_REQUEST", message: "Valyuta kursi kiritilmagan" });
 
@@ -90,7 +99,7 @@ export const warehouseRouter = router({
       const purchase = await ctx.db.purchase.create({
         data: {
           supplierId: input.supplierId ?? null,
-          warehouseId: input.warehouseId,
+          warehouseId,
           totalUzs,
           totalUsd,
           exchangeRate: todayRate.rate,
@@ -110,9 +119,9 @@ export const warehouseRouter = router({
       // Update stock
       for (const item of input.items) {
         await ctx.db.stockItem.upsert({
-          where: { productId_warehouseId: { productId: item.productId, warehouseId: input.warehouseId } },
+          where: { productId_warehouseId: { productId: item.productId, warehouseId } },
           update: { quantity: { increment: item.quantity } },
-          create: { productId: item.productId, warehouseId: input.warehouseId, quantity: item.quantity },
+          create: { productId: item.productId, warehouseId, quantity: item.quantity },
         });
       }
 
@@ -157,94 +166,57 @@ export const warehouseRouter = router({
         });
       }
 
-      ctx.io?.to("room:stock").emit("stock:updated", { warehouseId: input.warehouseId });
+      ctx.io?.to("room:stock").emit("stock:updated", {});
       return purchase;
-    }),
-
-  transfer: protectedProcedure
-    .input(z.object({
-      fromWarehouseId: z.number(),
-      toWarehouseId: z.number(),
-      productId: z.number(),
-      quantity: z.number().positive(),
-      notes: z.string().optional(),
-    }))
-    .mutation(async ({ ctx, input }) => {
-      // Check source stock
-      const sourceStock = await ctx.db.stockItem.findUnique({
-        where: { productId_warehouseId: { productId: input.productId, warehouseId: input.fromWarehouseId } },
-      });
-      if (!sourceStock || Number(sourceStock.quantity) < input.quantity) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Omborida yetarli mahsulot yo'q" });
-      }
-
-      const transfer = await ctx.db.transfer.create({ data: input });
-
-      // Decrement source
-      await ctx.db.stockItem.update({
-        where: { productId_warehouseId: { productId: input.productId, warehouseId: input.fromWarehouseId } },
-        data: { quantity: { decrement: input.quantity } },
-      });
-
-      // Increment destination
-      await ctx.db.stockItem.upsert({
-        where: { productId_warehouseId: { productId: input.productId, warehouseId: input.toWarehouseId } },
-        update: { quantity: { increment: input.quantity } },
-        create: { productId: input.productId, warehouseId: input.toWarehouseId, quantity: input.quantity },
-      });
-
-      ctx.io?.to("room:stock").emit("stock:updated", { warehouseId: input.fromWarehouseId });
-      return transfer;
     }),
 
   // Write-off (realizatsiya/chiqim)
   writeOff: bossProcedure
     .input(z.object({
-      warehouseId: z.number(),
       productId: z.number(),
       quantity: z.number().positive(),
       reason: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const warehouseId = await getWarehouseId(ctx.db);
       const stock = await ctx.db.stockItem.findUnique({
-        where: { productId_warehouseId: { productId: input.productId, warehouseId: input.warehouseId } },
+        where: { productId_warehouseId: { productId: input.productId, warehouseId } },
       });
       if (!stock || Number(stock.quantity) < input.quantity) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Omborida yetarli mahsulot yo'q" });
       }
 
       await ctx.db.stockItem.update({
-        where: { productId_warehouseId: { productId: input.productId, warehouseId: input.warehouseId } },
+        where: { productId_warehouseId: { productId: input.productId, warehouseId } },
         data: { quantity: { decrement: input.quantity } },
       });
 
-      ctx.io?.to("room:stock").emit("stock:updated", { warehouseId: input.warehouseId });
+      ctx.io?.to("room:stock").emit("stock:updated", {});
       return { success: true };
     }),
 
   // Return to stock (qaytarish)
   returnToStock: protectedProcedure
     .input(z.object({
-      warehouseId: z.number(),
       productId: z.number(),
       quantity: z.number().positive(),
       reason: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const warehouseId = await getWarehouseId(ctx.db);
       await ctx.db.stockItem.upsert({
-        where: { productId_warehouseId: { productId: input.productId, warehouseId: input.warehouseId } },
+        where: { productId_warehouseId: { productId: input.productId, warehouseId } },
         update: { quantity: { increment: input.quantity } },
-        create: { productId: input.productId, warehouseId: input.warehouseId, quantity: input.quantity },
+        create: { productId: input.productId, warehouseId, quantity: input.quantity },
       });
 
-      ctx.io?.to("room:stock").emit("stock:updated", { warehouseId: input.warehouseId });
+      ctx.io?.to("room:stock").emit("stock:updated", {});
       return { success: true };
     }),
 
   // Inventory check - create
   createInventoryCheck: bossProcedure
     .input(z.object({
-      warehouseId: z.number(),
       items: z.array(z.object({
         productId: z.number(),
         actualQty: z.number().nonnegative(),
@@ -252,15 +224,15 @@ export const warehouseRouter = router({
       notes: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Get expected quantities
+      const warehouseId = await getWarehouseId(ctx.db);
       const stockItems = await ctx.db.stockItem.findMany({
-        where: { warehouseId: input.warehouseId },
+        where: { warehouseId },
       });
       const stockMap = new Map(stockItems.map((s) => [s.productId, Number(s.quantity)]));
 
       const check = await ctx.db.inventoryCheck.create({
         data: {
-          warehouseId: input.warehouseId,
+          warehouseId,
           notes: input.notes,
           items: {
             create: input.items.map((item) => {
@@ -293,7 +265,6 @@ export const warehouseRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Bu inventarizatsiya allaqachon yakunlangan" });
       }
 
-      // Update stock for each item
       for (const item of check.items) {
         await ctx.db.stockItem.upsert({
           where: { productId_warehouseId: { productId: item.productId, warehouseId: check.warehouseId } },
@@ -307,20 +278,18 @@ export const warehouseRouter = router({
         data: { status: "COMPLETED", completedAt: new Date() },
       });
 
-      ctx.io?.to("room:stock").emit("stock:updated", { warehouseId: check.warehouseId });
+      ctx.io?.to("room:stock").emit("stock:updated", {});
       return { success: true };
     }),
 
-  // List inventory checks
   listInventoryChecks: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.inventoryCheck.findMany({
-      include: { items: { include: { inventoryCheck: false } }, },
+      include: { items: { include: { inventoryCheck: false } } },
       orderBy: { createdAt: "desc" },
       take: 50,
     });
   }),
 
-  // List revaluations
   listRevaluations: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.revaluation.findMany({
       orderBy: { createdAt: "desc" },
@@ -362,17 +331,17 @@ export const warehouseRouter = router({
   updateStock: bossProcedure
     .input(z.object({
       productId: z.number(),
-      warehouseId: z.number(),
       quantity: z.number().nonnegative(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const warehouseId = await getWarehouseId(ctx.db);
       await ctx.db.stockItem.upsert({
-        where: { productId_warehouseId: { productId: input.productId, warehouseId: input.warehouseId } },
+        where: { productId_warehouseId: { productId: input.productId, warehouseId } },
         update: { quantity: input.quantity },
-        create: { productId: input.productId, warehouseId: input.warehouseId, quantity: input.quantity },
+        create: { productId: input.productId, warehouseId, quantity: input.quantity },
       });
 
-      ctx.io?.to("room:stock").emit("stock:updated", { warehouseId: input.warehouseId });
+      ctx.io?.to("room:stock").emit("stock:updated", {});
       return { success: true };
     }),
 });

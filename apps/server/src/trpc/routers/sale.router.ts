@@ -1,8 +1,16 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { PrismaClient } from "@prisma/client";
 import { router, protectedProcedure } from "../trpc";
 import { createSaleSchema, createPaymentSchema } from "@ezoz/shared";
 import { uzbStartOfDay, uzbEndOfDay } from "../../lib/timezone";
+
+/** Get the single warehouse ID */
+async function getWarehouseId(db: PrismaClient): Promise<number> {
+  const wh = await db.warehouse.findFirst({ where: { isActive: true }, select: { id: true } });
+  if (!wh) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Ombor topilmadi" });
+  return wh.id;
+}
 
 export const saleRouter = router({
   create: protectedProcedure
@@ -51,10 +59,12 @@ export const saleRouter = router({
         };
       });
 
+      const autoWarehouseId = await getWarehouseId(ctx.db);
+
       const sale = await ctx.db.sale.create({
         data: {
           customerId: input.customerId ?? null,
-          warehouseId: input.warehouseId ?? null,
+          warehouseId: autoWarehouseId,
           cashierId: ctx.user.userId,
           saleType: input.saleType,
           totalUzs,
@@ -213,7 +223,7 @@ export const saleRouter = router({
             }
           }
         }
-        ctx.io?.to("room:stock").emit("stock:updated", { warehouseId: sale.warehouseId });
+        ctx.io?.to("room:stock").emit("stock:updated", {});
       }
 
       const updated = await ctx.db.sale.update({

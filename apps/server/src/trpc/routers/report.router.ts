@@ -358,10 +358,8 @@ export const reportRouter = router({
     }),
 
   inventoryReport: protectedProcedure
-    .input(z.object({ warehouseId: z.number().optional() }).optional())
-    .query(async ({ ctx, input }) => {
+    .query(async ({ ctx }) => {
       const stockItems = await ctx.db.stockItem.findMany({
-        where: input?.warehouseId ? { warehouseId: input.warehouseId } : {},
         include: {
           product: { include: { category: true } },
           warehouse: true,

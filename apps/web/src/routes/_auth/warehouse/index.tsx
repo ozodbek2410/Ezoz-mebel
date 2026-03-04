@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Warehouse,
-  ArrowRightLeft,
   AlertTriangle,
   Package,
   PackageMinus,
@@ -53,7 +52,6 @@ export function WarehousePage() {
           tabs={[
             { id: "stock", label: t("Qoldiqlar") },
             { id: "purchase", label: t("Kirim") },
-            { id: "transfer", label: t("Ko'chirish") },
             ...(can("warehouse:write_off") ? [{ id: "writeoff", label: t("Chiqim") }] : []),
             ...(can("warehouse:return") ? [{ id: "return", label: t("Qaytarish") }] : []),
             ...(can("warehouse:inventory") ? [{ id: "inventory", label: t("Inventarizatsiya") }] : []),
@@ -66,7 +64,6 @@ export function WarehousePage() {
         <div className="mt-6">
           {activeTab === "stock" && <StockTab />}
           {activeTab === "purchase" && <PurchaseTab />}
-          {activeTab === "transfer" && <TransferTab />}
           {activeTab === "writeoff" && <WriteOffTab />}
           {activeTab === "return" && <ReturnTab />}
           {activeTab === "inventory" && <InventoryTab />}
@@ -80,22 +77,12 @@ export function WarehousePage() {
 // ===== Stock Tab =====
 function StockTab() {
   const t = useT();
-  const [selectedWarehouse, setSelectedWarehouse] = useState<string>("");
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [search, setSearch] = useState("");
 
-  const warehousesQuery = useQuery({
-    queryKey: ["warehouse", "list"],
-    queryFn: () => trpc.warehouse.listWarehouses.query(),
-  });
-
   const stockQuery = useQuery({
-    queryKey: ["warehouse", "stock", selectedWarehouse, lowStockOnly],
-    queryFn: () =>
-      trpc.warehouse.getStock.query({
-        warehouseId: selectedWarehouse ? Number(selectedWarehouse) : undefined,
-        lowStockOnly,
-      }),
+    queryKey: ["warehouse", "stock", lowStockOnly],
+    queryFn: () => trpc.warehouse.getStock.query({ lowStockOnly }),
   });
 
   const stocks = stockQuery.data ?? [];
@@ -107,11 +94,6 @@ function StockTab() {
       )
     : stocks;
 
-  const warehouseOptions = (warehousesQuery.data ?? []).map((w) => ({
-    value: String(w.id),
-    label: w.name,
-  }));
-
   const lowStockCount = stocks.filter(
     (s) => Number(s.quantity) <= Number(s.product.minStockAlert) && Number(s.product.minStockAlert) > 0,
   ).length;
@@ -119,13 +101,6 @@ function StockTab() {
   return (
     <>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
-        <div className="w-full sm:w-48">
-          <Select
-            options={[{ value: "", label: t("Barcha omborlar") }, ...warehouseOptions]}
-            value={selectedWarehouse}
-            onChange={(e) => setSelectedWarehouse(e.target.value)}
-          />
-        </div>
         <div className="flex-1">
           <SearchInput
             placeholder={t("Mahsulot qidirish...")}
@@ -159,7 +134,6 @@ function StockTab() {
             <th>{t("Kod")}</th>
             <th>{t("Mahsulot")}</th>
             <th>{t("Guruh")}</th>
-            <th>{t("Ombor")}</th>
             <th>{t("Qoldiq")}</th>
             <th>{t("Min")}</th>
             <th>{t("Narx")}</th>
@@ -167,9 +141,9 @@ function StockTab() {
         </TableHead>
         <TableBody>
           {stockQuery.isLoading ? (
-            <TableLoading colSpan={7} />
+            <TableLoading colSpan={6} />
           ) : filtered.length === 0 ? (
-            <TableEmpty colSpan={7} message={t("Omborda mahsulot topilmadi")} />
+            <TableEmpty colSpan={6} message={t("Omborda mahsulot topilmadi")} />
           ) : (
             filtered.map((s) => {
               const qty = Number(s.quantity);
@@ -181,12 +155,6 @@ function StockTab() {
                   <td className="font-mono text-xs text-slate-500">{s.product.code}</td>
                   <td className="font-medium text-slate-900">{s.product.name}</td>
                   <td><Badge variant="neutral">{s.product.category.name}</Badge></td>
-                  <td>
-                    <div className="flex items-center gap-1.5">
-                      <Warehouse className="w-3.5 h-3.5 text-slate-400" />
-                      <span className="text-sm">{s.warehouse.name}</span>
-                    </div>
-                  </td>
                   <td><span className={stockClass}>{qty} {s.product.unit}</span></td>
                   <td className="text-sm text-slate-500">{minAlert > 0 ? minAlert : "-"}</td>
                   <td><CurrencyDisplay amountUzs={s.product.sellPriceUzs} amountUsd={s.product.sellPriceUsd} size="sm" /></td>
@@ -218,7 +186,6 @@ function PurchaseTab() {
   const [mode, setMode] = useState<"list" | "create" | "detail">("list");
   const [detailId, setDetailId] = useState<number | null>(null);
   const [supplierId, setSupplierId] = useState("");
-  const [warehouseId, setWarehouseId] = useState("");
   const [items, setItems] = useState<PurchaseItemRow[]>([{ ...emptyItem }]);
   const [notes, setNotes] = useState("");
   const [cashRegister, setCashRegister] = useState<"SALES" | "SERVICE">("SALES");
@@ -229,11 +196,6 @@ function PurchaseTab() {
   const purchasesQuery = useQuery({
     queryKey: ["warehouse", "purchases"],
     queryFn: () => trpc.warehouse.listPurchases.query(),
-  });
-
-  const warehousesQuery = useQuery({
-    queryKey: ["warehouse", "list"],
-    queryFn: () => trpc.warehouse.listWarehouses.query(),
   });
 
   const productsQuery = useQuery({
@@ -256,7 +218,6 @@ function PurchaseTab() {
     mutationFn: () =>
       trpc.warehouse.purchase.mutate({
         supplierId: supplierId ? Number(supplierId) : undefined,
-        warehouseId: Number(warehouseId),
         items: items
           .filter((i) => i.productId && i.quantity)
           .map((i) => ({
@@ -298,7 +259,6 @@ function PurchaseTab() {
 
   function resetForm() {
     setSupplierId("");
-    setWarehouseId("");
     setItems([{ ...emptyItem }]);
     setNotes("");
     setCashRegister("SALES");
@@ -328,7 +288,6 @@ function PurchaseTab() {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  const warehouseOptions = (warehousesQuery.data ?? []).map((w) => ({ value: String(w.id), label: w.name }));
   const productOptions = (productsQuery.data?.items ?? []).map((p) => ({
     value: String(p.id),
     label: `${p.code} — ${p.name} (${p.unit})`,
@@ -413,30 +372,21 @@ function PurchaseTab() {
         </div>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
-                <Select
-                  label={t("Yetkazuvchi")}
-                  options={supplierOptions}
-                  value={supplierId}
-                  onChange={(e) => setSupplierId(e.target.value)}
-                  placeholder={t("Tanlang (ixtiyoriy)")}
-                />
-              </div>
-              {(isBoss() || can("warehouse:purchase")) && (
-                <Button variant="secondary" size="sm" className="mb-0.5" onClick={() => setShowSupplierModal(true)}>
-                  <Plus className="w-4 h-4" />
-                </Button>
-              )}
+          <div className="flex items-end gap-2 max-w-md">
+            <div className="flex-1">
+              <Select
+                label={t("Yetkazuvchi")}
+                options={supplierOptions}
+                value={supplierId}
+                onChange={(e) => setSupplierId(e.target.value)}
+                placeholder={t("Tanlang (ixtiyoriy)")}
+              />
             </div>
-            <Select
-              label={t("Ombor")}
-              options={warehouseOptions}
-              value={warehouseId}
-              onChange={(e) => setWarehouseId(e.target.value)}
-              placeholder={t("Ombor tanlang")}
-            />
+            {(isBoss() || can("warehouse:purchase")) && (
+              <Button variant="secondary" size="sm" className="mb-0.5" onClick={() => setShowSupplierModal(true)}>
+                <Plus className="w-4 h-4" />
+              </Button>
+            )}
           </div>
 
           <div>
@@ -533,7 +483,6 @@ function PurchaseTab() {
             <Button
               loading={purchaseMutation.isPending}
               onClick={() => {
-                if (!warehouseId) { toast.error(getT()("Ombor tanlang")); return; }
                 if (validItems.length === 0) { toast.error(getT()("Kamida bitta mahsulot qo'shing")); return; }
                 purchaseMutation.mutate();
               }}
@@ -624,16 +573,11 @@ function PurchaseTab() {
   );
 }
 
-// ===== Transfer Tab =====
-function TransferTab() {
+// ===== Write-Off Tab (Chiqim/Realizatsiya) =====
+function WriteOffTab() {
   const queryClient = useQueryClient();
   const t = useT();
-  const [form, setForm] = useState({ fromWarehouseId: "", toWarehouseId: "", productId: "", quantity: "", notes: "" });
-
-  const warehousesQuery = useQuery({
-    queryKey: ["warehouse", "list"],
-    queryFn: () => trpc.warehouse.listWarehouses.query(),
-  });
+  const [form, setForm] = useState({ productId: "", quantity: "", reason: "" });
 
   const stockQuery = useQuery({
     queryKey: ["warehouse", "stock"],
@@ -642,98 +586,21 @@ function TransferTab() {
 
   const mutation = useMutation({
     mutationFn: () =>
-      trpc.warehouse.transfer.mutate({
-        fromWarehouseId: Number(form.fromWarehouseId),
-        toWarehouseId: Number(form.toWarehouseId),
-        productId: Number(form.productId),
-        quantity: Number(form.quantity),
-        notes: form.notes || undefined,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["warehouse"] });
-      setForm({ fromWarehouseId: "", toWarehouseId: "", productId: "", quantity: "", notes: "" });
-      toast.success(getT()("Ko'chirish amalga oshirildi"));
-    },
-    onError: (err) => toast.error(err.message),
-  });
-
-  const warehouseOptions = (warehousesQuery.data ?? []).map((w) => ({ value: String(w.id), label: w.name }));
-  const productOptions = (stockQuery.data ?? []).map((s) => ({
-    value: String(s.product.id),
-    label: `${s.product.name} (${Number(s.quantity)} ${s.product.unit})`,
-  }));
-
-  return (
-    <div className="card card-body max-w-xl">
-      <div className="flex items-center gap-2 mb-4">
-        <ArrowRightLeft className="w-5 h-5 text-brand-600" />
-        <h3 className="text-base font-semibold">{t("Omborlar arasi ko'chirish")}</h3>
-      </div>
-      <div className="space-y-4">
-        <Select label={t("Qayerdan")} options={warehouseOptions} value={form.fromWarehouseId}
-          onChange={(e) => setForm((f) => ({ ...f, fromWarehouseId: e.target.value }))} placeholder={t("Ombor tanlang")} />
-        <Select label={t("Qayerga")} options={warehouseOptions} value={form.toWarehouseId}
-          onChange={(e) => setForm((f) => ({ ...f, toWarehouseId: e.target.value }))} placeholder={t("Ombor tanlang")} />
-        <Select label={t("Mahsulot")} options={productOptions} value={form.productId}
-          onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))} placeholder={t("Mahsulot tanlang")} />
-        <Input label={t("Miqdor")} type="number" value={form.quantity}
-          onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))} />
-        <Input label={t("Izoh")} value={form.notes}
-          onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
-        <Button loading={mutation.isPending} onClick={() => {
-          if (!form.fromWarehouseId || !form.toWarehouseId || !form.productId || !form.quantity) {
-            toast.error(getT()("Barcha maydonlarni to'ldiring")); return;
-          }
-          if (form.fromWarehouseId === form.toWarehouseId) {
-            toast.error(getT()("Bir xil omborga ko'chirish mumkin emas")); return;
-          }
-          mutation.mutate();
-        }}>
-          <ArrowRightLeft className="w-4 h-4" />
-          {t("Ko'chirish")}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ===== Write-Off Tab (Chiqim/Realizatsiya) =====
-function WriteOffTab() {
-  const queryClient = useQueryClient();
-  const t = useT();
-  const [form, setForm] = useState({ warehouseId: "", productId: "", quantity: "", reason: "" });
-
-  const warehousesQuery = useQuery({
-    queryKey: ["warehouse", "list"],
-    queryFn: () => trpc.warehouse.listWarehouses.query(),
-  });
-
-  const stockQuery = useQuery({
-    queryKey: ["warehouse", "stock", form.warehouseId],
-    queryFn: () => trpc.warehouse.getStock.query({
-      warehouseId: form.warehouseId ? Number(form.warehouseId) : undefined,
-    }),
-  });
-
-  const mutation = useMutation({
-    mutationFn: () =>
       trpc.warehouse.writeOff.mutate({
-        warehouseId: Number(form.warehouseId),
         productId: Number(form.productId),
         quantity: Number(form.quantity),
         reason: form.reason || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
-      setForm({ warehouseId: "", productId: "", quantity: "", reason: "" });
+      setForm({ productId: "", quantity: "", reason: "" });
       toast.success(getT()("Chiqim amalga oshirildi"));
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const warehouseOptions = (warehousesQuery.data ?? []).map((w) => ({ value: String(w.id), label: w.name }));
   const productOptions = (stockQuery.data ?? [])
-    .filter((s) => !form.warehouseId || s.warehouseId === Number(form.warehouseId))
+    .filter((s) => Number(s.quantity) > 0)
     .map((s) => ({
       value: String(s.product.id),
       label: `${s.product.name} (${Number(s.quantity)} ${s.product.unit})`,
@@ -746,8 +613,6 @@ function WriteOffTab() {
         <h3 className="text-base font-semibold">{t("Chiqim (Realizatsiya / Hisobdan chiqarish)")}</h3>
       </div>
       <div className="space-y-4">
-        <Select label={t("Ombor")} options={warehouseOptions} value={form.warehouseId}
-          onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value, productId: "" }))} placeholder={t("Ombor tanlang")} />
         <Select label={t("Mahsulot")} options={productOptions} value={form.productId}
           onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))} placeholder={t("Mahsulot tanlang")} />
         <Input label={t("Miqdor")} type="number" value={form.quantity}
@@ -755,7 +620,7 @@ function WriteOffTab() {
         <Input label={t("Sabab")} value={form.reason}
           onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={t("Chiqim sababi...")} />
         <Button variant="danger" loading={mutation.isPending} onClick={() => {
-          if (!form.warehouseId || !form.productId || !form.quantity) {
+          if (!form.productId || !form.quantity) {
             toast.error(getT()("Barcha maydonlarni to'ldiring")); return;
           }
           mutation.mutate();
@@ -772,12 +637,7 @@ function WriteOffTab() {
 function ReturnTab() {
   const queryClient = useQueryClient();
   const t = useT();
-  const [form, setForm] = useState({ warehouseId: "", productId: "", quantity: "", reason: "" });
-
-  const warehousesQuery = useQuery({
-    queryKey: ["warehouse", "list"],
-    queryFn: () => trpc.warehouse.listWarehouses.query(),
-  });
+  const [form, setForm] = useState({ productId: "", quantity: "", reason: "" });
 
   const productsQuery = useQuery({
     queryKey: ["product", "list-return"],
@@ -787,20 +647,18 @@ function ReturnTab() {
   const mutation = useMutation({
     mutationFn: () =>
       trpc.warehouse.returnToStock.mutate({
-        warehouseId: Number(form.warehouseId),
         productId: Number(form.productId),
         quantity: Number(form.quantity),
         reason: form.reason || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["warehouse"] });
-      setForm({ warehouseId: "", productId: "", quantity: "", reason: "" });
+      setForm({ productId: "", quantity: "", reason: "" });
       toast.success(getT()("Qaytarish amalga oshirildi"));
     },
     onError: (err) => toast.error(err.message),
   });
 
-  const warehouseOptions = (warehousesQuery.data ?? []).map((w) => ({ value: String(w.id), label: w.name }));
   const productOptions = (productsQuery.data?.items ?? []).map((p) => ({
     value: String(p.id),
     label: p.name,
@@ -813,8 +671,6 @@ function ReturnTab() {
         <h3 className="text-base font-semibold">{t("Omborga qaytarish")}</h3>
       </div>
       <div className="space-y-4">
-        <Select label={t("Ombor")} options={warehouseOptions} value={form.warehouseId}
-          onChange={(e) => setForm((f) => ({ ...f, warehouseId: e.target.value }))} placeholder={t("Ombor tanlang")} />
         <Select label={t("Mahsulot")} options={productOptions} value={form.productId}
           onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))} placeholder={t("Mahsulot tanlang")} />
         <Input label={t("Miqdor")} type="number" value={form.quantity}
@@ -822,7 +678,7 @@ function ReturnTab() {
         <Input label={t("Sabab")} value={form.reason}
           onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={t("Qaytarish sababi...")} />
         <Button variant="success" loading={mutation.isPending} onClick={() => {
-          if (!form.warehouseId || !form.productId || !form.quantity) {
+          if (!form.productId || !form.quantity) {
             toast.error(getT()("Barcha maydonlarni to'ldiring")); return;
           }
           mutation.mutate();
@@ -839,20 +695,13 @@ function ReturnTab() {
 function InventoryTab() {
   const queryClient = useQueryClient();
   const t = useT();
-  const [warehouseId, setWarehouseId] = useState("");
   const [items, setItems] = useState<Array<{ productId: number; productName: string; expected: number; actual: string; unit: string }>>([]);
   const [notes, setNotes] = useState("");
   const [showHistory, setShowHistory] = useState(false);
 
-  const warehousesQuery = useQuery({
-    queryKey: ["warehouse", "list"],
-    queryFn: () => trpc.warehouse.listWarehouses.query(),
-  });
-
   const stockQuery = useQuery({
-    queryKey: ["warehouse", "stock", warehouseId],
-    queryFn: () => trpc.warehouse.getStock.query({ warehouseId: Number(warehouseId) }),
-    enabled: !!warehouseId,
+    queryKey: ["warehouse", "stock"],
+    queryFn: () => trpc.warehouse.getStock.query({}),
   });
 
   const historyQuery = useQuery({
@@ -864,7 +713,6 @@ function InventoryTab() {
   const createMutation = useMutation({
     mutationFn: () =>
       trpc.warehouse.createInventoryCheck.mutate({
-        warehouseId: Number(warehouseId),
         items: items.map((i) => ({ productId: i.productId, actualQty: Number(i.actual) || 0 })),
         notes: notes || undefined,
       }),
@@ -886,7 +734,6 @@ function InventoryTab() {
     onError: (err) => toast.error(err.message),
   });
 
-  // Load stock items into inventory form
   function loadStockForInventory() {
     const stocks = stockQuery.data ?? [];
     setItems(
@@ -899,8 +746,6 @@ function InventoryTab() {
       })),
     );
   }
-
-  const warehouseOptions = (warehousesQuery.data ?? []).map((w) => ({ value: String(w.id), label: w.name }));
 
   return (
     <div>
@@ -915,7 +760,6 @@ function InventoryTab() {
       </div>
 
       {showHistory ? (
-        // History
         <Table>
           <TableHead>
             <tr>
@@ -953,19 +797,10 @@ function InventoryTab() {
           </TableBody>
         </Table>
       ) : (
-        // Create new inventory check
         <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="w-48">
-              <Select label={t("Ombor")} options={warehouseOptions} value={warehouseId}
-                onChange={(e) => { setWarehouseId(e.target.value); setItems([]); }} placeholder={t("Ombor tanlang")} />
-            </div>
-            {warehouseId && (
-              <Button variant="secondary" size="sm" onClick={loadStockForInventory} className="mt-6">
-                {t("Mahsulotlarni yuklash")}
-              </Button>
-            )}
-          </div>
+          <Button variant="secondary" size="sm" onClick={loadStockForInventory}>
+            {t("Mahsulotlarni yuklash")}
+          </Button>
 
           {items.length > 0 && (
             <>
@@ -1060,7 +895,6 @@ function RevalueTab() {
     label: `${p.name} (tannarx: ${formatUzs(Number(p.costPriceUzs))})`,
   }));
 
-  // Fill current price when product selected
   const selectedProduct = (productsQuery.data?.items ?? []).find((p) => String(p.id) === form.productId);
 
   return (

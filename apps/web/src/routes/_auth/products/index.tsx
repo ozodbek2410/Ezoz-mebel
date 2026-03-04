@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useSearch, useNavigate } from "@tanstack/react-router";
-import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Warehouse, Filter, ShoppingCart, Eye, BarChart3 } from "lucide-react";
+import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOpen, ImagePlus, X, Printer, QrCode, ArrowUp, ArrowDown, ArrowUpDown, Filter, ShoppingCart, Eye, BarChart3 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button, SearchInput, Modal, Input, CurrencyPairInput, Select, Badge, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, SlideOver, Pagination, ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@/components/ui";
@@ -162,7 +162,7 @@ export function ProductsPage() {
   const t = useT();
   const queryClient = useQueryClient();
   const { setSidebarCollapsed } = useUIStore();
-  const { fromSale, warehouseId: saleWarehouseId, returnTo } = useSearch({ strict: false }) as { fromSale?: boolean; warehouseId?: number; returnTo?: string };
+  const { fromSale, returnTo } = useSearch({ strict: false }) as { fromSale?: boolean; returnTo?: string };
   const navigate = useNavigate();
   const cartStore = useCartStore();
 
@@ -266,11 +266,10 @@ export function ProductsPage() {
   });
 
   const productsQuery = useQuery({
-    queryKey: ["product", "list", selectedCategory, search, page, saleWarehouseId],
+    queryKey: ["product", "list", selectedCategory, search, page],
     queryFn: () =>
       trpc.product.list.query({
         categoryId: selectedCategory ?? undefined,
-        warehouseId: saleWarehouseId ?? undefined,
         search: search || undefined,
         page,
       }),
@@ -283,10 +282,7 @@ export function ProductsPage() {
     enabled: selectedProductId !== null,
   });
 
-  const warehousesQuery = useQuery({
-    queryKey: ["warehouse", "list"],
-    queryFn: () => trpc.warehouse.listWarehouses.query(),
-  });
+  // (warehousesQuery removed — single warehouse)
 
   // Mutations
   const createProduct = useMutation({
@@ -370,7 +366,7 @@ export function ProductsPage() {
   });
 
   const updateStock = useMutation({
-    mutationFn: (data: { productId: number; warehouseId: number; quantity: number }) =>
+    mutationFn: (data: { productId: number; quantity: number }) =>
       trpc.warehouse.updateStock.mutate(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["product"] });
@@ -1174,47 +1170,34 @@ export function ProductsPage() {
             <div className="border-t pt-4">
               <h4 className="text-sm font-medium text-slate-700 mb-2">{t("Ombor qoldiqlari")}</h4>
               <div className="space-y-1.5">
-                {productDetailQuery.data.stockItems.map((si) => (
-                  <div key={si.id} className="flex items-center gap-2 text-sm p-2 bg-slate-50 rounded">
-                    <Warehouse className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="text-slate-600 flex-1">{si.warehouse.name}</span>
-                    {can("product:update") ? (
-                      <input
-                        type="number"
-                        className="input-field w-20 text-sm py-1 text-right"
-                        defaultValue={Number(si.quantity)}
-                        onBlur={(e) => {
-                          const newQty = Number(e.target.value);
-                          if (newQty !== Number(si.quantity)) {
-                            updateStock.mutate({
-                              productId: selectedProductId!,
-                              warehouseId: si.warehouseId,
-                              quantity: newQty,
-                            });
-                          }
-                        }}
-                      />
-                    ) : (
-                      <span className="font-medium">{Number(si.quantity)}</span>
-                    )}
-                  </div>
-                ))}
-                {can("product:update") && (warehousesQuery.data ?? []).filter(
-                  (w) => !productDetailQuery.data!.stockItems.some((si) => si.warehouseId === w.id)
-                ).length > 0 && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <select
-                      className="input-field text-sm py-1.5 flex-1"
-                      id="newStockWarehouse"
-                      defaultValue=""
-                    >
-                      <option value="" disabled>{t("Ombor qo'shish...")}</option>
-                      {(warehousesQuery.data ?? [])
-                        .filter((w) => !productDetailQuery.data!.stockItems.some((si) => si.warehouseId === w.id))
-                        .map((w) => (
-                          <option key={w.id} value={w.id}>{w.name}</option>
-                        ))}
-                    </select>
+                {productDetailQuery.data.stockItems.length > 0 ? (
+                  productDetailQuery.data.stockItems.map((si) => (
+                    <div key={si.id} className="flex items-center gap-2 text-sm p-2 bg-slate-50 rounded">
+                      <Package className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="text-slate-600 flex-1">{t("Qoldiq")}</span>
+                      {can("product:update") ? (
+                        <input
+                          type="number"
+                          className="input-field w-20 text-sm py-1 text-right"
+                          defaultValue={Number(si.quantity)}
+                          onBlur={(e) => {
+                            const newQty = Number(e.target.value);
+                            if (newQty !== Number(si.quantity)) {
+                              updateStock.mutate({
+                                productId: selectedProductId!,
+                                quantity: newQty,
+                              });
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span className="font-medium">{Number(si.quantity)}</span>
+                      )}
+                    </div>
+                  ))
+                ) : can("product:update") ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-500">{t("Qoldiq")}:</span>
                     <input
                       type="number"
                       className="input-field w-20 text-sm py-1.5 text-right"
@@ -1225,14 +1208,10 @@ export function ProductsPage() {
                     <button
                       className="p-1.5 hover:bg-indigo-50 rounded text-indigo-600"
                       onClick={() => {
-                        const wSelect = document.getElementById("newStockWarehouse") as HTMLSelectElement;
                         const qtyInput = document.getElementById("newStockQty") as HTMLInputElement;
-                        const wId = Number(wSelect.value);
                         const qty = Number(qtyInput.value);
-                        if (!wId) { toast.error(getT()("Ombor tanlang")); return; }
                         updateStock.mutate({
                           productId: selectedProductId!,
-                          warehouseId: wId,
                           quantity: qty || 0,
                         });
                       }}
@@ -1240,6 +1219,8 @@ export function ProductsPage() {
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
+                ) : (
+                  <p className="text-sm text-slate-500">{t("Qoldiq")}: 0</p>
                 )}
               </div>
             </div>

@@ -64,18 +64,6 @@ function SalesPageInner() {
     cardUzs: "0",
   });
 
-  // Warehouse auto-detect (cached — rarely changes)
-  const warehousesQuery = useQuery({
-    queryKey: ["warehouse", "list"],
-    queryFn: () => trpc.warehouse.listWarehouses.query(),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
-  const warehouses = warehousesQuery.data ?? [];
-  const targetWarehouse = warehouses.find((w) =>
-    isServiceMode ? w.name === "Sex" : w.name === "Asosiy ombor",
-  );
-
   // Service types (cached — rarely changes)
   const serviceTypesQuery = useQuery({
     queryKey: ["serviceType", "list"],
@@ -101,13 +89,8 @@ function SalesPageInner() {
 
   // Products — load ALL once, filter client-side
   const productsQuery = useQuery({
-    queryKey: ["product", "list", targetWarehouse?.id],
-    queryFn: () =>
-      trpc.product.list.query({
-        warehouseId: targetWarehouse?.id,
-        limit: 1000,
-      }),
-    enabled: !!targetWarehouse,
+    queryKey: ["product", "list"],
+    queryFn: () => trpc.product.list.query({ limit: 1000 }),
     staleTime: 60 * 1000,
     gcTime: 5 * 60 * 1000,
   });
@@ -152,7 +135,6 @@ function SalesPageInner() {
     mutationFn: async () => {
       const sale = await trpc.sale.create.mutate({
         customerId: selectedCustomer?.id,
-        warehouseId: targetWarehouse?.id,
         saleType: "SERVICE",
         items: cart.map((item) => ({
           productId: item.productId ?? undefined,
@@ -196,7 +178,6 @@ function SalesPageInner() {
       if (!paymentSaleId) {
         const sale = await trpc.sale.create.mutate({
           customerId: selectedCustomer?.id,
-          warehouseId: targetWarehouse?.id,
           saleType,
           items: cart.map((item) => ({
             productId: item.productId ?? undefined,
@@ -365,7 +346,7 @@ function SalesPageInner() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    onClick={() => navigate({ to: "/products", search: { fromSale: true, warehouseId: targetWarehouse?.id, returnTo: "/sales/service" } as Record<string, unknown> })}
+                    onClick={() => navigate({ to: "/products", search: { fromSale: true, returnTo: "/sales/service" } as Record<string, unknown> })}
                   >
                     <Package className="w-4 h-4" />
                     {t("Mahsulot qo'shish")}

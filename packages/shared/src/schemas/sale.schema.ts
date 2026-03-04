@@ -27,7 +27,6 @@ export const CashRegisterType = {
 
 export const createSaleSchema = z.object({
   customerId: z.number().optional(),
-  warehouseId: z.number().optional(),
   saleType: z.enum(["PRODUCT", "SERVICE"]),
   goesToWorkshop: z.boolean().default(false),
   assignedToId: z.number().optional(),

@@ -368,7 +368,6 @@ function WorkshopTasksCard() {
 // ===== Low Stock =====
 interface LowStockItem {
   productName: string;
-  warehouseName: string;
   quantity: number;
   minAlert: number;
   unit: string;
@@ -400,7 +399,6 @@ function LowStockCard({ items }: { items: LowStockItem[] }) {
               <div key={idx} className="px-5 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
                 <div>
                   <p className="font-medium text-sm text-slate-900">{item.productName}</p>
-                  <p className="text-xs text-slate-400">{item.warehouseName}</p>
                 </div>
                 <div className="text-right">
                   <span className={`text-sm font-bold ${item.quantity <= 0 ? "text-red-600" : "text-amber-600"}`}>

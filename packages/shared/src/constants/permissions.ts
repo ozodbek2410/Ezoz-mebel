@@ -20,7 +20,6 @@ export const Permissions = {
   // Warehouse
   WAREHOUSE_READ: "warehouse:read",
   WAREHOUSE_PURCHASE: "warehouse:purchase",
-  WAREHOUSE_TRANSFER: "warehouse:transfer",
   WAREHOUSE_INVENTORY: "warehouse:inventory",
   WAREHOUSE_REVALUE: "warehouse:revalue",
 
@@ -58,6 +57,10 @@ export const Permissions = {
   // Shift
   SHIFT_OWN: "shift:own",
   SHIFT_VIEW_ALL: "shift:view_all",
+
+  // Supplier
+  SUPPLIER_READ: "supplier:read",
+  SUPPLIER_MANAGE: "supplier:manage",
 
   // Marketplace
   MARKETPLACE_MANAGE: "marketplace:manage",
@@ -179,7 +182,6 @@ export const PermissionGroups: PermissionGroup[] = [
     permissions: [
       { key: Permissions.WAREHOUSE_READ, label: "Qoldiqlarni ko'rish" },
       { key: Permissions.WAREHOUSE_PURCHASE, label: "Kirim qilish" },
-      { key: Permissions.WAREHOUSE_TRANSFER, label: "Omborlar arasi ko'chirish" },
       { key: Permissions.WAREHOUSE_INVENTORY, label: "Inventarizatsiya" },
       { key: Permissions.WAREHOUSE_REVALUE, label: "Qayta baholash" },
       { key: Permissions.WAREHOUSE_WRITE_OFF, label: "Chiqim (mahsulot olib tashlash)" },

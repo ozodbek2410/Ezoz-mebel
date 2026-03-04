@@ -126,11 +126,10 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Create warehouses
+  // Create warehouse (single)
   await prisma.warehouse.createMany({
     data: [
-      { name: "Asosiy ombor" },
-      { name: "Sex" },
+      { name: "Ombor" },
     ],
     skipDuplicates: true,
   });
@@ -183,7 +182,7 @@ async function main() {
   });
 
   // Seed products
-  const warehouse = await prisma.warehouse.findFirst({ where: { name: "Asosiy ombor" } });
+  const warehouse = await prisma.warehouse.findFirst({ where: { isActive: true } });
   if (warehouse) {
     await seedProducts(warehouse.id);
   }

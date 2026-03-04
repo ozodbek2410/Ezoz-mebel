@@ -318,7 +318,6 @@ export function ReportsPage() {
                       { header: "#", key: "idx", width: 5 },
                       { header: t("Mahsulot"), key: "name", width: 25 },
                       { header: t("Guruh"), key: "category", width: 15 },
-                      { header: t("Ombor"), key: "warehouse", width: 15 },
                       { header: t("Qoldiq"), key: "qty", width: 10 },
                       { header: t("Sotish narxi (UZS)"), key: "price", width: 18 },
                       { header: t("Tan narxi (UZS)"), key: "cost", width: 18 },
@@ -328,7 +327,6 @@ export function ReportsPage() {
                       idx: idx + 1,
                       name: item.productName,
                       category: item.category,
-                      warehouse: item.warehouse,
                       qty: item.quantity,
                       price: item.priceUzs,
                       cost: item.costUzs,
@@ -355,7 +353,6 @@ export function ReportsPage() {
                     <tr>
                       <th>{t("Mahsulot")}</th>
                       <th className="hidden sm:table-cell">{t("Guruh")}</th>
-                      <th className="hidden md:table-cell">{t("Ombor")}</th>
                       <th>{t("Qoldiq")}</th>
                       <th className="hidden sm:table-cell">{t("Sotish narxi")}</th>
                       <th className="hidden md:table-cell">{t("Tan narxi")}</th>
@@ -367,7 +364,6 @@ export function ReportsPage() {
                       <tr key={idx}>
                         <td className="font-medium">{item.productName}</td>
                         <td className="hidden sm:table-cell"><Badge variant="neutral">{item.category}</Badge></td>
-                        <td className="text-sm text-slate-500 hidden md:table-cell">{item.warehouse}</td>
                         <td>{item.quantity}</td>
                         <td className="currency-uzs text-sm hidden sm:table-cell">{formatUzs(item.priceUzs)}</td>
                         <td className="text-sm text-slate-500 hidden md:table-cell">{formatUzs(item.costUzs)}</td>
