@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Warehouse,
@@ -12,6 +12,13 @@ import {
   Plus,
   Trash2,
   Eye,
+  Search,
+  X,
+  Banknote,
+  CreditCard,
+  ArrowRightLeft,
+  CircleDollarSign,
+  HandCoins,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -171,12 +178,14 @@ function StockTab() {
 // ===== Purchase Tab (Kirim) =====
 interface PurchaseItemRow {
   productId: string;
+  productSearch: string;
+  dropdownOpen: boolean;
   quantity: string;
   priceUzs: string;
   priceUsd: string;
 }
 
-const emptyItem: PurchaseItemRow = { productId: "", quantity: "", priceUzs: "", priceUsd: "" };
+const emptyItem: PurchaseItemRow = { productId: "", productSearch: "", dropdownOpen: false, quantity: "", priceUzs: "", priceUsd: "" };
 
 function PurchaseTab() {
   const queryClient = useQueryClient();
@@ -192,6 +201,9 @@ function PurchaseTab() {
   const [paymentType, setPaymentType] = useState<"CASH_UZS" | "CASH_USD" | "CARD" | "TRANSFER" | "DEBT">("CASH_UZS");
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [newSupplier, setNewSupplier] = useState({ name: "", phone: "", notes: "" });
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const [supplierDropdownOpen, setSupplierDropdownOpen] = useState(false);
 
   const purchasesQuery = useQuery({
     queryKey: ["warehouse", "purchases"],
@@ -259,10 +271,12 @@ function PurchaseTab() {
 
   function resetForm() {
     setSupplierId("");
+    setSupplierSearch("");
     setItems([{ ...emptyItem }]);
     setNotes("");
     setCashRegister("SALES");
     setPaymentType("CASH_UZS");
+    setPaymentModalOpen(false);
   }
 
   function updateItem(idx: number, field: keyof PurchaseItemRow, value: string) {
@@ -288,13 +302,47 @@ function PurchaseTab() {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  const productOptions = (productsQuery.data?.items ?? []).map((p) => ({
-    value: String(p.id),
-    label: `${p.code} — ${p.name} (${p.unit})`,
-  }));
-  const supplierOptions = (suppliersQuery.data?.suppliers ?? []).map((s) => ({ value: String(s.id), label: s.name }));
+  const allProducts = productsQuery.data?.items ?? [];
+  const allSuppliers = suppliersQuery.data?.suppliers ?? [];
+
+  const filteredSuppliers = useMemo(() => {
+    if (!supplierSearch) return allSuppliers;
+    const q = supplierSearch.toLowerCase();
+    return allSuppliers.filter((s) => s.name.toLowerCase().includes(q) || (s.phone && s.phone.includes(q)));
+  }, [allSuppliers, supplierSearch]);
+
+  const selectedSupplierName = allSuppliers.find((s) => String(s.id) === supplierId)?.name ?? "";
 
   const validItems = items.filter((i) => i.productId && Number(i.quantity) > 0);
+  const totalUzs = validItems.reduce((sum, i) => sum + (Number(i.priceUzs) || 0) * (Number(i.quantity) || 0), 0);
+  const totalUsd = validItems.reduce((sum, i) => sum + (Number(i.priceUsd) || 0) * (Number(i.quantity) || 0), 0);
+
+  function getFilteredProducts(search: string) {
+    if (!search) return allProducts.slice(0, 50);
+    const q = search.toLowerCase();
+    return allProducts.filter((p) => p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q));
+  }
+
+  function getProductName(productId: string) {
+    const p = allProducts.find((pr) => String(pr.id) === productId);
+    return p ? `${p.code} — ${p.name}` : "";
+  }
+
+  function selectProduct(idx: number, productId: string) {
+    setItems((prev) => prev.map((item, i) => i === idx ? { ...item, productId, productSearch: "", dropdownOpen: false } : item));
+  }
+
+  function clearProduct(idx: number) {
+    setItems((prev) => prev.map((item, i) => i === idx ? { ...item, productId: "", productSearch: "", dropdownOpen: false } : item));
+  }
+
+  function setItemDropdown(idx: number, open: boolean) {
+    setItems((prev) => prev.map((item, i) => i === idx ? { ...item, dropdownOpen: open } : item));
+  }
+
+  function setItemSearch(idx: number, search: string) {
+    setItems((prev) => prev.map((item, i) => i === idx ? { ...item, productSearch: search } : item));
+  }
 
   // Detail view
   if (mode === "detail" && purchaseDetailQuery.data) {
@@ -372,15 +420,49 @@ function PurchaseTab() {
         </div>
 
         <div className="space-y-4">
+          {/* Supplier combobox */}
           <div className="flex items-end gap-2 max-w-md">
-            <div className="flex-1">
-              <Select
-                label={t("Yetkazuvchi")}
-                options={supplierOptions}
-                value={supplierId}
-                onChange={(e) => setSupplierId(e.target.value)}
-                placeholder={t("Tanlang (ixtiyoriy)")}
-              />
+            <div className="flex-1 relative">
+              <label className="block text-sm font-medium text-slate-700 mb-1">{t("Yetkazuvchi")}</label>
+              {supplierId ? (
+                <div className="input-field text-sm py-1.5 flex items-center justify-between">
+                  <span className="font-medium">{selectedSupplierName}</span>
+                  <button type="button" onClick={() => { setSupplierId(""); setSupplierSearch(""); }} className="text-slate-400 hover:text-slate-600">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <input
+                    className="input-field text-sm py-1.5 pl-8 w-full"
+                    placeholder={t("Qidirish (ixtiyoriy)...")}
+                    value={supplierSearch}
+                    onChange={(e) => setSupplierSearch(e.target.value)}
+                    onFocus={() => setSupplierDropdownOpen(true)}
+                    onBlur={() => setTimeout(() => setSupplierDropdownOpen(false), 150)}
+                  />
+                  {supplierDropdownOpen && (
+                    <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 max-h-48 overflow-y-auto">
+                      {filteredSuppliers.length === 0 ? (
+                        <div className="px-3 py-2.5 text-sm text-slate-400">{t("Topilmadi")}</div>
+                      ) : (
+                        filteredSuppliers.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            className="w-full text-left px-3 py-2 hover:bg-indigo-50 text-sm border-b border-slate-50 last:border-0 transition-colors"
+                            onMouseDown={() => { setSupplierId(String(s.id)); setSupplierSearch(""); setSupplierDropdownOpen(false); }}
+                          >
+                            <span className="font-medium text-slate-700">{s.name}</span>
+                            {s.phone && <span className="text-xs text-slate-400 ml-2">{s.phone}</span>}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             {(isBoss() || can("warehouse:purchase")) && (
               <Button variant="secondary" size="sm" className="mb-0.5" onClick={() => setShowSupplierModal(true)}>
@@ -389,6 +471,7 @@ function PurchaseTab() {
             )}
           </div>
 
+          {/* Products table with inline combobox */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">{t("Mahsulotlar")}</label>
             <Table>
@@ -405,16 +488,48 @@ function PurchaseTab() {
                 {items.map((item, idx) => (
                   <tr key={idx} className="border-b border-slate-100">
                     <td className="py-1.5 px-2">
-                      <select
-                        className="input-field text-sm py-1.5"
-                        value={item.productId}
-                        onChange={(e) => updateItem(idx, "productId", e.target.value)}
-                      >
-                        <option value="">{t("Tanlang")}</option>
-                        {productOptions.map((o) => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        {item.productId ? (
+                          <div className="input-field text-sm py-1.5 flex items-center justify-between gap-1">
+                            <span className="truncate text-slate-800">{getProductName(item.productId)}</span>
+                            <button type="button" onClick={() => clearProduct(idx)} className="text-slate-400 hover:text-slate-600 shrink-0">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                            <input
+                              className="input-field text-sm py-1.5 pl-7 w-full"
+                              placeholder={t("Qidirish...")}
+                              value={item.productSearch}
+                              onChange={(e) => setItemSearch(idx, e.target.value)}
+                              onFocus={() => setItemDropdown(idx, true)}
+                              onBlur={() => setTimeout(() => setItemDropdown(idx, false), 150)}
+                            />
+                            {item.dropdownOpen && (
+                              <div className="absolute z-20 w-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 max-h-48 overflow-y-auto min-w-[280px]">
+                                {getFilteredProducts(item.productSearch).length === 0 ? (
+                                  <div className="px-3 py-2.5 text-sm text-slate-400">{t("Topilmadi")}</div>
+                                ) : (
+                                  getFilteredProducts(item.productSearch).map((p) => (
+                                    <button
+                                      key={p.id}
+                                      type="button"
+                                      className="w-full text-left px-3 py-2 hover:bg-indigo-50 text-sm border-b border-slate-50 last:border-0 transition-colors"
+                                      onMouseDown={() => selectProduct(idx, String(p.id))}
+                                    >
+                                      <span className="text-slate-400 text-xs mr-1.5">{p.code}</span>
+                                      <span className="font-medium text-slate-700">{p.name}</span>
+                                      <span className="text-xs text-slate-400 ml-1.5">({p.unit})</span>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </td>
                     <td className="py-1.5 px-2">
                       <input type="number" className="input-field text-sm py-1.5 w-full" value={item.quantity}
@@ -445,7 +560,49 @@ function PurchaseTab() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Notes */}
+          <Input label={t("Izoh")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("Kirim izohi...")} />
+
+          {/* Bottom: total + save */}
+          <div className="flex items-center justify-between pt-2">
+            <div className="text-sm text-slate-500">
+              {validItems.length > 0 && (
+                <span>
+                  {validItems.length} {t("ta mahsulot")} | {t("Jami")}:{" "}
+                  <span className="text-red-600 font-semibold">{formatUzs(totalUzs)}</span>
+                  {totalUsd > 0 && <span className="text-blue-600 ml-2">${totalUsd.toLocaleString()}</span>}
+                </span>
+              )}
+            </div>
+            <Button
+              onClick={() => {
+                if (validItems.length === 0) { toast.error(getT()("Kamida bitta mahsulot qo'shing")); return; }
+                setPaymentModalOpen(true);
+              }}
+            >
+              <PackageCheck className="w-4 h-4" />
+              {t("Saqlash")}
+            </Button>
+          </div>
+        </div>
+
+        {/* Payment modal */}
+        <Modal
+          open={paymentModalOpen}
+          onClose={() => setPaymentModalOpen(false)}
+          title={t("Kirim tasdiqlash")}
+          size="lg"
+        >
+          <div className="space-y-5">
+            {/* Total */}
+            <div className="bg-slate-50 rounded-xl p-4 text-center">
+              <p className="text-sm text-slate-500 mb-1">{t("Jami summa")}</p>
+              <p className="text-2xl font-bold text-red-600">{formatUzs(totalUzs)}</p>
+              {totalUsd > 0 && <p className="text-sm text-blue-600 mt-0.5">${totalUsd.toLocaleString()}</p>}
+              <p className="text-xs text-slate-400 mt-1">{validItems.length} {t("ta mahsulot")}{selectedSupplierName ? ` | ${selectedSupplierName}` : ""}</p>
+            </div>
+
+            {/* Cash register */}
             <Select
               label={t("Kassa")}
               options={[
@@ -455,45 +612,63 @@ function PurchaseTab() {
               value={cashRegister}
               onChange={(e) => setCashRegister(e.target.value as "SALES" | "SERVICE")}
             />
-            <Select
-              label={t("To'lov turi")}
-              options={[
-                { value: "CASH_UZS", label: t("Naqd (UZS)") },
-                { value: "CASH_USD", label: t("Naqd (USD)") },
-                { value: "CARD", label: t("Karta") },
-                { value: "TRANSFER", label: t("O'tkazma") },
-                { value: "DEBT", label: t("Qarzga") },
-              ]}
-              value={paymentType}
-              onChange={(e) => setPaymentType(e.target.value as "CASH_UZS" | "CASH_USD" | "CARD" | "TRANSFER" | "DEBT")}
-            />
-            <Input label={t("Izoh")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("Kirim izohi...")} />
-          </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <div className="text-sm text-slate-500">
-              {validItems.length > 0 && (
-                <span>
-                  {validItems.length} {t("ta mahsulot")} | {t("Jami")}:{" "}
-                  <span className="text-red-600 font-semibold">
-                    {formatUzs(validItems.reduce((sum, i) => sum + (Number(i.priceUzs) || 0) * (Number(i.quantity) || 0), 0))}
-                  </span>
-                </span>
+            {/* Payment type buttons */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">{t("To'lov turi")}</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {([
+                  { value: "CASH_UZS", label: t("Naqd (UZS)"), icon: Banknote, color: "emerald" },
+                  { value: "CASH_USD", label: t("Naqd ($)"), icon: CircleDollarSign, color: "blue" },
+                  { value: "CARD", label: t("Karta"), icon: CreditCard, color: "violet" },
+                  { value: "TRANSFER", label: t("O'tkazma"), icon: ArrowRightLeft, color: "sky" },
+                  { value: "DEBT", label: t("Qarzga"), icon: HandCoins, color: "red" },
+                ] as const).map((opt) => {
+                  const Icon = opt.icon;
+                  const isActive = paymentType === opt.value;
+                  const colorMap: Record<string, string> = {
+                    emerald: isActive ? "bg-emerald-50 border-emerald-500 text-emerald-700" : "border-slate-200 hover:border-emerald-300 text-slate-600",
+                    blue: isActive ? "bg-blue-50 border-blue-500 text-blue-700" : "border-slate-200 hover:border-blue-300 text-slate-600",
+                    violet: isActive ? "bg-violet-50 border-violet-500 text-violet-700" : "border-slate-200 hover:border-violet-300 text-slate-600",
+                    sky: isActive ? "bg-sky-50 border-sky-500 text-sky-700" : "border-slate-200 hover:border-sky-300 text-slate-600",
+                    red: isActive ? "bg-red-50 border-red-500 text-red-700" : "border-slate-200 hover:border-red-300 text-slate-600",
+                  };
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 text-sm font-medium transition-all ${colorMap[opt.color]}`}
+                      onClick={() => setPaymentType(opt.value)}
+                    >
+                      <Icon className="w-4 h-4" />
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {paymentType === "DEBT" && !supplierId && (
+                <p className="text-xs text-red-500 mt-2">{t("Qarzga kirim uchun ta'minotchini tanlang")}</p>
               )}
             </div>
-            <Button
-              loading={purchaseMutation.isPending}
-              onClick={() => {
-                if (validItems.length === 0) { toast.error(getT()("Kamida bitta mahsulot qo'shing")); return; }
-                if (paymentType === "DEBT" && !supplierId) { toast.error(getT()("Qarzga kirim uchun ta'minotchini tanlang")); return; }
-                purchaseMutation.mutate();
-              }}
-            >
-              <PackageCheck className="w-4 h-4" />
-              {t("Saqlash")}
-            </Button>
+
+            {/* Confirm */}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setPaymentModalOpen(false)}>{t("Bekor")}</Button>
+              <Button
+                loading={purchaseMutation.isPending}
+                onClick={() => {
+                  if (paymentType === "DEBT" && !supplierId) {
+                    toast.error(getT()("Qarzga kirim uchun ta'minotchini tanlang"));
+                    return;
+                  }
+                  purchaseMutation.mutate();
+                }}
+              >
+                {t("Tasdiqlash")}
+              </Button>
+            </div>
           </div>
-        </div>
+        </Modal>
 
         {/* New supplier modal */}
         <Modal open={showSupplierModal} onClose={() => setShowSupplierModal(false)} title={t("Yangi yetkazuvchi")}>
