@@ -82,9 +82,15 @@ export const warehouseRouter = router({
       })).min(1),
       notes: z.string().optional(),
       cashRegister: z.enum(["SALES", "SERVICE"]).default("SALES"),
-      paymentType: z.enum(["CASH_UZS", "CASH_USD", "CARD", "TRANSFER"]).default("CASH_UZS"),
+      paymentType: z.enum(["CASH_UZS", "CASH_USD", "CARD", "TRANSFER", "DEBT"]).default("CASH_UZS"),
     }))
     .mutation(async ({ ctx, input }) => {
+      const isDebt = input.paymentType === "DEBT";
+
+      if (isDebt && !input.supplierId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Qarzga kirim uchun ta'minotchini tanlash majburiy" });
+      }
+
       const warehouseId = await getWarehouseId(ctx.db);
       const todayRate = await ctx.db.exchangeRate.findFirst({ orderBy: { date: "desc" } });
       if (!todayRate) throw new TRPCError({ code: "BAD_REQUEST", message: "Valyuta kursi kiritilmagan" });
@@ -125,8 +131,23 @@ export const warehouseRouter = router({
         });
       }
 
-      // Auto-create expense for purchase
-      if (totalUzs > 0 || totalUsd > 0) {
+      // If NOT debt — create payment, expense, cashRegisterOp
+      if (!isDebt && (totalUzs > 0 || totalUsd > 0)) {
+        // Create SupplierPayment if supplier selected
+        if (input.supplierId) {
+          await ctx.db.supplierPayment.create({
+            data: {
+              supplierId: input.supplierId,
+              purchaseId: purchase.id,
+              amountUzs: totalUzs,
+              amountUsd: totalUsd,
+              paymentType: input.paymentType as "CASH_UZS" | "CASH_USD" | "CARD" | "TRANSFER",
+              cashRegister: input.cashRegister,
+              userId: ctx.user.userId,
+            },
+          });
+        }
+
         let expenseCategory = await ctx.db.expenseCategory.findFirst({
           where: { name: "Mahsulot kirimi" },
         });
@@ -147,7 +168,7 @@ export const warehouseRouter = router({
             amountUsd: totalUsd,
             description: `Kirim #${purchase.id}${supplierName ? ` — ${supplierName}` : ""}`,
             cashRegister: input.cashRegister,
-            paymentType: input.paymentType,
+            paymentType: input.paymentType as "CASH_UZS" | "CASH_USD" | "CARD" | "TRANSFER",
             userId: ctx.user.userId,
           },
         });
@@ -165,6 +186,7 @@ export const warehouseRouter = router({
           },
         });
       }
+      // If DEBT — no expense/cashRegisterOp, debt stays on supplier
 
       ctx.io?.to("room:stock").emit("stock:updated", {});
       return purchase;

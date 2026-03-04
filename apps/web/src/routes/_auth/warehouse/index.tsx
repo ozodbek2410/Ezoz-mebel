@@ -189,7 +189,7 @@ function PurchaseTab() {
   const [items, setItems] = useState<PurchaseItemRow[]>([{ ...emptyItem }]);
   const [notes, setNotes] = useState("");
   const [cashRegister, setCashRegister] = useState<"SALES" | "SERVICE">("SALES");
-  const [paymentType, setPaymentType] = useState<"CASH_UZS" | "CASH_USD" | "CARD" | "TRANSFER">("CASH_UZS");
+  const [paymentType, setPaymentType] = useState<"CASH_UZS" | "CASH_USD" | "CARD" | "TRANSFER" | "DEBT">("CASH_UZS");
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [newSupplier, setNewSupplier] = useState({ name: "", phone: "", notes: "" });
 
@@ -462,9 +462,10 @@ function PurchaseTab() {
                 { value: "CASH_USD", label: t("Naqd (USD)") },
                 { value: "CARD", label: t("Karta") },
                 { value: "TRANSFER", label: t("O'tkazma") },
+                { value: "DEBT", label: t("Qarzga") },
               ]}
               value={paymentType}
-              onChange={(e) => setPaymentType(e.target.value as "CASH_UZS" | "CASH_USD" | "CARD" | "TRANSFER")}
+              onChange={(e) => setPaymentType(e.target.value as "CASH_UZS" | "CASH_USD" | "CARD" | "TRANSFER" | "DEBT")}
             />
             <Input label={t("Izoh")} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("Kirim izohi...")} />
           </div>
@@ -484,6 +485,7 @@ function PurchaseTab() {
               loading={purchaseMutation.isPending}
               onClick={() => {
                 if (validItems.length === 0) { toast.error(getT()("Kamida bitta mahsulot qo'shing")); return; }
+                if (paymentType === "DEBT" && !supplierId) { toast.error(getT()("Qarzga kirim uchun ta'minotchini tanlang")); return; }
                 purchaseMutation.mutate();
               }}
             >

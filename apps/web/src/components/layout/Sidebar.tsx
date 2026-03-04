@@ -26,6 +26,7 @@ import {
   Factory,
   Settings2,
   Scissors,
+  Truck,
   Download,
   ChevronDown,
   X,
@@ -53,6 +54,7 @@ const navSections: NavSection[] = [
     items: [
       { label: "Bosh sahifa", href: "/dashboard", icon: LayoutDashboard },
       { label: "Mijozlar", href: "/customers", icon: Users, permission: "customer:read" },
+      { label: "Ta'minotchilar", href: "/suppliers", icon: Truck, permission: "supplier:read" },
     ],
   },
   {

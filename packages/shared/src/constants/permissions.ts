@@ -92,6 +92,7 @@ export const RolePermissions: Record<UserRole, readonly Permission[]> = {
     Permissions.REPORT_OWN,
     Permissions.WORKSHOP_VIEW,
     Permissions.SHIFT_OWN,
+    Permissions.SUPPLIER_READ,
   ],
   [UserRole.CASHIER_SERVICE]: [
     Permissions.DASHBOARD_VIEW,
@@ -224,6 +225,13 @@ export const PermissionGroups: PermissionGroup[] = [
     permissions: [
       { key: Permissions.WORKSHOP_VIEW, label: "Vazifalarni ko'rish" },
       { key: Permissions.WORKSHOP_MANAGE, label: "Vazifalarni boshqarish" },
+    ],
+  },
+  {
+    title: "Ta'minotchilar",
+    permissions: [
+      { key: Permissions.SUPPLIER_READ, label: "Ko'rish" },
+      { key: Permissions.SUPPLIER_MANAGE, label: "Boshqarish" },
     ],
   },
   {

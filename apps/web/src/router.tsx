@@ -21,6 +21,7 @@ import { AdminSettingsPage } from "@/routes/_auth/admin/settings";
 import { MarketplaceSettingsPage } from "@/routes/_auth/admin/marketplace-settings";
 import { MarketplacePage } from "@/routes/marketplace";
 import { ServicesPage } from "@/routes/_auth/services";
+import { SuppliersPage } from "@/routes/_auth/suppliers";
 import { useAuthStore } from "@/store/auth.store";
 import { hasUserPermission, type Permission, type UserRole } from "@ezoz/shared";
 
@@ -164,6 +165,13 @@ const marketplaceSettingsRoute = createRoute({
   beforeLoad: () => checkPermission("marketplace:manage"),
 });
 
+const suppliersRoute = createRoute({
+  getParentRoute: () => authLayout,
+  path: "/suppliers",
+  component: SuppliersPage,
+  beforeLoad: () => checkPermission("supplier:read"),
+});
+
 // Marketplace (public)
 const marketplaceRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -191,6 +199,7 @@ const routeTree = rootRoute.addChildren([
     employeesRoute,
     adminSettingsRoute,
     marketplaceSettingsRoute,
+    suppliersRoute,
   ]),
 ]);
 

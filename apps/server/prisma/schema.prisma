@@ -38,6 +38,7 @@ model User {
   advances         Advance[]
   jobRecords       JobRecord[]
   salaryPayments   SalaryPayment[]
+  supplierPayments SupplierPayment[]
 }
 
 // ==================== SHIFT ====================
@@ -197,12 +198,15 @@ model StockItem {
 // ==================== PURCHASE (KIRIM) ====================
 
 model Supplier {
-  id        Int        @id @default(autoincrement())
-  name      String
-  phone     String?
-  notes     String?
-  isActive  Boolean    @default(true)
-  purchases Purchase[]
+  id             Int               @id @default(autoincrement())
+  name           String
+  phone          String?
+  notes          String?
+  isActive       Boolean           @default(true)
+  initialDebtUzs Decimal           @db.Decimal(18, 2) @default(0)
+  initialDebtUsd Decimal           @db.Decimal(18, 2) @default(0)
+  purchases      Purchase[]
+  payments       SupplierPayment[]
 }
 
 enum DocumentStatus {
@@ -226,6 +230,7 @@ model Purchase {
   notes        String?
   createdAt    DateTime       @default(now())
   items        PurchaseItem[]
+  payments     SupplierPayment[]
 }
 
 model PurchaseItem {
@@ -237,6 +242,22 @@ model PurchaseItem {
   quantity   Decimal  @db.Decimal(18, 3)
   priceUzs   Decimal  @db.Decimal(18, 2)
   priceUsd   Decimal  @db.Decimal(18, 2)
+}
+
+model SupplierPayment {
+  id           Int              @id @default(autoincrement())
+  supplierId   Int
+  supplier     Supplier         @relation(fields: [supplierId], references: [id])
+  purchaseId   Int?
+  purchase     Purchase?        @relation(fields: [purchaseId], references: [id])
+  amountUzs    Decimal          @db.Decimal(18, 2)
+  amountUsd    Decimal          @db.Decimal(18, 2) @default(0)
+  paymentType  PaymentType
+  cashRegister CashRegisterType
+  notes        String?
+  userId       Int
+  user         User             @relation(fields: [userId], references: [id])
+  createdAt    DateTime         @default(now())
 }
 
 // ==================== TRANSFER ====================
