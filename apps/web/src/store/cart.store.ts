@@ -10,7 +10,6 @@ export interface CartItem {
   quantity: number;
   priceUzs: number;
   priceUsd: number;
-  masterId: number | null;
 }
 
 interface AddProductInput {
@@ -29,7 +28,6 @@ interface CartStore {
   removeItem: (index: number) => void;
   updateQuantity: (index: number, qty: number) => void;
   updatePrice: (index: number, field: "priceUzs" | "priceUsd", value: number) => void;
-  updateMaster: (index: number, masterId: number | null) => void;
   addService: (name: string, uzs: number, usd: number) => void;
   clear: () => void;
 }
@@ -60,7 +58,6 @@ export const useCartStore = create<CartStore>((set) => ({
             quantity: 1,
             priceUzs: product.sellPriceUzs,
             priceUsd: product.sellPriceUsd,
-            masterId: null,
           },
         ],
       };
@@ -79,11 +76,6 @@ export const useCartStore = create<CartStore>((set) => ({
   updatePrice: (index, field, value) =>
     set((state) => ({
       items: state.items.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
-    })),
-
-  updateMaster: (index, masterId) =>
-    set((state) => ({
-      items: state.items.map((item, i) => (i === index ? { ...item, masterId } : item)),
     })),
 
   addService: (name, uzs, usd) =>
@@ -109,7 +101,6 @@ export const useCartStore = create<CartStore>((set) => ({
             quantity: 1,
             priceUzs: uzs,
             priceUsd: usd,
-            masterId: null,
           },
         ],
       };

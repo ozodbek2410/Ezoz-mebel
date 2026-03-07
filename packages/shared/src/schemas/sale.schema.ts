@@ -29,7 +29,6 @@ export const createSaleSchema = z.object({
   customerId: z.number().optional(),
   saleType: z.enum(["PRODUCT", "SERVICE"]),
   goesToWorkshop: z.boolean().default(false),
-  assignedToId: z.number().optional(),
   notes: z.string().optional(),
   items: z.array(z.object({
     productId: z.number().optional(),
@@ -37,7 +36,6 @@ export const createSaleSchema = z.object({
     quantity: z.number().positive("Miqdor musbat bo'lishi kerak"),
     priceUzs: z.number().nonnegative(),
     priceUsd: z.number().nonnegative(),
-    masterId: z.number().optional(),
   })).min(1, "Kamida 1 ta mahsulot qo'shing"),
 });
 

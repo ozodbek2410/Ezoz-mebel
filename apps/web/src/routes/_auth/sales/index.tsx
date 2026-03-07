@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import {
   Plus, ShoppingCart, Trash2, Check, X,
-  User, Package, Banknote, Wrench, UserCheck,
+  User, Package, Banknote, Wrench,
 } from "lucide-react";
 import { useCartStore } from "@/store/cart.store";
 import { trpc } from "@/lib/trpc";
@@ -54,6 +54,9 @@ function SalesPageInner() {
   // Service mode — modal for picking service types
   const [servicePickerOpen, setServicePickerOpen] = useState(false);
 
+  // Workshop
+  const [goesToWorkshop, setGoesToWorkshop] = useState(false);
+
   // Payment
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentSaleId, setPaymentSaleId] = useState<number | null>(null);
@@ -73,19 +76,6 @@ function SalesPageInner() {
     gcTime: 10 * 60 * 1000,
   });
   const serviceTypes = serviceTypesQuery.data ?? [];
-
-  // Masters (cached)
-  const usersQuery = useQuery({
-    queryKey: ["auth", "getUsers"],
-    queryFn: () => trpc.auth.getUsers.query(),
-    enabled: isServiceMode,
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
-  });
-  const masters = useMemo(
-    () => (usersQuery.data ?? []).filter((u) => u.role === "MASTER"),
-    [usersQuery.data],
-  );
 
   // Products — load ALL once, filter client-side
   const productsQuery = useQuery({
@@ -117,8 +107,7 @@ function SalesPageInner() {
     staleTime: 30 * 1000,
   });
 
-  const hasWorkshopItems = cart.some((item) => item.serviceName && item.masterId);
-  const hasUnassignedService = cart.some((item) => item.serviceName && !item.masterId);
+  const hasServiceItems = cart.some((item) => item.serviceName);
 
   // Open payment modal (no sale created yet)
   function openPaymentModal() {
@@ -142,9 +131,8 @@ function SalesPageInner() {
           quantity: item.quantity,
           priceUzs: item.priceUzs,
           priceUsd: item.priceUsd,
-          masterId: item.masterId ?? undefined,
         })),
-        goesToWorkshop: hasWorkshopItems,
+        goesToWorkshop,
         notes: saleNotes || undefined,
       });
       return sale;
@@ -156,6 +144,7 @@ function SalesPageInner() {
       cartStore.clear();
       setSelectedCustomer(null);
       setSaleNotes("");
+      setGoesToWorkshop(false);
       toast.success(getT()("Sotuv yaratildi"));
       void fetchAndPrintReceipt(sale.id);
     },
@@ -185,9 +174,8 @@ function SalesPageInner() {
             quantity: item.quantity,
             priceUzs: item.priceUzs,
             priceUsd: item.priceUsd,
-            masterId: item.masterId ?? undefined,
           })),
-          goesToWorkshop: hasWorkshopItems,
+          goesToWorkshop: false,
           notes: saleNotes || undefined,
         });
         saleId = sale.id;
@@ -267,11 +255,6 @@ function SalesPageInner() {
     () => new Map(cart.filter((i) => i.productId).map((i) => [i.productId, i.quantity])),
     [cart],
   );
-
-  function getMasterName(id: number | null) {
-    if (!id) return null;
-    return masters.find((m) => m.id === id)?.fullName ?? null;
-  }
 
   // ===================== RENDER =====================
   return (
@@ -362,7 +345,6 @@ function SalesPageInner() {
                       <th className="w-10 text-center">#</th>
                       <th>{t("Nomi")}</th>
                       <th className="text-center">{t("Turi")}</th>
-                      <th>{t("Usta")}</th>
                       <th className="text-center">{t("Miqdor")}</th>
                       <th className="text-right">{t("Narx")}</th>
                       <th className="text-right">{t("Jami")}</th>
@@ -372,7 +354,7 @@ function SalesPageInner() {
                   <TableBody>
                     {cart.length === 0 ? (
                       <TableEmpty
-                        colSpan={8}
+                        colSpan={7}
                         message={t("Savat bo'sh")}
                         icon={<ShoppingCart className="w-8 h-8" />}
                       />
@@ -395,26 +377,6 @@ function SalesPageInner() {
                               <Badge variant={item.serviceName ? "warning" : "info"}>
                                 {item.serviceName ? t("Xizmat") : t("Mahsulot")}
                               </Badge>
-                            </td>
-                            <td className="!py-2">
-                              {item.serviceName ? (
-                                <select
-                                  value={item.masterId ?? ""}
-                                  onChange={(e) => cartStore.updateMaster(idx, e.target.value ? Number(e.target.value) : null)}
-                                  className={`w-full text-sm py-1 px-2 border rounded-lg bg-white outline-none transition-colors ${
-                                    !item.masterId
-                                      ? "border-red-300 text-red-500"
-                                      : "border-slate-200 text-slate-700"
-                                  }`}
-                                >
-                                  <option value="">{t("Usta tanlang")} *</option>
-                                  {masters.map((m) => (
-                                    <option key={m.id} value={m.id}>{m.fullName}</option>
-                                  ))}
-                                </select>
-                              ) : (
-                                <span className="text-slate-300">—</span>
-                              )}
                             </td>
                             <td className="text-center !py-2">
                               <div className="pos-qty-control inline-flex">
@@ -463,19 +425,23 @@ function SalesPageInner() {
 
               {/* Bottom bar: total + notes + sell */}
               {cart.length > 0 && (
-                <div className="card !p-4">
-                  {hasUnassignedService && (
-                    <div className="flex items-center gap-2 text-xs text-red-600 font-medium mb-3 bg-red-50 px-3 py-1.5 rounded-lg">
-                      <UserCheck className="w-3.5 h-3.5" />
-                      {t("Barcha xizmatlarga usta tanlang")}
-                    </div>
+                <div className="card !p-4 space-y-3">
+                  {/* Workshop toggle */}
+                  {hasServiceItems && (
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={goesToWorkshop}
+                        onChange={(e) => setGoesToWorkshop(e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                      />
+                      <span className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                        <Wrench className="w-4 h-4 text-amber-500" />
+                        {t("Ustaxonaga yuborish")}
+                      </span>
+                    </label>
                   )}
-                  {hasWorkshopItems && (
-                    <div className="flex items-center gap-2 text-xs text-amber-700 font-medium mb-3 bg-amber-50 px-3 py-1.5 rounded-lg">
-                      <Wrench className="w-3.5 h-3.5" />
-                      {t("Ustaxonaga yuboriladi")}
-                    </div>
-                  )}
+
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                     <div className="flex-1 w-full sm:w-auto">
                       <Input placeholder={t("Izoh...")} value={saleNotes} onChange={(e) => setSaleNotes(e.target.value)} />
@@ -489,7 +455,7 @@ function SalesPageInner() {
                       <Button
                         variant="success"
                         onClick={() => createServiceSale.mutate()}
-                        disabled={cart.length === 0 || hasUnassignedService || createServiceSale.isPending}
+                        disabled={cart.length === 0 || createServiceSale.isPending}
                         className="!px-6 !py-2.5"
                       >
                         <Banknote className="w-5 h-5" />

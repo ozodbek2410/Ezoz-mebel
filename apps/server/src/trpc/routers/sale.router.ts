@@ -78,23 +78,9 @@ export const saleRouter = router({
         include: { items: true },
       });
 
-      // Create one workshop task per service item
+      // Workshop tasks are set up by boss after sale creation
       if (input.goesToWorkshop) {
-        for (let i = 0; i < input.items.length; i++) {
-          const inputItem = input.items[i];
-          const createdItem = sale.items[i];
-          if (inputItem && createdItem && inputItem.serviceName) {
-            await ctx.db.workshopTask.create({
-              data: {
-                saleId: sale.id,
-                saleItemId: createdItem.id,
-                description: inputItem.serviceName,
-                assignedToId: inputItem.masterId ?? null,
-              },
-            });
-          }
-        }
-        ctx.io?.to("room:workshop").emit("workshop:newTask", {
+        ctx.io?.to("room:boss").emit("workshop:needsSetup", {
           saleId: sale.id,
           documentNo: sale.documentNo,
         });
@@ -114,6 +100,7 @@ export const saleRouter = router({
     .input(z.object({
       status: z.enum(["OPEN", "COMPLETED", "CANCELLED", "RETURNED"]).optional(),
       saleType: z.enum(["PRODUCT", "SERVICE"]).optional(),
+      workshopStatus: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED"]).optional(),
       customerId: z.number().optional(),
       dateFrom: z.string().optional(),
       dateTo: z.string().optional(),
@@ -127,6 +114,7 @@ export const saleRouter = router({
       const where: Record<string, unknown> = {};
       if (input?.status) where["status"] = input.status;
       if (input?.saleType) where["saleType"] = input.saleType;
+      if (input?.workshopStatus) where["workshopStatus"] = input.workshopStatus;
       if (input?.customerId) where["customerId"] = input.customerId;
       if (input?.dateFrom || input?.dateTo) {
         where["createdAt"] = {
@@ -170,7 +158,13 @@ export const saleRouter = router({
           cashier: { select: { id: true, fullName: true, role: true } },
           items: { include: { product: true } },
           payments: true,
-          workshopTasks: { include: { photos: true } },
+          workshopTasks: {
+            include: {
+              assignedTo: { select: { id: true, fullName: true } },
+              photos: true,
+            },
+            orderBy: { stepOrder: "asc" },
+          },
           receipt: true,
         },
       });
@@ -190,8 +184,10 @@ export const saleRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Bu sotuv allaqachon yakunlangan" });
       }
 
-      // Decrement stock from the specific warehouse
-      if (sale.warehouseId) {
+      // For workshop sales, stock is decremented when all tasks complete — skip here
+      const shouldDecrementStock = !(sale.goesToWorkshop && sale.workshopStatus === "COMPLETED");
+
+      if (sale.warehouseId && shouldDecrementStock) {
         for (const item of sale.items) {
           if (item.productId) {
             await ctx.db.stockItem.update({
