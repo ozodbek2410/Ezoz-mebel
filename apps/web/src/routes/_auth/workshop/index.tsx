@@ -937,8 +937,13 @@ function MasterView() {
           </div>
         )}
 
+        {/* Loading state */}
+        {tasksQuery.isLoading && (
+          <div className="card !p-12 text-center text-slate-400">{t("Yuklanmoqda...")}</div>
+        )}
+
         {/* Empty state */}
-        {activeSaleGroups.length === 0 && waitingGroups.length === 0 && (
+        {!tasksQuery.isLoading && activeSaleGroups.length === 0 && waitingGroups.length === 0 && (
           <div className="card !p-12 text-center">
             <CheckCircle className="w-12 h-12 text-green-200 mx-auto mb-3" />
             <p className="text-slate-400">{t("Hozirda sizga vazifa yo'q")}</p>
