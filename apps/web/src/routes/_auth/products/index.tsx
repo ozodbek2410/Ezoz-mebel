@@ -5,6 +5,7 @@ import { Plus, Edit2, Trash2, Lock, Package, ChevronRight, ChevronDown, FolderOp
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button, SearchInput, Modal, Input, CurrencyPairInput, Select, Badge, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, SlideOver, Pagination, ContextMenu, ContextMenuItem, ContextMenuSeparator } from "@/components/ui";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { CurrencyDisplay } from "@/components/shared";
 import { useAuth } from "@/hooks/useAuth";
 import { useT, getT } from "@/hooks/useT";
@@ -883,12 +884,11 @@ export function ProductsPage() {
               autoFocus
               onKeyDown={(e) => { if (e.key === "Enter") confirmCartModal(); }}
             />
-            <Input
+            <CurrencyInput
               label={t("Sotish narxi (UZS)")}
-              type="number"
-              min="0"
+              currency="UZS"
               value={cartModalPrice}
-              onChange={(e) => setCartModalPrice(e.target.value)}
+              onValueChange={(v) => setCartModalPrice(v)}
               onKeyDown={(e) => { if (e.key === "Enter") confirmCartModal(); }}
             />
           </div>

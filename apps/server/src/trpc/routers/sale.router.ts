@@ -78,12 +78,34 @@ export const saleRouter = router({
         include: { items: true },
       });
 
-      // Workshop tasks are set up by boss after sale creation
+      // Auto-create workshop tasks per item with assigned master
       if (input.goesToWorkshop) {
-        ctx.io?.to("room:boss").emit("workshop:needsSetup", {
-          saleId: sale.id,
-          documentNo: sale.documentNo,
-        });
+        const tasksToCreate = input.items
+          .map((item, idx) => ({
+            description: item.serviceName ?? `Ish #${idx + 1}`,
+            assignedToId: item.assignedToId ?? null,
+            stepOrder: idx + 1,
+          }))
+          .filter((t) => t.assignedToId !== null);
+
+        if (tasksToCreate.length > 0) {
+          await ctx.db.workshopTask.createMany({
+            data: tasksToCreate.map((t) => ({
+              saleId: sale.id,
+              description: t.description,
+              assignedToId: t.assignedToId,
+              status: "PENDING" as const,
+              stepOrder: t.stepOrder,
+            })),
+          });
+          ctx.io?.to("room:workshop").emit("workshop:newTask", { saleId: sale.id });
+          ctx.io?.to("room:boss").emit("workshop:newTask", { saleId: sale.id });
+        } else {
+          ctx.io?.to("room:boss").emit("workshop:needsSetup", {
+            saleId: sale.id,
+            documentNo: sale.documentNo,
+          });
+        }
       }
 
       // Broadcast sale created
@@ -249,7 +271,16 @@ export const paymentRouter = router({
   create: protectedProcedure
     .input(createPaymentSchema)
     .mutation(async ({ ctx, input }) => {
-      const cashRegister = ctx.user.role === "CASHIER_SERVICE" ? "SERVICE" : "SALES";
+      // Determine cashRegister by the linked sale's saleType, fallback to user role
+      let cashRegister: "SALES" | "SERVICE" = ctx.user.role === "CASHIER_SERVICE" ? "SERVICE" : "SALES";
+      if (input.saleId) {
+        const linkedSale = await ctx.db.sale.findUnique({
+          where: { id: input.saleId },
+          select: { saleType: true },
+        });
+        if (linkedSale?.saleType === "SERVICE") cashRegister = "SERVICE";
+        else if (linkedSale?.saleType === "PRODUCT") cashRegister = "SALES";
+      }
 
       const payment = await ctx.db.payment.create({
         data: {

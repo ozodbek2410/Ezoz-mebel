@@ -225,23 +225,31 @@ export const reportRouter = router({
       const dateFrom = uzbStartOfDay(input.dateFrom);
       const dateTo = uzbEndOfDay(input.dateTo);
       const registerFilter = input.cashRegister ? { cashRegister: input.cashRegister as "SALES" | "SERVICE" } : {};
+      const isBoss = ctx.user.role === "BOSS";
+      const userFilter = isBoss ? {} : { cashierId: ctx.user.userId };
+      const expenseUserFilter = isBoss ? {} : { userId: ctx.user.userId };
 
       const [sales, payments, expenses] = await Promise.all([
         ctx.db.sale.aggregate({
           where: {
             createdAt: { gte: dateFrom, lte: dateTo },
             status: { not: "CANCELLED" },
+            ...userFilter,
             ...(registerFilter.cashRegister ? { saleType: registerFilter.cashRegister === "SALES" ? "PRODUCT" : "SERVICE" } : {}),
           },
           _sum: { totalUzs: true, totalUsd: true },
           _count: true,
         }),
         ctx.db.payment.aggregate({
-          where: { createdAt: { gte: dateFrom, lte: dateTo }, ...registerFilter },
+          where: {
+            createdAt: { gte: dateFrom, lte: dateTo },
+            ...registerFilter,
+            ...(isBoss ? {} : { sale: { cashierId: ctx.user.userId } }),
+          },
           _sum: { amountUzs: true, amountUsd: true },
         }),
         ctx.db.expense.aggregate({
-          where: { createdAt: { gte: dateFrom, lte: dateTo }, ...registerFilter },
+          where: { createdAt: { gte: dateFrom, lte: dateTo }, ...registerFilter, ...expenseUserFilter },
           _sum: { amountUzs: true, amountUsd: true },
         }),
       ]);
@@ -259,13 +267,259 @@ export const reportRouter = router({
       };
     }),
 
+  myReport: protectedProcedure
+    .input(z.object({ dateFrom: z.string(), dateTo: z.string(), userId: z.number().optional() }))
+    .query(async ({ ctx, input }) => {
+      const dateFrom = uzbStartOfDay(input.dateFrom);
+      const dateTo = uzbEndOfDay(input.dateTo);
+      const userId = (input.userId && ctx.user.role === "BOSS") ? input.userId : ctx.user.userId;
+
+      const [user, jobRecords, workshopTasks] = await Promise.all([
+        ctx.db.user.findUnique({ where: { id: userId }, select: { bonusPerJob: true, fullName: true } }),
+        ctx.db.jobRecord.findMany({
+          where: { userId, date: { gte: dateFrom, lte: dateTo } },
+          orderBy: { date: "desc" },
+        }),
+        ctx.db.workshopTask.findMany({
+          where: { assignedToId: userId, status: "COMPLETED", completedAt: { gte: dateFrom, lte: dateTo } },
+          include: {
+            sale: { select: { customer: { select: { fullName: true } } } },
+          },
+          orderBy: { completedAt: "desc" },
+        }),
+      ]);
+
+      const bonusPerJob = Number(user?.bonusPerJob ?? 0);
+      const jobRecordsBonus = jobRecords.reduce((sum, jr) => sum + Number(jr.bonusUzs), 0);
+      const taskBonus = workshopTasks.length * bonusPerJob;
+
+      return {
+        fullName: user?.fullName ?? "",
+        bonusPerJob,
+        totalBonusUzs: jobRecordsBonus + taskBonus,
+        workshopTasksCount: workshopTasks.length,
+        jobRecords: jobRecords.map((jr) => ({
+          id: jr.id,
+          description: jr.description,
+          bonusUzs: Number(jr.bonusUzs),
+          date: jr.date,
+        })),
+        workshopTasks: workshopTasks.map((t) => ({
+          id: t.id,
+          description: t.description,
+          stepOrder: t.stepOrder,
+          customerName: t.sale.customer?.fullName ?? null,
+          completedAt: t.completedAt,
+        })),
+      };
+    }),
+
+  employeeDetail: bossProcedure
+    .input(z.object({ dateFrom: z.string(), dateTo: z.string(), userId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const dateFrom = uzbStartOfDay(input.dateFrom);
+      const dateTo = uzbEndOfDay(input.dateTo);
+
+      const user = await ctx.db.user.findUnique({
+        where: { id: input.userId },
+        select: { id: true, fullName: true, role: true, bonusPerJob: true, baseSalaryUzs: true },
+      });
+      if (!user) throw new Error("User not found");
+
+      if (user.role === "MASTER") {
+        const [jobRecords, workshopTasks] = await Promise.all([
+          ctx.db.jobRecord.findMany({
+            where: { userId: user.id, date: { gte: dateFrom, lte: dateTo } },
+            orderBy: { date: "desc" },
+          }),
+          ctx.db.workshopTask.findMany({
+            where: { assignedToId: user.id, status: "COMPLETED", completedAt: { gte: dateFrom, lte: dateTo } },
+            include: { sale: { select: { customer: { select: { fullName: true } } } } },
+            orderBy: { completedAt: "desc" },
+          }),
+        ]);
+        const bonusPerJob = Number(user.bonusPerJob);
+        const jobRecordsBonus = jobRecords.reduce((sum, jr) => sum + Number(jr.bonusUzs), 0);
+        const taskBonus = workshopTasks.length * bonusPerJob;
+        return {
+          type: "MASTER" as const,
+          fullName: user.fullName,
+          role: user.role,
+          bonusPerJob,
+          baseSalaryUzs: Number(user.baseSalaryUzs),
+          totalBonusUzs: jobRecordsBonus + taskBonus,
+          workshopTasksCount: workshopTasks.length,
+          workshopTasks: workshopTasks.map((t) => ({
+            id: t.id,
+            description: t.description,
+            customerName: t.sale.customer?.fullName ?? null,
+            completedAt: t.completedAt,
+            bonus: bonusPerJob,
+          })),
+          jobRecords: jobRecords.map((jr) => ({
+            id: jr.id,
+            description: jr.description,
+            bonusUzs: Number(jr.bonusUzs),
+            date: jr.date,
+          })),
+        };
+      }
+
+      // CASHIER_SALES or CASHIER_SERVICE
+      const saleType = user.role === "CASHIER_SERVICE" ? "SERVICE" : "PRODUCT";
+      const [sales, payments, expenses] = await Promise.all([
+        ctx.db.sale.findMany({
+          where: { cashierId: user.id, saleType, createdAt: { gte: dateFrom, lte: dateTo }, status: { not: "CANCELLED" } },
+          include: { customer: { select: { fullName: true } } },
+          orderBy: { createdAt: "desc" },
+        }),
+        ctx.db.payment.findMany({
+          where: { cashRegister: user.role === "CASHIER_SERVICE" ? "SERVICE" : "SALES", createdAt: { gte: dateFrom, lte: dateTo } },
+          include: { sale: { select: { documentNo: true, customer: { select: { fullName: true } } } } },
+          orderBy: { createdAt: "desc" },
+        }),
+        ctx.db.expense.findMany({
+          where: { userId: user.id, createdAt: { gte: dateFrom, lte: dateTo } },
+          orderBy: { createdAt: "desc" },
+        }),
+      ]);
+
+      const totalSalesUzs = sales.reduce((s, sale) => s + Number(sale.totalUzs), 0);
+      const totalPaymentsUzs = payments.reduce((s, p) => s + Number(p.amountUzs), 0);
+      const totalExpensesUzs = expenses.reduce((s, e) => s + Number(e.amountUzs), 0);
+
+      return {
+        type: "CASHIER" as const,
+        fullName: user.fullName,
+        role: user.role,
+        baseSalaryUzs: Number(user.baseSalaryUzs),
+        totalSalesUzs,
+        totalPaymentsUzs,
+        totalExpensesUzs,
+        netUzs: totalPaymentsUzs - totalExpensesUzs,
+        sales: sales.map((s) => ({
+          id: s.id,
+          documentNo: s.documentNo,
+          customerName: s.customer?.fullName ?? null,
+          totalUzs: Number(s.totalUzs),
+          status: s.status,
+          createdAt: s.createdAt,
+        })),
+        payments: payments.map((p) => ({
+          id: p.id,
+          method: p.paymentType,
+          amountUzs: Number(p.amountUzs),
+          saleDocNo: p.sale?.documentNo ?? null,
+          customerName: p.sale?.customer?.fullName ?? null,
+          createdAt: p.createdAt,
+        })),
+        expenses: expenses.map((e) => ({
+          id: e.id,
+          description: e.description,
+          amountUzs: Number(e.amountUzs),
+          category: e.categoryId,
+          createdAt: e.createdAt,
+        })),
+      };
+    }),
+
+  employeesSummary: bossProcedure
+    .input(z.object({ dateFrom: z.string(), dateTo: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const dateFrom = uzbStartOfDay(input.dateFrom);
+      const dateTo = uzbEndOfDay(input.dateTo);
+
+      const [users, salesByUser] = await Promise.all([
+        ctx.db.user.findMany({
+          where: { isActive: true, role: { not: "BOSS" } },
+          select: {
+            id: true,
+            fullName: true,
+            role: true,
+            bonusPerJob: true,
+            baseSalaryUzs: true,
+            jobRecords: {
+              where: { date: { gte: dateFrom, lte: dateTo } },
+              select: { bonusUzs: true },
+            },
+            workshopTasks: {
+              where: { status: "COMPLETED", completedAt: { gte: dateFrom, lte: dateTo } },
+              select: { id: true },
+            },
+          },
+          orderBy: { fullName: "asc" },
+        }),
+        ctx.db.sale.groupBy({
+          by: ["cashierId", "saleType"],
+          where: {
+            createdAt: { gte: dateFrom, lte: dateTo },
+            status: { not: "CANCELLED" },
+          },
+          _sum: { totalUzs: true },
+          _count: { _all: true },
+        }),
+      ]);
+
+      type SalesEntry = { salesCount: number; salesTotalUzs: number; serviceCount: number; serviceTotalUzs: number };
+      const salesMap = new Map<number, SalesEntry>();
+      for (const row of salesByUser) {
+        if (!row.cashierId) continue;
+        if (!salesMap.has(row.cashierId)) {
+          salesMap.set(row.cashierId, { salesCount: 0, salesTotalUzs: 0, serviceCount: 0, serviceTotalUzs: 0 });
+        }
+        const entry = salesMap.get(row.cashierId)!;
+        const count = row._count?._all ?? 0;
+        const total = Number(row._sum?.totalUzs ?? 0);
+        if (row.saleType === "PRODUCT") {
+          entry.salesCount = count;
+          entry.salesTotalUzs = total;
+        } else if (row.saleType === "SERVICE") {
+          entry.serviceCount = count;
+          entry.serviceTotalUzs = total;
+        }
+      }
+
+      return users.map((u) => {
+        const jobBonus = u.jobRecords.reduce((sum, jr) => sum + Number(jr.bonusUzs), 0);
+        const taskBonus = u.workshopTasks.length * Number(u.bonusPerJob);
+        const sales = salesMap.get(u.id) ?? { salesCount: 0, salesTotalUzs: 0, serviceCount: 0, serviceTotalUzs: 0 };
+        return {
+          id: u.id,
+          fullName: u.fullName,
+          role: u.role,
+          bonusPerJob: Number(u.bonusPerJob),
+          baseSalaryUzs: Number(u.baseSalaryUzs),
+          workshopTasksCount: u.workshopTasks.length,
+          jobRecordsCount: u.jobRecords.length,
+          totalBonusUzs: jobBonus + taskBonus,
+          salesCount: sales.salesCount,
+          salesTotalUzs: sales.salesTotalUzs,
+          serviceCount: sales.serviceCount,
+          serviceTotalUzs: sales.serviceTotalUzs,
+        };
+      });
+    }),
+
   bossOverview: bossProcedure
     .input(dateRangeInput)
     .query(async ({ ctx, input }) => {
       const dateFrom = uzbStartOfDay(input.dateFrom);
       const dateTo = uzbEndOfDay(input.dateTo);
 
-      const [salesCash, serviceCash, salesExpenses, serviceExpenses, advances] = await Promise.all([
+      const [
+        salesCash, serviceCash,
+        salesExpenses, serviceExpenses,
+        advances,
+        salesCount, serviceCount,
+        paymentsByMethod,
+        customerDebtRaw,
+        workshopPending, workshopInProgress, workshopCompleted,
+        topCashiersRaw,
+        salaryPaid,
+        newCustomers,
+        saleItemsForCost,
+      ] = await Promise.all([
+        // Cash totals
         ctx.db.payment.aggregate({
           where: { createdAt: { gte: dateFrom, lte: dateTo }, cashRegister: "SALES" },
           _sum: { amountUzs: true, amountUsd: true },
@@ -274,6 +528,7 @@ export const reportRouter = router({
           where: { createdAt: { gte: dateFrom, lte: dateTo }, cashRegister: "SERVICE" },
           _sum: { amountUzs: true, amountUsd: true },
         }),
+        // Expenses
         ctx.db.expense.aggregate({
           where: { createdAt: { gte: dateFrom, lte: dateTo }, cashRegister: "SALES" },
           _sum: { amountUzs: true },
@@ -282,27 +537,120 @@ export const reportRouter = router({
           where: { createdAt: { gte: dateFrom, lte: dateTo }, cashRegister: "SERVICE" },
           _sum: { amountUzs: true },
         }),
+        // Advances
         ctx.db.advance.aggregate({
           where: { givenAt: { gte: dateFrom, lte: dateTo } },
           _sum: { amountUzs: true },
         }),
+        // Sale counts
+        ctx.db.sale.count({
+          where: { createdAt: { gte: dateFrom, lte: dateTo }, saleType: "PRODUCT", status: { not: "CANCELLED" } },
+        }),
+        ctx.db.sale.count({
+          where: { createdAt: { gte: dateFrom, lte: dateTo }, saleType: "SERVICE", status: { not: "CANCELLED" } },
+        }),
+        // Payments grouped by paymentType
+        ctx.db.payment.groupBy({
+          by: ["paymentType"],
+          where: { createdAt: { gte: dateFrom, lte: dateTo } },
+          _sum: { amountUzs: true, amountUsd: true },
+          _count: { id: true },
+        }),
+        // Customer total initial debt (all customers)
+        ctx.db.customer.aggregate({ _sum: { initialDebtUzs: true } }),
+        // Workshop task counts
+        ctx.db.workshopTask.count({ where: { status: "PENDING" } }),
+        ctx.db.workshopTask.count({ where: { status: "IN_PROGRESS" } }),
+        ctx.db.workshopTask.count({ where: { status: "COMPLETED", completedAt: { gte: dateFrom, lte: dateTo } } }),
+        // Top cashiers by sale total in period
+        ctx.db.sale.groupBy({
+          by: ["cashierId"],
+          where: { createdAt: { gte: dateFrom, lte: dateTo }, status: { not: "CANCELLED" } },
+          _sum: { totalUzs: true },
+          _count: { id: true },
+          orderBy: { _sum: { totalUzs: "desc" } },
+          take: 5,
+        }),
+        // Salary payments (sum of netPayment)
+        ctx.db.salaryPayment.aggregate({
+          where: { paidAt: { gte: dateFrom, lte: dateTo } },
+          _sum: { netPayment: true },
+        }),
+        // New customers registered in period
+        ctx.db.customer.count({ where: { createdAt: { gte: dateFrom, lte: dateTo } } }),
+        // Product cost of goods sold
+        ctx.db.saleItem.findMany({
+          where: {
+            productId: { not: null },
+            sale: { createdAt: { gte: dateFrom, lte: dateTo }, status: { not: "CANCELLED" } },
+          },
+          select: { quantity: true, product: { select: { costPriceUzs: true } } },
+        }),
       ]);
+
+      // Resolve cashier names
+      const cashierIds = topCashiersRaw.map((r) => r.cashierId).filter((id): id is number => id !== null);
+      const cashierUsers = cashierIds.length > 0
+        ? await ctx.db.user.findMany({ where: { id: { in: cashierIds } }, select: { id: true, fullName: true } })
+        : [];
+      const cashierMap = new Map(cashierUsers.map((u) => [u.id, u.fullName]));
+
+      const topCashiers = topCashiersRaw.map((r) => ({
+        fullName: cashierMap.get(r.cashierId) ?? "Noma'lum",
+        totalUzs: Number(r._sum.totalUzs ?? 0),
+        count: r._count.id ?? 0,
+      }));
+
+      // Payment type breakdown
+      const methodMap: Record<string, { uzs: number; usd: number; count: number }> = {};
+      for (const p of paymentsByMethod) {
+        const method = p.paymentType;
+        methodMap[method] = {
+          uzs: Number(p._sum?.amountUzs ?? 0),
+          usd: Number(p._sum?.amountUsd ?? 0),
+          count: p._count.id ?? 0,
+        };
+      }
 
       const totalIncomeUzs = Number(salesCash._sum.amountUzs ?? 0) + Number(serviceCash._sum.amountUzs ?? 0);
       const totalExpensesUzs = Number(salesExpenses._sum.amountUzs ?? 0) + Number(serviceExpenses._sum.amountUzs ?? 0);
       const totalAdvancesUzs = Number(advances._sum.amountUzs ?? 0);
+      const salaryPaidUzs = Number(salaryPaid._sum.netPayment ?? 0);
+      const totalProductCostUzs = saleItemsForCost.reduce(
+        (sum, item) => sum + Number(item.quantity) * Number(item.product?.costPriceUzs ?? 0),
+        0,
+      );
 
       return {
+        // Cash registers
         salesCashUzs: Number(salesCash._sum.amountUzs ?? 0),
         salesCashUsd: Number(salesCash._sum.amountUsd ?? 0),
         serviceCashUzs: Number(serviceCash._sum.amountUzs ?? 0),
         serviceCashUsd: Number(serviceCash._sum.amountUsd ?? 0),
         salesExpensesUzs: Number(salesExpenses._sum.amountUzs ?? 0),
         serviceExpensesUzs: Number(serviceExpenses._sum.amountUzs ?? 0),
+        // Totals
         totalAdvancesUzs,
         totalIncomeUzs,
         totalExpensesUzs,
-        netProfitUzs: totalIncomeUzs - totalExpensesUzs - totalAdvancesUzs,
+        salaryPaidUzs,
+        totalProductCostUzs,
+        netProfitUzs: totalIncomeUzs - totalExpensesUzs - totalAdvancesUzs - salaryPaidUzs,
+        // Sale counts
+        salesCount,
+        serviceCount,
+        totalSalesCount: salesCount + serviceCount,
+        // Payment methods
+        paymentMethods: methodMap,
+        // Customers
+        customerTotalDebtUzs: Number(customerDebtRaw._sum.initialDebtUzs ?? 0),
+        newCustomers,
+        // Workshop
+        workshopPending,
+        workshopInProgress,
+        workshopCompleted,
+        // Top cashiers
+        topCashiers,
       };
     }),
 

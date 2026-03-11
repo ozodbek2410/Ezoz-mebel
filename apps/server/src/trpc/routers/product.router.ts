@@ -163,6 +163,12 @@ export const productRouter = router({
           where: {
             isActive: true,
             ...(input?.categoryId ? { categoryId: input.categoryId } : {}),
+            ...(input?.search ? {
+              OR: [
+                { name: { contains: input.search, mode: "insensitive" } },
+                { description: { contains: input.search, mode: "insensitive" } },
+              ],
+            } : {}),
           },
         }),
       ]);

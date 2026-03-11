@@ -19,6 +19,9 @@ import {
   ArrowRightLeft,
   CircleDollarSign,
   HandCoins,
+  Wrench,
+  User,
+  CheckCircle,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -39,9 +42,10 @@ import {
   PhoneInput,
 } from "@/components/ui";
 import { CurrencyDisplay } from "@/components/shared";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { useAuth } from "@/hooks/useAuth";
 import { useT, getT } from "@/hooks/useT";
-import { formatUzs, convertToUzs, convertToUsd } from "@ezoz/shared";
+import { formatUzs, convertToUzs, convertToUsd, formatNumber } from "@ezoz/shared";
 import { useCurrencyStore } from "@/store/currency.store";
 import toast from "react-hot-toast";
 
@@ -59,6 +63,7 @@ export function WarehousePage() {
           tabs={[
             { id: "stock", label: t("Qoldiqlar") },
             { id: "purchase", label: t("Kirim") },
+            { id: "tayyor", label: t("Tayyor (Ustaxona)") },
             ...(can("warehouse:write_off") ? [{ id: "writeoff", label: t("Chiqim") }] : []),
             ...(can("warehouse:return") ? [{ id: "return", label: t("Qaytarish") }] : []),
             ...(can("warehouse:inventory") ? [{ id: "inventory", label: t("Inventarizatsiya") }] : []),
@@ -71,6 +76,7 @@ export function WarehousePage() {
         <div className="mt-6">
           {activeTab === "stock" && <StockTab />}
           {activeTab === "purchase" && <PurchaseTab />}
+          {activeTab === "tayyor" && <TayyorTab />}
           {activeTab === "writeoff" && <WriteOffTab />}
           {activeTab === "return" && <ReturnTab />}
           {activeTab === "inventory" && <InventoryTab />}
@@ -177,6 +183,7 @@ function StockTab() {
 
 // ===== Purchase Tab (Kirim) =====
 interface PurchaseItemRow {
+  id: number;
   productId: string;
   productSearch: string;
   dropdownOpen: boolean;
@@ -185,7 +192,10 @@ interface PurchaseItemRow {
   priceUsd: string;
 }
 
-const emptyItem: PurchaseItemRow = { productId: "", productSearch: "", dropdownOpen: false, quantity: "", priceUzs: "", priceUsd: "" };
+let purchaseItemId = 0;
+function createEmptyItem(): PurchaseItemRow {
+  return { id: ++purchaseItemId, productId: "", productSearch: "", dropdownOpen: false, quantity: "", priceUzs: "", priceUsd: "" };
+}
 
 function PurchaseTab() {
   const queryClient = useQueryClient();
@@ -195,7 +205,7 @@ function PurchaseTab() {
   const [mode, setMode] = useState<"list" | "create" | "detail">("list");
   const [detailId, setDetailId] = useState<number | null>(null);
   const [supplierId, setSupplierId] = useState("");
-  const [items, setItems] = useState<PurchaseItemRow[]>([{ ...emptyItem }]);
+  const [items, setItems] = useState<PurchaseItemRow[]>([createEmptyItem()]);
   const [notes, setNotes] = useState("");
   const [cashRegister, setCashRegister] = useState<"SALES" | "SERVICE">("SALES");
   const [paymentType, setPaymentType] = useState<"CASH_UZS" | "CASH_USD" | "CARD" | "TRANSFER" | "DEBT">("CASH_UZS");
@@ -272,7 +282,7 @@ function PurchaseTab() {
   function resetForm() {
     setSupplierId("");
     setSupplierSearch("");
-    setItems([{ ...emptyItem }]);
+    setItems([createEmptyItem()]);
     setNotes("");
     setCashRegister("SALES");
     setPaymentType("CASH_UZS");
@@ -295,7 +305,7 @@ function PurchaseTab() {
   }
 
   function addItemRow() {
-    setItems((prev) => [...prev, { ...emptyItem }]);
+    setItems((prev) => [...prev, createEmptyItem()]);
   }
 
   function removeItemRow(idx: number) {
@@ -474,8 +484,9 @@ function PurchaseTab() {
           {/* Products table with inline combobox */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">{t("Mahsulotlar")}</label>
-            <Table>
-              <TableHead>
+            <div className="card">
+            <table className="data-table">
+              <thead>
                 <tr>
                   <th className="w-[35%]">{t("Mahsulot")}</th>
                   <th className="w-[15%]">{t("Miqdor")}</th>
@@ -483,10 +494,10 @@ function PurchaseTab() {
                   <th className="w-[20%]">{t("Narx (USD)")}</th>
                   <th className="w-[10%]"></th>
                 </tr>
-              </TableHead>
-              <TableBody>
+              </thead>
+              <tbody>
                 {items.map((item, idx) => (
-                  <tr key={idx} className="border-b border-slate-100">
+                  <tr key={item.id} className="border-b border-slate-100">
                     <td className="py-1.5 px-2">
                       <div className="relative">
                         {item.productId ? (
@@ -536,12 +547,12 @@ function PurchaseTab() {
                         onChange={(e) => updateItem(idx, "quantity", e.target.value)} placeholder="0" />
                     </td>
                     <td className="py-1.5 px-2">
-                      <input type="number" className="input-field text-sm py-1.5 w-full" value={item.priceUzs}
-                        onChange={(e) => updateItem(idx, "priceUzs", e.target.value)} placeholder="0" />
+                      <input type="text" inputMode="decimal" className="input-field text-sm py-1.5 w-full" value={formatNumber(item.priceUzs)}
+                        onChange={(e) => updateItem(idx, "priceUzs", e.target.value.replace(/\s/g, ""))} placeholder="0" />
                     </td>
                     <td className="py-1.5 px-2">
-                      <input type="number" className="input-field text-sm py-1.5 w-full" value={item.priceUsd}
-                        onChange={(e) => updateItem(idx, "priceUsd", e.target.value)} placeholder="0" />
+                      <input type="text" inputMode="decimal" className="input-field text-sm py-1.5 w-full" value={formatNumber(item.priceUsd)}
+                        onChange={(e) => updateItem(idx, "priceUsd", e.target.value.replace(/\s/g, ""))} placeholder="0" />
                     </td>
                     <td className="py-1.5 px-2 text-center">
                       {items.length > 1 && (
@@ -552,8 +563,9 @@ function PurchaseTab() {
                     </td>
                   </tr>
                 ))}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
+            </div>
             <Button variant="ghost" size="sm" className="mt-2" onClick={addItemRow}>
               <Plus className="w-4 h-4" />
               {t("Qator qo'shish")}
@@ -1133,10 +1145,10 @@ function RevalueTab() {
                 <p>{t("Joriy tannarx")}: <strong>{formatUzs(Number(selectedProduct.costPriceUzs))}</strong></p>
               </div>
             )}
-            <Input label={t("Yangi tannarx (UZS)")} type="number" value={form.newPriceUzs}
-              onChange={(e) => setForm((f) => ({ ...f, newPriceUzs: e.target.value }))} />
-            <Input label={t("Yangi tannarx (USD)")} type="number" value={form.newPriceUsd}
-              onChange={(e) => setForm((f) => ({ ...f, newPriceUsd: e.target.value }))} />
+            <CurrencyInput label={t("Yangi tannarx (UZS)")} currency="UZS" value={form.newPriceUzs}
+              onValueChange={(v) => setForm((f) => ({ ...f, newPriceUzs: v }))} />
+            <CurrencyInput label={t("Yangi tannarx (USD)")} currency="USD" value={form.newPriceUsd}
+              onValueChange={(v) => setForm((f) => ({ ...f, newPriceUsd: v }))} />
             <Input label={t("Sabab")} value={form.reason}
               onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} placeholder={t("Qayta baholash sababi...")} />
             <Button loading={mutation.isPending} onClick={() => {
@@ -1151,6 +1163,179 @@ function RevalueTab() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ===== Tayyor Tab (Completed Workshop Orders) =====
+function TayyorTab() {
+  const t = useT();
+  const [detailSaleId, setDetailSaleId] = useState<number | null>(null);
+
+  const ordersQuery = useQuery({
+    queryKey: ["sale", "list", "workshop-completed"],
+    queryFn: () => trpc.sale.list.query({
+      saleType: "SERVICE",
+      workshopStatus: "COMPLETED",
+    }),
+  });
+
+  const detailQuery = useQuery({
+    queryKey: ["sale", "getById", detailSaleId],
+    queryFn: () => trpc.sale.getById.query({ id: detailSaleId! }),
+    enabled: detailSaleId !== null,
+  });
+
+  const sales = ordersQuery.data?.sales ?? [];
+
+  function formatDate(date: string | Date) {
+    return new Date(date).toLocaleDateString("uz", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+  }
+
+  const detail = detailQuery.data;
+
+  return (
+    <div className="space-y-4">
+      <div className="overflow-x-auto">
+        <Table variant="report">
+          <TableHead>
+            <tr>
+              <th className="w-10 text-center">#</th>
+              <th>{t("Hujjat")}</th>
+              <th>{t("Sana")}</th>
+              <th>{t("Mijoz")}</th>
+              <th className="text-center">{t("Bosqichlar")}</th>
+              <th className="text-right">{t("Summa")}</th>
+              <th className="w-20 text-center">{t("Amallar")}</th>
+            </tr>
+          </TableHead>
+          <TableBody>
+            {ordersQuery.isLoading ? (
+              <TableLoading colSpan={7} />
+            ) : sales.length === 0 ? (
+              <TableEmpty colSpan={7} message={t("Tayyor buyurtmalar yo'q")} icon={<CheckCircle className="w-8 h-8" />} />
+            ) : (
+              sales.map((sale, idx) => (
+                <TableRow key={sale.id}>
+                  <td className="text-center text-slate-400">{idx + 1}</td>
+                  <td className="font-mono text-xs text-slate-500">{sale.documentNo}</td>
+                  <td className="text-slate-600 text-sm">{formatDate(sale.createdAt)}</td>
+                  <td>
+                    <div className="flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-slate-300 shrink-0" />
+                      <span className="font-medium">{sale.customer?.fullName ?? t("Oddiy mijoz")}</span>
+                    </div>
+                  </td>
+                  <td className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <Wrench className="w-3.5 h-3.5 text-amber-500" />
+                      <span className="text-sm font-medium text-amber-700">{sale._count.payments}</span>
+                    </div>
+                  </td>
+                  <td className="text-right">
+                    <CurrencyDisplay amountUzs={sale.totalUzs} amountUsd={sale.totalUsd} size="sm" />
+                  </td>
+                  <td className="text-center">
+                    <button
+                      className="p-1.5 hover:bg-indigo-50 rounded-md transition-colors"
+                      title={t("Ko'rish")}
+                      onClick={() => setDetailSaleId(sale.id)}
+                    >
+                      <Eye className="w-4 h-4 text-indigo-500" />
+                    </button>
+                  </td>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Detail modal */}
+      <Modal
+        open={detailSaleId !== null}
+        onClose={() => setDetailSaleId(null)}
+        title={t("Buyurtma tafsiloti")}
+        size="lg"
+      >
+        {detailQuery.isLoading ? (
+          <div className="text-center py-8 text-slate-400">{t("Yuklanmoqda...")}</div>
+        ) : detail ? (
+          <div className="space-y-4">
+            {/* Customer + sale info */}
+            <div className="bg-slate-50 rounded-lg p-3 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-500">{t("Mijoz")}:</span>
+                <span className="font-medium">{detail.customer?.fullName ?? t("Oddiy mijoz")}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">{t("Sana")}:</span>
+                <span>{formatDate(detail.createdAt)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">{t("Jami")}:</span>
+                <CurrencyDisplay amountUzs={detail.totalUzs} amountUsd={detail.totalUsd} size="sm" />
+              </div>
+            </div>
+
+            {/* Sale items */}
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase mb-2">{t("Mahsulot/xizmatlar")}</p>
+              <div className="space-y-1">
+                {detail.items.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between text-sm py-1 px-2 bg-white border border-slate-100 rounded">
+                    <span className="flex items-center gap-1.5">
+                      {item.serviceName ? (
+                        <Wrench className="w-3.5 h-3.5 text-amber-500" />
+                      ) : (
+                        <Package className="w-3.5 h-3.5 text-indigo-400" />
+                      )}
+                      {item.product?.name ?? item.serviceName ?? "—"}
+                    </span>
+                    <span className="text-slate-400">×{Number(item.quantity)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Workshop task chain */}
+            {"workshopTasks" in detail && Array.isArray(detail.workshopTasks) && detail.workshopTasks.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-slate-500 uppercase mb-2">{t("Ustaxona bosqichlari")}</p>
+                <div className="space-y-2">
+                  {(detail.workshopTasks as Array<{
+                    id: number; stepOrder: number; description: string;
+                    status: string; assignedTo: { fullName: string } | null;
+                    startedAt: string | null; completedAt: string | null; notes: string | null;
+                  }>).map((task) => (
+                    <div key={task.id} className={`flex items-start gap-3 p-2.5 rounded-lg border ${task.status === "COMPLETED" ? "bg-green-50 border-green-200" : task.status === "IN_PROGRESS" ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"}`}>
+                      <span className="text-xs font-bold text-slate-400 mt-0.5 w-5 shrink-0">#{task.stepOrder}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-slate-800">{task.description}</span>
+                          {task.assignedTo && (
+                            <span className="text-xs text-indigo-600 font-medium">{task.assignedTo.fullName}</span>
+                          )}
+                        </div>
+                        {task.completedAt && (
+                          <span className="text-xs text-green-600 mt-0.5 block">
+                            <CheckCircle className="w-3 h-3 inline mr-1" />
+                            {formatDate(task.completedAt)}
+                          </span>
+                        )}
+                        {task.notes && <p className="text-xs text-amber-700 mt-0.5">{task.notes}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }

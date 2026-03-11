@@ -25,11 +25,21 @@ import { SuppliersPage } from "@/routes/_auth/suppliers";
 import { useAuthStore } from "@/store/auth.store";
 import { hasUserPermission, type Permission, type UserRole } from "@ezoz/shared";
 
+function getDefaultRoute(user: { role: string; customPermissions?: string[] | null }): string {
+  const role = user.role as UserRole;
+  const cp = user.customPermissions;
+  if (hasUserPermission(role, "dashboard:view", cp)) return "/dashboard";
+  if (hasUserPermission(role, "workshop:manage", cp) || hasUserPermission(role, "workshop:view", cp)) return "/workshop";
+  if (hasUserPermission(role, "sale:product", cp)) return "/sales";
+  if (hasUserPermission(role, "sale:service", cp)) return "/sales/service";
+  return "/login";
+}
+
 function checkPermission(permission: Permission) {
   const { user } = useAuthStore.getState();
   if (!user) throw redirect({ to: "/login" });
   if (!hasUserPermission(user.role as UserRole, permission, user.customPermissions)) {
-    throw redirect({ to: "/dashboard" });
+    throw redirect({ to: getDefaultRoute(user) });
   }
 }
 
@@ -63,6 +73,7 @@ const dashboardRoute = createRoute({
   getParentRoute: () => authLayout,
   path: "/dashboard",
   component: DashboardPage,
+  beforeLoad: () => checkPermission("dashboard:view"),
 });
 
 // Index redirect
@@ -70,7 +81,9 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   beforeLoad: () => {
-    throw redirect({ to: "/dashboard" });
+    const { user, isAuthenticated } = useAuthStore.getState();
+    if (!isAuthenticated || !user) throw redirect({ to: "/login" });
+    throw redirect({ to: getDefaultRoute(user) });
   },
 });
 

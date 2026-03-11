@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/ui.store";
 import { useCurrencyStore } from "@/store/currency.store";
@@ -6,6 +7,7 @@ import { UserRoleLabels, type UserRole } from "@ezoz/shared";
 import { useT } from "@/hooks/useT";
 import { useLocaleStore } from "@/store/locale.store";
 import { useRouter } from "@tanstack/react-router";
+import { trpc } from "@/lib/trpc";
 import {
   Menu,
   Maximize,
@@ -14,6 +16,9 @@ import {
   ChevronDown,
   LogOut,
   Edit2,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 
 interface TopbarProps {
@@ -22,15 +27,47 @@ interface TopbarProps {
 
 export function Topbar({ onEditProfile }: TopbarProps) {
   const t = useT();
-  const { user, logout } = useAuth();
+  const { user, logout, isBoss } = useAuth();
   const router = useRouter();
   const { toggleMobileSidebar, sidebarCollapsed, toggleSidebarCollapsed } = useUIStore();
-  const { rate } = useCurrencyStore();
+  const { rate, setRate } = useCurrencyStore();
   const { locale, toggleLocale } = useLocaleStore();
   const isCyrillic = locale === "cyrillic";
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [avatarOpen, setAvatarOpen] = useState(false);
   const avatarRef = useRef<HTMLDivElement>(null);
+  const [editingRate, setEditingRate] = useState(false);
+  const [rateInput, setRateInput] = useState("");
+  const rateInputRef = useRef<HTMLInputElement>(null);
+
+  const saveRateMutation = useMutation({
+    mutationFn: (newRate: number) => trpc.currency.setRate.mutate({ rate: newRate }),
+    onSuccess: (savedRate) => {
+      setRate(savedRate);
+      setEditingRate(false);
+    },
+  });
+
+  function startEditRate() {
+    setRateInput(String(rate ?? ""));
+    setEditingRate(true);
+    setTimeout(() => rateInputRef.current?.select(), 0);
+  }
+
+  function cancelEditRate() {
+    setEditingRate(false);
+  }
+
+  function commitEditRate() {
+    const parsed = Number(rateInput.replace(/\s/g, ""));
+    if (!parsed || parsed <= 0 || isNaN(parsed)) { cancelEditRate(); return; }
+    saveRateMutation.mutate(parsed);
+  }
+
+  function handleRateKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") commitEditRate();
+    if (e.key === "Escape") cancelEditRate();
+  }
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -81,11 +118,53 @@ export function Topbar({ onEditProfile }: TopbarProps) {
 
         {/* Currency rate */}
         {rate && (
-          <div className="hidden sm:flex items-center gap-1.5 text-xs">
-            <span className="text-green-600 font-semibold">$1</span>
-            <span className="text-slate-400">=</span>
-            <span className="text-slate-800 font-semibold">{rate.toLocaleString()}</span>
-            <span className="text-slate-400">{t("so'm")}</span>
+          <div className="hidden sm:flex items-center gap-1.5">
+            {editingRate ? (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-green-600 font-semibold">$1 =</span>
+                <input
+                  ref={rateInputRef}
+                  type="number"
+                  value={rateInput}
+                  onChange={(e) => setRateInput(e.target.value)}
+                  onKeyDown={handleRateKeyDown}
+                  onBlur={commitEditRate}
+                  className="w-24 text-xs font-semibold text-slate-800 border border-indigo-400 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 [appearance:textfield]"
+                  disabled={saveRateMutation.isPending}
+                />
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); commitEditRate(); }}
+                  className="p-0.5 text-green-600 hover:text-green-700"
+                  disabled={saveRateMutation.isPending}
+                >
+                  <Check size={13} />
+                </button>
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); cancelEditRate(); }}
+                  className="p-0.5 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-green-600 font-semibold">$1</span>
+                <span className="text-slate-400">=</span>
+                <span className="text-slate-800 font-semibold">
+                  {saveRateMutation.isPending ? "..." : rate.toLocaleString()}
+                </span>
+                <span className="text-slate-400">{t("so'm")}</span>
+                {isBoss() && (
+                  <button
+                    onClick={startEditRate}
+                    className="p-0.5 text-slate-400 hover:text-indigo-600 transition-colors"
+                    title={t("Kursni tahrirlash")}
+                  >
+                    <Pencil size={11} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

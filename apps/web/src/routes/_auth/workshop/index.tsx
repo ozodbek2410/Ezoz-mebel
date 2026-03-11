@@ -695,6 +695,7 @@ function MasterView() {
   const t = useT();
   const queryClient = useQueryClient();
 
+  const [activeTab, setActiveTab] = useState("active");
   const [completeTaskId, setCompleteTaskId] = useState<number | null>(null);
   const [completeNotes, setCompleteNotes] = useState("");
 
@@ -729,7 +730,6 @@ function MasterView() {
 
   const allTasks = (tasksQuery.data as WorkshopTask[] | undefined) ?? [];
 
-  // Group by saleId
   const saleGroups = useMemo(() => {
     const map = new Map<number, WorkshopTask[]>();
     for (const task of allTasks) {
@@ -737,247 +737,308 @@ function MasterView() {
       group.push(task);
       map.set(task.saleId, group);
     }
-    return Array.from(map.values()).sort((a, b) => {
-      const aId = a[0]?.saleId ?? 0;
-      const bId = b[0]?.saleId ?? 0;
-      return bId - aId;
-    });
+    return Array.from(map.values()).sort((a, b) => (b[0]?.saleId ?? 0) - (a[0]?.saleId ?? 0));
   }, [allTasks]);
 
   const myUserId = user?.userId;
 
-  // For each sale group, find the "active" task for this master
-  // A task is actionable if it's assigned to me AND all previous steps are COMPLETED
   function getActiveTask(groupTasks: WorkshopTask[]): WorkshopTask | null {
     for (const task of groupTasks) {
       if (task.assignedToId !== myUserId) continue;
       if (task.status === "COMPLETED") continue;
-      // Check if all previous steps done
       const prevTasks = groupTasks.filter((t) => t.stepOrder < task.stepOrder);
-      if (prevTasks.every((t) => t.status === "COMPLETED")) {
-        return task;
-      }
+      if (prevTasks.every((t) => t.status === "COMPLETED")) return task;
     }
     return null;
   }
 
   const activeSaleGroups = saleGroups.filter((g) => getActiveTask(g) !== null);
   const waitingGroups = saleGroups.filter((g) => {
-    // Has a task assigned to me that's not completed, but not yet ready (prev steps pending)
-    const hasMyTask = g.some(
-      (t) => t.assignedToId === myUserId && t.status !== "COMPLETED",
-    );
+    const hasMyTask = g.some((t) => t.assignedToId === myUserId && t.status !== "COMPLETED");
     return hasMyTask && getActiveTask(g) === null;
   });
-  const doneGroups = saleGroups.filter((g) =>
-    g.filter((t) => t.assignedToId === myUserId).every((t) => t.status === "COMPLETED") &&
-    g.some((t) => t.assignedToId === myUserId),
+  const doneGroups = saleGroups.filter(
+    (g) =>
+      g.filter((t) => t.assignedToId === myUserId).every((t) => t.status === "COMPLETED") &&
+      g.some((t) => t.assignedToId === myUserId),
   );
+
+  const totalActive = activeSaleGroups.length + waitingGroups.length;
 
   return (
     <div className="page-enter">
       <PageHeader
         title={t("Mening vazifalarim")}
-        subtitle={`${activeSaleGroups.length} ${t("faol")}, ${waitingGroups.length} ${t("kutilmoqda")}`}
+        subtitle={`${totalActive} ${t("faol")}, ${doneGroups.length} ${t("yakunlangan")}`}
       />
 
-      <div className="page-body space-y-6">
+      <div className="page-body">
+        {/* Tabs */}
+        <div className="mb-4">
+          <Tabs
+            tabs={[
+              { id: "active", label: t("Bajarish kerak"), count: totalActive },
+              { id: "done", label: t("Yakunlangan"), count: doneGroups.length },
+            ]}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+          />
+        </div>
 
-        {/* Active tasks */}
-        {activeSaleGroups.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-600 uppercase tracking-wider">
-              {t("Bajarish kerak")}
-            </h3>
-            {activeSaleGroups.map((groupTasks) => {
-              const activeTask = getActiveTask(groupTasks)!;
-              const sale = activeTask.sale;
-              return (
-                <div key={activeTask.saleId} className="card !p-0 overflow-hidden border-l-4 border-l-amber-400">
-                  {/* Header */}
-                  <div className="flex items-start gap-3 p-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <User className="w-4 h-4 text-slate-400 shrink-0" />
-                        <span className="font-semibold text-slate-800">
-                          {sale?.customer?.fullName ?? t("Oddiy mijoz")}
-                        </span>
-                        {sale?.customer?.phone && (
-                          <span className="text-xs text-slate-400">{sale.customer.phone}</span>
-                        )}
-                      </div>
-                      {/* Items */}
-                      {sale && sale.items.length > 0 && (
-                        <div className="flex flex-wrap gap-1 ml-6 mb-2">
-                          {sale.items.map((item) => (
-                            <span
-                              key={item.id}
-                              className="inline-flex items-center gap-1 text-[11px] bg-slate-100 rounded px-1.5 py-0.5"
-                            >
-                              {item.serviceName ? (
-                                <Wrench className="w-3 h-3 text-amber-400" />
-                              ) : (
-                                <Package className="w-3 h-3 text-indigo-300" />
-                              )}
-                              <span className="text-slate-500">
-                                {item.product?.name ?? item.serviceName ?? "—"}
-                              </span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Step chain for context */}
-                      <div className="flex items-center gap-1 flex-wrap ml-6">
-                        {groupTasks.map((task, idx) => (
-                          <div key={task.id} className="flex items-center gap-1">
-                            {idx > 0 && <ChevronRight className="w-3 h-3 text-slate-300" />}
-                            <span
-                              className={`text-xs rounded px-2 py-0.5 border ${
-                                task.id === activeTask.id
-                                  ? "bg-amber-100 border-amber-300 text-amber-800 font-semibold"
-                                  : task.status === "COMPLETED"
-                                  ? "bg-green-50 border-green-200 text-green-600 line-through"
-                                  : "bg-slate-50 border-slate-200 text-slate-400"
-                              }`}
-                            >
-                              {task.description}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Active task action bar */}
-                  <div className="border-t border-slate-100 px-4 py-3 bg-amber-50/50 flex items-center justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        {stepStatusIcon(activeTask.status)}
-                        <span className="font-semibold text-slate-800">{activeTask.description}</span>
-                        <span className="text-xs text-slate-400">({t("Bosqich")} {activeTask.stepOrder})</span>
-                      </div>
-                      {activeTask.startedAt && (
-                        <span className="text-xs text-amber-600 flex items-center gap-1 mt-0.5">
-                          <Clock className="w-3 h-3" />
-                          {t("Boshlangan")}: {formatDate(activeTask.startedAt)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="shrink-0">
-                      {activeTask.status === "PENDING" && (
-                        <Button
-                          variant="primary"
-                          loading={startTaskMutation.isPending}
-                          onClick={() => startTaskMutation.mutate(activeTask.id)}
-                        >
-                          <Play className="w-4 h-4" />
-                          {t("Boshlash")}
-                        </Button>
-                      )}
-                      {activeTask.status === "IN_PROGRESS" && (
-                        <Button
-                          variant="success"
-                          onClick={() => {
-                            setCompleteTaskId(activeTask.id);
-                            setCompleteNotes("");
-                          }}
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                          {t("Tugatish")}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Waiting tasks (prev step not done) */}
-        {waitingGroups.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-              {t("Oldingi bosqich kutilmoqda")}
-            </h3>
-            {waitingGroups.map((groupTasks) => {
-              const myTask = groupTasks.find(
-                (t) => t.assignedToId === myUserId && t.status !== "COMPLETED",
-              )!;
-              const sale = myTask.sale;
-              const prevTask = groupTasks.find((t) => t.stepOrder === myTask.stepOrder - 1);
-              return (
-                <div
-                  key={myTask.saleId}
-                  className="card !p-4 opacity-70 border-l-4 border-l-slate-200"
-                >
-                  <div className="flex items-start gap-3">
-                    <Clock className="w-5 h-5 text-slate-300 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-slate-600">
-                          {sale?.customer?.fullName ?? t("Oddiy mijoz")}
-                        </span>
-                      </div>
-                      <p className="text-sm text-slate-500">
-                        {t("Sizning vazifangiz")}: <strong>{myTask.description}</strong>
-                      </p>
-                      {prevTask && (
-                        <p className="text-xs text-slate-400 mt-1">
-                          {t("Kutilmoqda")}: {prevTask.description}{" "}
-                          {prevTask.assignedTo ? `(${prevTask.assignedTo.fullName})` : ""}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Loading state */}
+        {/* Loading */}
         {tasksQuery.isLoading && (
           <div className="card !p-12 text-center text-slate-400">{t("Yuklanmoqda...")}</div>
         )}
 
-        {/* Empty state */}
-        {!tasksQuery.isLoading && activeSaleGroups.length === 0 && waitingGroups.length === 0 && (
-          <div className="card !p-12 text-center">
-            <CheckCircle className="w-12 h-12 text-green-200 mx-auto mb-3" />
-            <p className="text-slate-400">{t("Hozirda sizga vazifa yo'q")}</p>
+        {/* ── Tab: Bajarish kerak ── */}
+        {!tasksQuery.isLoading && activeTab === "active" && (
+          <div className="space-y-3">
+            {totalActive === 0 ? (
+              <div className="card !p-12 text-center">
+                <CheckCircle className="w-12 h-12 text-green-200 mx-auto mb-3" />
+                <p className="text-slate-400">{t("Hozirda sizga vazifa yo'q")}</p>
+              </div>
+            ) : (
+              <>
+                {/* Active groups */}
+                {activeSaleGroups.map((groupTasks) => {
+                  const activeTask = getActiveTask(groupTasks)!;
+                  const sale = activeTask.sale;
+                  return (
+                    <div key={activeTask.saleId} className="card !p-0 overflow-hidden border-l-4 border-l-amber-400">
+                      {/* Two-column body */}
+                      <div className="flex gap-0 divide-x divide-slate-100">
+                        {/* Left: Customer + items */}
+                        <div className="flex-1 min-w-0 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <User className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="font-semibold text-slate-800">
+                              {sale?.customer?.fullName ?? t("Oddiy mijoz")}
+                            </span>
+                            {sale?.customer?.phone && (
+                              <span className="text-xs text-slate-400">{sale.customer.phone}</span>
+                            )}
+                          </div>
+                          {sale && sale.items.length > 0 && (
+                            <div className="flex flex-wrap gap-1 ml-6 mb-3">
+                              {sale.items.map((item) => (
+                                <span
+                                  key={item.id}
+                                  className="inline-flex items-center gap-1 text-[11px] bg-slate-100 rounded px-1.5 py-0.5"
+                                >
+                                  {item.serviceName ? (
+                                    <Wrench className="w-3 h-3 text-amber-400" />
+                                  ) : (
+                                    <Package className="w-3 h-3 text-indigo-300" />
+                                  )}
+                                  <span className="text-slate-500">
+                                    {item.product?.name ?? item.serviceName ?? "—"}
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {/* Step chain */}
+                          <div className="flex items-center gap-1 flex-wrap ml-6">
+                            {groupTasks.map((task, idx) => (
+                              <div key={task.id} className="flex items-center gap-1">
+                                {idx > 0 && <ChevronRight className="w-3 h-3 text-slate-300" />}
+                                <span
+                                  className={`text-xs rounded px-2 py-0.5 border ${
+                                    task.id === activeTask.id
+                                      ? "bg-amber-100 border-amber-300 text-amber-800 font-semibold"
+                                      : task.status === "COMPLETED"
+                                      ? "bg-green-50 border-green-200 text-green-600 line-through"
+                                      : "bg-slate-50 border-slate-200 text-slate-400"
+                                  }`}
+                                >
+                                  {task.description}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Right: Current task info + action */}
+                        <div className="w-52 shrink-0 p-4 bg-amber-50/40 flex flex-col justify-between gap-3">
+                          <div>
+                            <div className="flex items-center gap-1.5 mb-1">
+                              {stepStatusIcon(activeTask.status)}
+                              <span className="font-semibold text-slate-800 text-sm">{activeTask.description}</span>
+                            </div>
+                            <p className="text-xs text-slate-400 ml-5">
+                              {t("Bosqich")} {activeTask.stepOrder} / {groupTasks.length}
+                            </p>
+                            {activeTask.startedAt && (
+                              <p className="text-xs text-amber-600 flex items-center gap-1 mt-1.5 ml-5">
+                                <Clock className="w-3 h-3" />
+                                {formatDate(activeTask.startedAt)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex justify-end">
+                            {activeTask.status === "PENDING" && (
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                loading={startTaskMutation.isPending}
+                                onClick={() => startTaskMutation.mutate(activeTask.id)}
+                              >
+                                <Play className="w-3.5 h-3.5" />
+                                {t("Boshlash")}
+                              </Button>
+                            )}
+                            {activeTask.status === "IN_PROGRESS" && (
+                              <Button
+                                variant="success"
+                                size="sm"
+                                onClick={() => { setCompleteTaskId(activeTask.id); setCompleteNotes(""); }}
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                {t("Tugatish")}
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Waiting groups */}
+                {waitingGroups.map((groupTasks) => {
+                  const myTask = groupTasks.find(
+                    (t) => t.assignedToId === myUserId && t.status !== "COMPLETED",
+                  )!;
+                  const sale = myTask.sale;
+                  const prevTask = groupTasks.find((t) => t.stepOrder === myTask.stepOrder - 1);
+                  return (
+                    <div key={myTask.saleId} className="card !p-0 overflow-hidden border-l-4 border-l-slate-200 opacity-70">
+                      <div className="flex gap-0 divide-x divide-slate-100">
+                        {/* Left */}
+                        <div className="flex-1 min-w-0 p-4">
+                          <div className="flex items-center gap-2 mb-1">
+                            <User className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="font-medium text-slate-600">
+                              {sale?.customer?.fullName ?? t("Oddiy mijoz")}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-500 ml-6">
+                            {t("Sizning vazifangiz")}: <strong>{myTask.description}</strong>
+                          </p>
+                        </div>
+                        {/* Right */}
+                        <div className="w-52 shrink-0 p-4 bg-slate-50/60 flex flex-col justify-center gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-4 h-4 text-slate-300 shrink-0" />
+                            <span className="text-xs text-slate-400 font-medium">{t("Kutilmoqda")}</span>
+                          </div>
+                          {prevTask && (
+                            <p className="text-xs text-slate-400 ml-5">
+                              {prevTask.description}
+                              {prevTask.assignedTo ? ` (${prevTask.assignedTo.fullName})` : ""}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
         )}
 
-        {/* Completed today */}
-        {doneGroups.length > 0 && (
-          <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">
-              {t("Yakunlangan")}
-            </h3>
-            {doneGroups.map((groupTasks) => {
-              const myTask = groupTasks.find((t) => t.assignedToId === myUserId);
-              const sale = myTask?.sale;
-              return (
-                <div
-                  key={groupTasks[0]!.saleId}
-                  className="card !p-3 opacity-60 flex items-center gap-3"
-                >
-                  <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-                  <div className="flex-1 text-sm">
-                    <span className="font-medium text-slate-600">
-                      {sale?.customer?.fullName ?? t("Oddiy mijoz")}
-                    </span>
-                    {" — "}
-                    <span className="text-slate-400">{myTask?.description}</span>
+        {/* ── Tab: Yakunlangan ── */}
+        {!tasksQuery.isLoading && activeTab === "done" && (
+          <div className="space-y-3">
+            {doneGroups.length === 0 ? (
+              <div className="card !p-12 text-center">
+                <CheckCircle className="w-12 h-12 text-slate-100 mx-auto mb-3" />
+                <p className="text-slate-400">{t("Yakunlangan vazifa yo'q")}</p>
+              </div>
+            ) : (
+              doneGroups.map((groupTasks) => {
+                const myTask = groupTasks.find((t) => t.assignedToId === myUserId);
+                const sale = myTask?.sale;
+                return (
+                  <div key={groupTasks[0]!.saleId} className="card !p-0 overflow-hidden border-l-4 border-l-green-400">
+                    <div className="flex gap-0 divide-x divide-slate-100">
+                      {/* Left: Customer + items + step chain */}
+                      <div className="flex-1 min-w-0 p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <User className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span className="font-semibold text-slate-700">
+                            {sale?.customer?.fullName ?? t("Oddiy mijoz")}
+                          </span>
+                          {sale?.customer?.phone && (
+                            <span className="text-xs text-slate-400">{sale.customer.phone}</span>
+                          )}
+                        </div>
+                        {sale && sale.items.length > 0 && (
+                          <div className="flex flex-wrap gap-1 ml-6 mb-2">
+                            {sale.items.map((item) => (
+                              <span
+                                key={item.id}
+                                className="inline-flex items-center gap-1 text-[11px] bg-slate-100 rounded px-1.5 py-0.5"
+                              >
+                                {item.serviceName ? (
+                                  <Wrench className="w-3 h-3 text-amber-400" />
+                                ) : (
+                                  <Package className="w-3 h-3 text-indigo-300" />
+                                )}
+                                <span className="text-slate-500">
+                                  {item.product?.name ?? item.serviceName ?? "—"}
+                                </span>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {/* Step chain */}
+                        <div className="flex items-center gap-1 flex-wrap ml-6">
+                          {groupTasks.map((task, idx) => (
+                            <div key={task.id} className="flex items-center gap-1">
+                              {idx > 0 && <ChevronRight className="w-3 h-3 text-slate-300" />}
+                              <span className="text-xs bg-green-50 border border-green-200 text-green-600 line-through rounded px-2 py-0.5">
+                                {task.description}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Right: My task completion */}
+                      <div className="w-52 shrink-0 p-4 bg-green-50/40 flex flex-col justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
+                            <span className="font-semibold text-slate-700 text-sm">{myTask?.description}</span>
+                          </div>
+                          {myTask?.notes && (
+                            <p className="text-xs text-slate-400 ml-5 flex items-center gap-1">
+                              <MessageSquare className="w-3 h-3 shrink-0" />
+                              {myTask.notes}
+                            </p>
+                          )}
+                          {myTask?.startedAt && (
+                            <p className="text-xs text-amber-600 ml-5 flex items-center gap-1 mt-1">
+                              <Clock className="w-3 h-3" />
+                              Boshlangan: {formatDate(myTask.startedAt)}
+                            </p>
+                          )}
+                          {myTask?.completedAt && (
+                            <p className="text-xs text-green-600 ml-5 flex items-center gap-1 mt-1">
+                              <Calendar className="w-3 h-3" />
+                              Tugallangan: {formatDate(myTask.completedAt)}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  {myTask?.completedAt && (
-                    <span className="text-xs text-slate-400">{formatDate(myTask.completedAt)}</span>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         )}
       </div>

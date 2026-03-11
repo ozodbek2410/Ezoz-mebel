@@ -4,6 +4,7 @@ import { Plus, Edit2, Trash2, Truck, ChevronDown } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button, SearchInput, Modal, Input, Select, Table, TableHead, TableBody, TableRow, TableEmpty, TableLoading, Pagination, Badge, CurrencyPairInput, Tabs, SlideOver, PhoneInput } from "@/components/ui";
+import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { EmptyState } from "@/components/shared";
 import { formatUzs, formatUsd } from "@ezoz/shared";
 import toast from "react-hot-toast";
@@ -603,13 +604,11 @@ export function SuppliersPage() {
         }
       >
         <div className="space-y-4">
-          <Input
+          <CurrencyInput
             label={t("Summa (UZS)")}
-            type="number"
-            min="0"
+            currency="UZS"
             value={debtPayForm.amountUzs}
-            onChange={(e) => setDebtPayForm((f) => ({ ...f, amountUzs: e.target.value }))}
-            rightIcon={<span className="text-xs">so'm</span>}
+            onValueChange={(v) => setDebtPayForm((f) => ({ ...f, amountUzs: v }))}
           />
           <Select
             label={t("To'lov turi")}

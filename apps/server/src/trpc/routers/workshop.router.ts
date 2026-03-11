@@ -199,6 +199,17 @@ export const workshopRouter = router({
           ctx.io?.to("room:stock").emit("stock:updated", {});
         }
 
+        // Auto-complete the sale (mark as COMPLETED / paid)
+        await ctx.db.sale.update({
+          where: { id: task.saleId },
+          data: { status: "COMPLETED" },
+        });
+
+        ctx.io?.to("room:sales").to("room:boss").emit("sale:completed", {
+          saleId: task.saleId,
+          total: sale ? { uzs: Number(sale.totalUzs), usd: Number(sale.totalUsd) } : undefined,
+        });
+
         ctx.io?.to("room:service").to("room:boss").emit("workshop:allCompleted", {
           saleId: task.saleId,
         });

@@ -253,7 +253,7 @@
 /* ===== STAT CARDS ===== */
 
 @utility stat-card {
-  @apply bg-white rounded-lg border border-slate-200 p-5 hover:shadow-md transition-shadow;
+  @apply bg-white rounded-lg border-t border-r border-b border-slate-200 p-5 hover:shadow-md transition-shadow;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 

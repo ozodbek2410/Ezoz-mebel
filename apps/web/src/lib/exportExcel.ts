@@ -36,10 +36,10 @@ const DATA_STYLE: XLSX.CellStyle = {
   font: { sz: 11, color: { rgb: "1E293B" } },
   alignment: { vertical: "center" },
   border: {
-    top: { style: "thin", color: { rgb: "CBD5E1" } },
-    bottom: { style: "thin", color: { rgb: "CBD5E1" } },
-    left: { style: "thin", color: { rgb: "CBD5E1" } },
-    right: { style: "thin", color: { rgb: "CBD5E1" } },
+    top: { style: "thin", color: { rgb: "94A3B8" } },
+    bottom: { style: "thin", color: { rgb: "94A3B8" } },
+    left: { style: "medium", color: { rgb: "94A3B8" } },
+    right: { style: "medium", color: { rgb: "94A3B8" } },
   },
 };
 
@@ -60,6 +60,19 @@ const TOTAL_STYLE: XLSX.CellStyle = {
   },
 };
 
+// Section header row — spans all columns, indigo background
+const SECTION_STYLE: XLSX.CellStyle = {
+  font: { bold: true, sz: 10, color: { rgb: "FFFFFF" } },
+  fill: { fgColor: { rgb: "4338CA" } },
+  alignment: { horizontal: "left", vertical: "center" },
+  border: {
+    top: { style: "thin", color: { rgb: "312E81" } },
+    bottom: { style: "thin", color: { rgb: "312E81" } },
+    left: { style: "thin", color: { rgb: "312E81" } },
+    right: { style: "thin", color: { rgb: "312E81" } },
+  },
+};
+
 function isNumeric(val: unknown): boolean {
   if (typeof val === "number") return true;
   if (typeof val === "string") {
@@ -71,7 +84,7 @@ function isNumeric(val: unknown): boolean {
 
 /**
  * Export data to Excel (.xlsx) file with professional styling.
- * Dark header, alternating row colors, borders, bold title, total row detection.
+ * Supports section header rows via `_section: true` and total rows via `_total: true`.
  */
 export function exportToExcel({ filename, sheetName = "Sheet1", title, columns, data }: ExportOptions): void {
   const wb = XLSX.utils.book_new();
@@ -102,18 +115,48 @@ export function exportToExcel({ filename, sheetName = "Sheet1", title, columns, 
   rowIdx++;
 
   // Data rows
+  let dataRowCount = 0; // alternating color counter — excludes section rows
+  const spacerRowIndices = new Set<number>();
+
   for (let r = 0; r < data.length; r++) {
     const row = data[r]!;
-    const isAlt = r % 2 === 1;
+    const isSectionRow = row["_section"] === true;
+    const isExplicitTotal = row["_total"] === true;
     const isLastRow = r === data.length - 1;
-
-    // Detect "total" row (last row with "JAMI" or total-like label)
     const firstVal = row[columns[0]?.key ?? ""];
-    const secondVal = row[columns[1]?.key ?? ""];
-    const isTotalRow = isLastRow && (
-      (typeof firstVal === "string" && /jami|итого|total/i.test(firstVal)) ||
-      (typeof secondVal === "string" && /jami|итого|total/i.test(secondVal))
-    );
+    const isAutoTotal =
+      isLastRow &&
+      typeof firstVal === "string" &&
+      /jami|итого|total/i.test(firstVal);
+    const isTotalRow = isExplicitTotal || isAutoTotal;
+
+    // — Section header row —
+    if (isSectionRow) {
+      // Insert blank spacer row before section (except the very first section)
+      if (rowIdx > headerRowIdx + 1) {
+        for (let c = 0; c < columns.length; c++) {
+          ws[XLSX.utils.encode_cell({ r: rowIdx, c })] = { v: "", t: "s" as const };
+        }
+        spacerRowIndices.add(rowIdx);
+        rowIdx++;
+      }
+
+      const sectionLabel = String(row[columns[0]?.key ?? ""] ?? "");
+      for (let c = 0; c < columns.length; c++) {
+        ws[XLSX.utils.encode_cell({ r: rowIdx, c })] = {
+          v: c === 0 ? sectionLabel : "",
+          t: "s",
+          s: SECTION_STYLE,
+        };
+      }
+      merges.push({ s: { r: rowIdx, c: 0 }, e: { r: rowIdx, c: columns.length - 1 } });
+      rowIdx++;
+      continue;
+    }
+
+    // — Normal / total data row —
+    const isAlt = dataRowCount % 2 === 1;
+    dataRowCount++;
 
     for (let c = 0; c < columns.length; c++) {
       const col = columns[c]!;
@@ -122,7 +165,7 @@ export function exportToExcel({ filename, sheetName = "Sheet1", title, columns, 
 
       let style: XLSX.CellStyle;
       if (isTotalRow) {
-        style = TOTAL_STYLE;
+        style = { ...TOTAL_STYLE };
       } else {
         style = isAlt ? { ...DATA_STYLE_ALT } : { ...DATA_STYLE };
       }
@@ -138,10 +181,12 @@ export function exportToExcel({ filename, sheetName = "Sheet1", title, columns, 
       }
 
       const cellVal = val != null ? val : "";
+      const isNumber = typeof cellVal === "number";
       const cell: XLSX.CellObject = {
-        v: typeof cellVal === "number" ? cellVal : String(cellVal),
-        t: typeof cellVal === "number" ? "n" : "s",
+        v: isNumber ? cellVal : String(cellVal),
+        t: isNumber ? "n" : "s",
         s: style,
+        ...(isNumber ? { z: "#,##0" } : {}),
       };
 
       ws[cellRef] = cell;
@@ -161,8 +206,10 @@ export function exportToExcel({ filename, sheetName = "Sheet1", title, columns, 
   // Row heights
   const rowHeights: Array<{ hpx: number }> = [];
   for (let r = 0; r < rowIdx; r++) {
-    if (title && r === 0) {
-      rowHeights.push({ hpx: 30 });
+    if (spacerRowIndices.has(r)) {
+      rowHeights.push({ hpx: 12 });
+    } else if (title && r === 0) {
+      rowHeights.push({ hpx: 32 });
     } else if (r === headerRowIdx) {
       rowHeights.push({ hpx: 24 });
     } else {

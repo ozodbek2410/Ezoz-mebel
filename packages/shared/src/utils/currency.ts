@@ -12,9 +12,12 @@ export function formatUzs(amount: number): string {
 }
 
 export function formatNumber(value: number | string): string {
-  const num = String(value).replace(/[^\d]/g, "");
-  if (!num) return "";
-  return num.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const str = String(value);
+  const parts = str.split(".");
+  const integer = (parts[0] ?? "").replace(/[^\d]/g, "");
+  const decimal = parts.length > 1 ? "." + (parts[1]?.replace(/[^\d]/g, "").slice(0, 2) ?? "") : "";
+  if (!integer) return "";
+  return integer.replace(/\B(?=(\d{3})+(?!\d))/g, " ") + decimal;
 }
 
 export function parseFormattedNumber(value: string): number {

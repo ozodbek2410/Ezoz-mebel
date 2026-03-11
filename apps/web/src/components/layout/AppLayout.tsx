@@ -10,6 +10,8 @@ import { useUIStore } from "@/store/ui.store";
 import { connectSocket } from "@/lib/socket";
 import { useSocketEvent } from "@/hooks/useSocket";
 import { EditProfileModal } from "./Sidebar";
+import { useAuthStore } from "@/store/auth.store";
+import { trpc } from "@/lib/trpc";
 
 export function AppLayout() {
   const { show, customers, dismiss } = useBirthdayAlert();
@@ -19,6 +21,14 @@ export function AppLayout() {
   useEffect(() => {
     connectSocket();
     useCurrencyStore.getState().loadRate();
+
+    // Sync fresh permissions from server on every app load
+    trpc.auth.me.query().then((me) => {
+      useAuthStore.getState().updateProfile({
+        fullName: me.fullName,
+        customPermissions: me.customPermissions,
+      });
+    }).catch(() => { /* ignore — offline or token expired */ });
   }, []);
 
   const handleRateChange = useCallback((data: { rate: number }) => {

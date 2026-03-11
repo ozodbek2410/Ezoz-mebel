@@ -5,7 +5,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { BarChart3, TrendingUp, TrendingDown, DollarSign, ShoppingBag, Wallet, Download, Package, ArrowLeft, Wrench, CheckCircle, Star, Users, ChevronRight } from "lucide-react";
+import { BarChart3, TrendingUp, TrendingDown, DollarSign, ShoppingBag, Wallet, Download, Package, ArrowLeft, Wrench, CheckCircle, Star } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Input, Select, Tabs, Badge, SearchInput } from "@/components/ui";
@@ -43,7 +43,6 @@ export function ReportsPage() {
   const [filterProductId, setFilterProductId] = useState<number | undefined>(
     search?.productId ? Number(search.productId) : undefined,
   );
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
 
   useEffect(() => {
     if (search?.tab) setActiveTab(search.tab);
@@ -69,18 +68,6 @@ export function ReportsPage() {
     queryKey: ["report", "my", dateFrom, dateTo],
     queryFn: () => trpc.report.myReport.query({ dateFrom, dateTo }),
     enabled: activeTab === "my",
-  });
-
-  const employeesSummary = useQuery({
-    queryKey: ["report", "employees", dateFrom, dateTo],
-    queryFn: () => trpc.report.employeesSummary.query({ dateFrom, dateTo }),
-    enabled: activeTab === "employees" && isBoss(),
-  });
-
-  const employeeDetail = useQuery({
-    queryKey: ["report", "employeeDetail", dateFrom, dateTo, selectedEmployeeId],
-    queryFn: () => trpc.report.myReport.query({ dateFrom, dateTo, userId: selectedEmployeeId! }),
-    enabled: activeTab === "employees" && isBoss() && selectedEmployeeId !== null,
   });
 
   const bossReport = useQuery({
@@ -122,8 +109,7 @@ export function ReportsPage() {
           <Tabs
             tabs={[
               ...(isBoss() ? [{ id: "boss", label: t("Umumiy hisobot") }] : []),
-              ...(isBoss() ? [{ id: "employees", label: t("Xodimlar") }] : []),
-              ...(!isBoss() ? [{ id: "my", label: t("O'z hisobotim") }] : []),
+              { id: "my", label: t("O'z hisobotim") },
               ...(!isMaster() ? [{ id: "cashier", label: t("Kassir hisoboti") }] : []),
               ...(!isMaster() ? [{ id: "products", label: t("Mahsulotlar") }] : []),
               ...(!isMaster() ? [{ id: "charts", label: t("Diagrammalar") }] : []),
@@ -135,7 +121,7 @@ export function ReportsPage() {
         </div>
 
         {/* Date filters */}
-        {activeTab !== "inventory" && activeTab !== "charts" && activeTab !== "products" && !(activeTab === "employees" && selectedEmployeeId !== null) && (
+        {activeTab !== "inventory" && activeTab !== "charts" && activeTab !== "products" && (
           <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 mb-6">
             <Input label={t("Dan")} type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
             <Input label={t("Gacha")} type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
@@ -251,198 +237,6 @@ export function ReportsPage() {
           </div>
         )}
 
-        {/* Employees Tab */}
-        {activeTab === "employees" && isBoss() && (
-          <div className="space-y-5">
-            {selectedEmployeeId === null ? (
-              <>
-                {/* Employee list */}
-                <div className="card overflow-hidden">
-                  <div className="card-header">
-                    <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                      <Users size={16} className="text-indigo-500" />
-                      {t("Xodimlar ro'yxati")}
-                    </h3>
-                    <span className="text-xs text-slate-400">{employeesSummary.data?.length ?? 0} {t("ta xodim")}</span>
-                  </div>
-                  {employeesSummary.isLoading ? (
-                    <div className="p-8 text-center text-slate-400">{t("Yuklanmoqda...")}</div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse text-sm [&_thead_th+th]:border-l-2 [&_thead_th+th]:border-slate-500/60 [&_tbody_td+td]:border-l-2 [&_tbody_td+td]:border-slate-200">
-                        <thead>
-                          <tr className="bg-slate-700 text-white text-left">
-                            <th className="px-4 py-3 font-semibold">{t("Xodim")}</th>
-                            <th className="px-4 py-3 font-semibold">{t("Rol")}</th>
-                            <th className="px-4 py-3 font-semibold text-right">{t("Bajarilgan vazifalar")}</th>
-                            <th className="px-4 py-3 font-semibold text-right">{t("Qo'shimcha yozuvlar")}</th>
-                            <th className="px-4 py-3 font-semibold text-right">{t("Jami bonus")}</th>
-                            <th className="px-4 py-3 font-semibold text-center">{t("Batafsil")}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(employeesSummary.data ?? []).map((emp, i) => (
-                            <tr
-                              key={emp.id}
-                              className={`border-b-2 border-slate-200 hover:bg-indigo-50/40 transition-colors cursor-pointer ${i % 2 === 1 ? "bg-slate-50/60" : ""}`}
-                              onClick={() => setSelectedEmployeeId(emp.id)}
-                            >
-                              <td className="px-4 py-3 font-medium text-slate-900">{emp.fullName}</td>
-                              <td className="px-4 py-3">
-                                <Badge variant="neutral">{emp.role}</Badge>
-                              </td>
-                              <td className="px-4 py-3 text-right text-indigo-700 font-medium">{emp.workshopTasksCount} ta</td>
-                              <td className="px-4 py-3 text-right text-slate-600">{emp.jobRecordsCount} ta</td>
-                              <td className="px-4 py-3 text-right font-bold text-amber-600">{formatUzs(emp.totalBonusUzs)}</td>
-                              <td className="px-4 py-3 text-center">
-                                <button className="text-indigo-600 hover:text-indigo-800 transition-colors">
-                                  <ChevronRight size={18} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                          {(employeesSummary.data ?? []).length === 0 && (
-                            <tr>
-                              <td colSpan={6} className="px-4 py-8 text-center text-slate-400">{t("Ma'lumot yo'q")}</td>
-                            </tr>
-                          )}
-                        </tbody>
-                        {(employeesSummary.data ?? []).length > 0 && (
-                          <tfoot>
-                            <tr className="bg-slate-100 border-t-2 border-slate-300">
-                              <td colSpan={2} className="px-4 py-3 font-bold text-slate-800">{t("Jami")}</td>
-                              <td className="px-4 py-3 text-right font-bold text-indigo-700">
-                                {(employeesSummary.data ?? []).reduce((s, e) => s + e.workshopTasksCount, 0)} ta
-                              </td>
-                              <td className="px-4 py-3 text-right font-bold text-slate-600">
-                                {(employeesSummary.data ?? []).reduce((s, e) => s + e.jobRecordsCount, 0)} ta
-                              </td>
-                              <td className="px-4 py-3 text-right font-bold text-amber-600">
-                                {formatUzs((employeesSummary.data ?? []).reduce((s, e) => s + e.totalBonusUzs, 0))}
-                              </td>
-                              <td className="px-4 py-3" />
-                            </tr>
-                          </tfoot>
-                        )}
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Employee detail view */}
-                <div className="flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-4 mb-2">
-                  <button
-                    onClick={() => setSelectedEmployeeId(null)}
-                    className="flex items-center gap-1.5 text-sm text-indigo-600 hover:text-indigo-800 transition-colors"
-                  >
-                    <ArrowLeft size={16} />
-                    {t("Xodimlar ro'yxati")}
-                  </button>
-                  <span className="text-slate-300 hidden sm:block">|</span>
-                  <span className="font-semibold text-slate-900">{employeeDetail.data?.fullName}</span>
-                  <div className="flex gap-3 sm:ml-auto">
-                    <Input label={t("Dan")} type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-                    <Input label={t("Gacha")} type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-                  </div>
-                </div>
-
-                {employeeDetail.data && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <StatCard
-                        label={t("Bajarilgan vazifalar")}
-                        value={String(employeeDetail.data.workshopTasksCount)}
-                        icon={<CheckCircle className="w-5 h-5 text-green-600" />}
-                        variant="success"
-                      />
-                      <StatCard
-                        label={t("Har bir vazifa bonusi")}
-                        value={formatUzs(employeeDetail.data.bonusPerJob)}
-                        icon={<Wrench className="w-5 h-5 text-orange-500" />}
-                      />
-                      <StatCard
-                        label={t("Jami bonus")}
-                        value={formatUzs(employeeDetail.data.totalBonusUzs)}
-                        icon={<Star className="w-5 h-5 text-amber-500" />}
-                      />
-                    </div>
-
-                    {employeeDetail.data.workshopTasks.length > 0 && (
-                      <div className="card">
-                        <div className="card-header">
-                          <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                            <Wrench size={16} className="text-orange-500" />
-                            {t("Bajarilgan ustaxona vazifalari")}
-                          </h3>
-                          <span className="text-xs text-slate-400">{employeeDetail.data.workshopTasksCount} {t("ta vazifa")}</span>
-                        </div>
-                        <div className="divide-y divide-slate-100">
-                          {employeeDetail.data.workshopTasks.map((task, index) => (
-                            <div key={task.id} className="px-5 py-3 flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-full bg-orange-50 border border-orange-200 flex items-center justify-center flex-shrink-0">
-                                <span className="text-xs font-bold text-orange-600">{index + 1}</span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-slate-800 truncate">{task.description}</p>
-                                {task.customerName && <p className="text-xs text-slate-400 mt-0.5">{task.customerName}</p>}
-                              </div>
-                              <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                <span className="text-xs font-semibold text-amber-600">{formatUzs(employeeDetail.data.bonusPerJob)}</span>
-                                <span className="text-xs text-slate-400">
-                                  {task.completedAt ? new Date(task.completedAt).toLocaleDateString("uz-UZ") : ""}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        {employeeDetail.data.bonusPerJob > 0 && (
-                          <div className="px-5 py-3 bg-amber-50 border-t border-amber-100 flex items-center justify-between">
-                            <span className="text-sm text-amber-700">{t("Vazifalardan jami bonus")}</span>
-                            <span className="text-sm font-bold text-amber-700">
-                              {formatUzs(employeeDetail.data.workshopTasksCount * employeeDetail.data.bonusPerJob)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {employeeDetail.data.jobRecords.length > 0 && (
-                      <div className="card">
-                        <div className="card-header">
-                          <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                            <Star size={16} className="text-amber-500" />
-                            {t("Qo'shimcha bonus yozuvlari")}
-                          </h3>
-                        </div>
-                        <div className="divide-y divide-slate-100">
-                          {employeeDetail.data.jobRecords.map((jr) => (
-                            <div key={jr.id} className="px-5 py-3 flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-medium text-slate-800">{jr.description}</p>
-                                <p className="text-xs text-slate-400 mt-0.5">{new Date(jr.date).toLocaleDateString("uz-UZ")}</p>
-                              </div>
-                              <span className="text-sm font-semibold text-amber-600">{formatUzs(jr.bonusUzs)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {employeeDetail.data.workshopTasks.length === 0 && employeeDetail.data.jobRecords.length === 0 && (
-                      <div className="empty-state">
-                        <Wrench className="empty-state-icon" />
-                        <p className="empty-state-title">{t("Bu davrda ma'lumot yo'q")}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
         {/* Charts Tab */}
         {activeTab === "charts" && (
           <ChartsTab
@@ -459,42 +253,29 @@ export function ReportsPage() {
 
         {/* Cashier Report */}
         {activeTab === "cashier" && cashierReport.data && (
-          <div className="space-y-5">
-            {/* Excel button */}
-            <div className="flex justify-end">
+          <div className="space-y-6">
+            <div className="flex justify-end mb-2">
               <button
                 className="btn-sm flex items-center gap-1.5 text-xs bg-green-600 text-white hover:bg-green-700 px-3 py-1.5 rounded-lg transition-colors"
                 onClick={() => {
                   const d = cashierReport.data;
                   if (!d) return;
-                  const sec = (label: string): Record<string, unknown> => ({ _section: true, label, uzs: "", usd: "", extra: "" });
-                  const tot = (label: string, uzs: number | string, usd?: number | string): Record<string, unknown> => ({ _total: true, label, uzs, usd: usd ?? "", extra: "" });
                   exportToExcel({
                     filename: `kassir-hisobot_${dateFrom}_${dateTo}`,
-                    sheetName: "Kassir hisoboti",
-                    title: `Kassir hisoboti: ${dateFrom} dan ${dateTo} gacha`,
+                    sheetName: t("Kassir hisoboti"),
                     columns: [
-                      { header: "Ko'rsatkich", key: "label", width: 34 },
-                      { header: "UZS (so'm)", key: "uzs", width: 22 },
-                      { header: "USD ($)", key: "usd", width: 14 },
-                      { header: "Son", key: "extra", width: 12 },
+                      { header: t("Ko'rsatkich"), key: "label", width: 25 },
+                      { header: t("Qiymat"), key: "value", width: 20 },
                     ],
                     data: [
-                      sec("SOTUVLAR"),
-                      { label: "  Sotuvlar soni", uzs: "", usd: "", extra: `${d.salesCount} ta` },
-                      { label: "  Jami sotuvlar (UZS)", uzs: d.totalSalesUzs, usd: "", extra: "" },
-                      { label: "  Jami sotuvlar (USD)", uzs: "", usd: d.totalSalesUsd, extra: "" },
-                      tot("Jami to'lovlar", d.totalPaymentsUzs, d.totalPaymentsUsd),
-
-                      sec("XARAJATLAR"),
-                      { label: "  Xarajatlar (UZS)", uzs: d.totalExpensesUzs, usd: "", extra: "" },
-                      { label: "  Xarajatlar (USD)", uzs: "", usd: d.totalExpensesUsd, extra: "" },
-                      tot("Jami xarajat", d.totalExpensesUzs, d.totalExpensesUsd),
-
-                      sec("YAKUNIY HISOB"),
-                      { label: "  Jami tushum", uzs: d.totalPaymentsUzs, usd: d.totalPaymentsUsd || "", extra: "" },
-                      { label: "  Jami xarajat", uzs: d.totalExpensesUzs, usd: "", extra: "" },
-                      tot(d.netUzs >= 0 ? "SOF FOYDA" : "ZARAR", d.netUzs, d.netUsd),
+                      { label: t("Sotuvlar soni"), value: d.salesCount },
+                      { label: t("Jami sotuvlar (UZS)"), value: d.totalSalesUzs },
+                      { label: t("Jami sotuvlar (USD)"), value: d.totalSalesUsd },
+                      { label: t("Jami to'lovlar (UZS)"), value: d.totalPaymentsUzs },
+                      { label: t("Jami to'lovlar (USD)"), value: d.totalPaymentsUsd },
+                      { label: t("Xarajatlar (UZS)"), value: d.totalExpensesUzs },
+                      { label: t("Xarajatlar (USD)"), value: d.totalExpensesUsd },
+                      { label: t("Sof foyda (UZS)"), value: d.netUzs },
                     ],
                   });
                 }}
@@ -503,127 +284,33 @@ export function ReportsPage() {
                 Excel
               </button>
             </div>
-
-            {/* Hero: Sof foyda */}
-            <div className={`rounded-2xl p-6 ${cashierReport.data.netUzs >= 0 ? "bg-gradient-to-br from-green-50 to-emerald-100 border border-green-200" : "bg-gradient-to-br from-red-50 to-rose-100 border border-red-200"}`}>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-slate-500 mb-1">{t("Sof foyda (davr)")}</p>
-                  <p className={`text-3xl font-bold ${cashierReport.data.netUzs >= 0 ? "text-green-700" : "text-red-700"}`}>
-                    {formatUzs(cashierReport.data.netUzs)}
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1">{t("Tushum - Xarajat")}</p>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { label: t("Sotuvlar"), value: String(cashierReport.data.salesCount) + " ta", color: "text-indigo-700" },
-                    { label: t("Jami tushum"), value: formatUzs(cashierReport.data.totalPaymentsUzs), color: "text-green-700" },
-                    { label: t("Xarajatlar"), value: formatUzs(cashierReport.data.totalExpensesUzs), color: "text-red-600" },
-                  ].map((item, i) => (
-                    <div key={i} className="bg-white/70 rounded-xl px-4 py-3 text-center">
-                      <p className="text-xs text-slate-400">{item.label}</p>
-                      <p className={`text-sm font-bold mt-0.5 ${item.color}`}>{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard label={t("Sotuvlar soni")} value={String(cashierReport.data.salesCount)}
+                icon={<ShoppingBag className="w-5 h-5 text-indigo-600" />} />
+              <StatCard label={t("Jami sotuvlar")} value={formatUzs(cashierReport.data.totalSalesUzs)}
+                sub={formatUsd(cashierReport.data.totalSalesUsd)}
+                icon={<DollarSign className="w-5 h-5 text-green-600" />} />
+              <StatCard label={t("Xarajatlar")} value={formatUzs(cashierReport.data.totalExpensesUzs)}
+                icon={<TrendingDown className="w-5 h-5 text-red-600" />} variant="danger" />
+              <StatCard label={t("Sof foyda")} value={formatUzs(cashierReport.data.netUzs)}
+                icon={<TrendingUp className="w-5 h-5 text-green-600" />}
+                variant={cashierReport.data.netUzs >= 0 ? "success" : "danger"} />
             </div>
 
-            {/* Detail table */}
-            <div className="card overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm [&_thead_th+th]:border-l-2 [&_thead_th+th]:border-slate-500/60 [&_tbody_td+td]:border-l-2 [&_tbody_td+td]:border-slate-300">
-                  <thead>
-                    <tr className="bg-slate-700 text-white text-left">
-                      <th className="px-5 py-3 font-semibold">{t("Ko'rsatkich")}</th>
-                      <th className="px-5 py-3 font-semibold text-right">{t("UZS (so'm)")}</th>
-                      <th className="px-5 py-3 font-semibold text-right">{t("USD ($)")}</th>
-                      <th className="px-5 py-3 font-semibold text-center">{t("Son")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* SOTUVLAR */}
-                    <tr className="bg-indigo-700">
-                      <td colSpan={4} className="px-5 py-2 text-xs font-bold text-white uppercase tracking-wider">{t("SOTUVLAR")}</td>
-                    </tr>
-                    <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                      <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Sotuvlar soni")}</td>
-                      <td className="px-5 py-2.5" />
-                      <td className="px-5 py-2.5" />
-                      <td className="px-5 py-2.5 text-center font-medium text-indigo-700">{cashierReport.data.salesCount} ta</td>
-                    </tr>
-                    <tr className="border-b-2 border-slate-200 bg-slate-50/60 hover:bg-indigo-50/30 transition-colors">
-                      <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Jami sotuvlar")}</td>
-                      <td className="px-5 py-2.5 text-right font-medium text-slate-800">{formatUzs(cashierReport.data.totalSalesUzs)}</td>
-                      <td className="px-5 py-2.5 text-right font-medium text-blue-600">{formatUsd(cashierReport.data.totalSalesUsd)}</td>
-                      <td className="px-5 py-2.5" />
-                    </tr>
-                    <tr className="border-t-2 border-slate-300 bg-slate-100">
-                      <td className="px-5 py-2.5 pl-8 font-bold text-slate-800">{t("Jami to'lovlar")}</td>
-                      <td className="px-5 py-2.5 text-right font-bold text-green-700">{formatUzs(cashierReport.data.totalPaymentsUzs)}</td>
-                      <td className="px-5 py-2.5 text-right font-bold text-blue-600">{formatUsd(cashierReport.data.totalPaymentsUsd)}</td>
-                      <td className="px-5 py-2.5" />
-                    </tr>
-
-                    {/* spacer */}
-                    <tr><td colSpan={4} className="h-3 bg-slate-50 p-0" /></tr>
-
-                    {/* XARAJATLAR */}
-                    <tr className="bg-indigo-700">
-                      <td colSpan={4} className="px-5 py-2 text-xs font-bold text-white uppercase tracking-wider">{t("XARAJATLAR")}</td>
-                    </tr>
-                    <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                      <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Xarajatlar (UZS)")}</td>
-                      <td className="px-5 py-2.5 text-right font-medium text-red-600">{formatUzs(cashierReport.data.totalExpensesUzs)}</td>
-                      <td className="px-5 py-2.5" />
-                      <td className="px-5 py-2.5" />
-                    </tr>
-                    <tr className="border-b-2 border-slate-200 bg-slate-50/60 hover:bg-indigo-50/30 transition-colors">
-                      <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Xarajatlar (USD)")}</td>
-                      <td className="px-5 py-2.5" />
-                      <td className="px-5 py-2.5 text-right font-medium text-red-500">{formatUsd(cashierReport.data.totalExpensesUsd)}</td>
-                      <td className="px-5 py-2.5" />
-                    </tr>
-                    <tr className="border-t-2 border-slate-300 bg-slate-100">
-                      <td className="px-5 py-2.5 pl-8 font-bold text-slate-800">{t("Jami xarajat")}</td>
-                      <td className="px-5 py-2.5 text-right font-bold text-red-700">{formatUzs(cashierReport.data.totalExpensesUzs)}</td>
-                      <td className="px-5 py-2.5 text-right font-bold text-red-500">{formatUsd(cashierReport.data.totalExpensesUsd)}</td>
-                      <td className="px-5 py-2.5" />
-                    </tr>
-
-                    {/* spacer */}
-                    <tr><td colSpan={4} className="h-3 bg-slate-50 p-0" /></tr>
-
-                    {/* YAKUNIY HISOB */}
-                    <tr className="bg-indigo-700">
-                      <td colSpan={4} className="px-5 py-2 text-xs font-bold text-white uppercase tracking-wider">{t("YAKUNIY HISOB")}</td>
-                    </tr>
-                    <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                      <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Jami tushum")}</td>
-                      <td className="px-5 py-2.5 text-right font-medium text-green-700">{formatUzs(cashierReport.data.totalPaymentsUzs)}</td>
-                      <td className="px-5 py-2.5 text-right font-medium text-blue-600">{formatUsd(cashierReport.data.totalPaymentsUsd)}</td>
-                      <td className="px-5 py-2.5" />
-                    </tr>
-                    <tr className="border-b-2 border-slate-200 bg-slate-50/60 hover:bg-indigo-50/30 transition-colors">
-                      <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Jami xarajat")}</td>
-                      <td className="px-5 py-2.5 text-right font-medium text-red-600">{formatUzs(cashierReport.data.totalExpensesUzs)}</td>
-                      <td className="px-5 py-2.5" />
-                      <td className="px-5 py-2.5" />
-                    </tr>
-                    <tr className={`border-t-2 ${cashierReport.data.netUzs >= 0 ? "border-green-400 bg-green-50" : "border-red-400 bg-red-50"}`}>
-                      <td className="px-5 py-4 pl-8 text-base font-bold text-slate-900">
-                        {cashierReport.data.netUzs >= 0 ? t("SOF FOYDA") : t("ZARAR")}
-                      </td>
-                      <td className={`px-5 py-4 text-right text-xl font-bold ${cashierReport.data.netUzs >= 0 ? "text-green-700" : "text-red-700"}`}>
-                        {formatUzs(cashierReport.data.netUzs)}
-                      </td>
-                      <td className={`px-5 py-4 text-right text-base font-bold ${cashierReport.data.netUzs >= 0 ? "text-green-600" : "text-red-600"}`}>
-                        {formatUsd(cashierReport.data.netUsd)}
-                      </td>
-                      <td className="px-5 py-4" />
-                    </tr>
-                  </tbody>
-                </table>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="card card-body">
+                <h4 className="text-sm font-medium text-slate-500 mb-3">{t("Tushumlar tafsiloti")}</h4>
+                <div className="space-y-2">
+                  <DetailRow label={t("Jami to'lovlar (UZS)")} value={formatUzs(cashierReport.data.totalPaymentsUzs)} />
+                  <DetailRow label={t("Jami to'lovlar (USD)")} value={formatUsd(cashierReport.data.totalPaymentsUsd)} className="text-usd" />
+                </div>
+              </div>
+              <div className="card card-body">
+                <h4 className="text-sm font-medium text-slate-500 mb-3">{t("Xarajatlar tafsiloti")}</h4>
+                <div className="space-y-2">
+                  <DetailRow label={t("Xarajatlar (UZS)")} value={formatUzs(cashierReport.data.totalExpensesUzs)} className="text-red-600" />
+                  <DetailRow label={t("Xarajatlar (USD)")} value={formatUsd(cashierReport.data.totalExpensesUsd)} className="text-red-500" />
+                </div>
               </div>
             </div>
           </div>
@@ -757,7 +444,6 @@ interface BossData {
   totalAdvancesUzs: number;
   totalIncomeUzs: number;
   totalExpensesUzs: number;
-  totalProductCostUzs: number;
   salaryPaidUzs: number;
   netProfitUzs: number;
   salesCount: number;
@@ -854,17 +540,16 @@ function BossOverviewTab({ data: d, dateFrom, dateTo }: { data: BossData; dateFr
         // Yakuniy hisob
         sec("YAKUNIY HISOB"),
         { label: "  Jami tushum", uzs: d.totalIncomeUzs, usd: "", extra: "" },
-
         { label: "  Jami chiqim", uzs: totalChiqim, usd: "", extra: "" },
         tot(d.netProfitUzs >= 0 ? "SOF FOYDA" : "ZARAR", d.netProfitUzs),
       ],
     });
   };
 
-  const totalChiqim = d.totalExpensesUzs + d.salaryPaidUzs + d.totalAdvancesUzs;
+  const maxCashier = d.topCashiers[0]?.totalUzs ?? 1;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Excel */}
       <div className="flex justify-end">
         <button
@@ -887,234 +572,254 @@ function BossOverviewTab({ data: d, dateFrom, dateTo }: { data: BossData; dateFr
             <p className="text-xs text-slate-400 mt-1">{t("Tushum - Xarajat - Maosh - Avans")}</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: t("Jami tushum"), value: formatUzs(d.totalIncomeUzs), color: "text-green-700" },
-              { label: t("Xarajatlar"), value: formatUzs(d.totalExpensesUzs), color: "text-red-600" },
-              { label: t("Maosh"), value: formatUzs(d.salaryPaidUzs), color: "text-amber-600" },
-              { label: t("Avanslar"), value: formatUzs(d.totalAdvancesUzs), color: "text-rose-500" },
-            ].map((item, i) => (
-              <div key={i} className="bg-white/70 rounded-xl px-4 py-3 text-center">
-                <p className="text-xs text-slate-400">{item.label}</p>
-                <p className={`text-sm font-bold mt-0.5 ${item.color}`}>{item.value}</p>
-              </div>
-            ))}
+            <div className="bg-white/70 rounded-xl px-4 py-3 text-center">
+              <p className="text-xs text-slate-400">{t("Jami tushum")}</p>
+              <p className="text-sm font-bold text-green-700 mt-0.5">{formatUzs(d.totalIncomeUzs)}</p>
+            </div>
+            <div className="bg-white/70 rounded-xl px-4 py-3 text-center">
+              <p className="text-xs text-slate-400">{t("Xarajatlar")}</p>
+              <p className="text-sm font-bold text-red-600 mt-0.5">{formatUzs(d.totalExpensesUzs)}</p>
+            </div>
+            <div className="bg-white/70 rounded-xl px-4 py-3 text-center">
+              <p className="text-xs text-slate-400">{t("Maosh")}</p>
+              <p className="text-sm font-bold text-amber-600 mt-0.5">{formatUzs(d.salaryPaidUzs)}</p>
+            </div>
+            <div className="bg-white/70 rounded-xl px-4 py-3 text-center">
+              <p className="text-xs text-slate-400">{t("Avanslar")}</p>
+              <p className="text-sm font-bold text-orange-600 mt-0.5">{formatUzs(d.totalAdvancesUzs)}</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Report Table */}
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm [&_thead_th+th]:border-l-2 [&_thead_th+th]:border-slate-400 [&_tbody_td+td]:border-l-2 [&_tbody_td+td]:border-slate-300">
-            <thead>
-              <tr className="bg-slate-700 text-white">
-                <th className="px-5 py-3 text-left font-semibold">{t("Ko'rsatkich")}</th>
-                <th className="px-5 py-3 text-right font-semibold w-52">{t("UZS (so'm)")}</th>
-                <th className="px-5 py-3 text-right font-semibold w-32">{t("USD ($)")}</th>
-                <th className="px-5 py-3 text-right font-semibold w-28">{t("Son / Izoh")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* ── KASSA TUSHUMI ── */}
-              <tr className="bg-indigo-600">
-                <td colSpan={4} className="px-5 py-2 text-white font-bold text-xs uppercase tracking-widest">{t("KASSA TUSHUMI")}</td>
-              </tr>
-              <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Savdo kassasi tushum")}</td>
-                <td className="px-5 py-2.5 text-right font-medium text-slate-900">{formatUzs(d.salesCashUzs)}</td>
-                <td className="px-5 py-2.5 text-right text-blue-600">{d.salesCashUsd > 0 ? formatUsd(d.salesCashUsd) : ""}</td>
-                <td className="px-5 py-2.5" />
-              </tr>
-              <tr className="border-b-2 border-slate-200 bg-slate-50/60 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-600">{t("Savdo kassasi xarajat")}</td>
-                <td className="px-5 py-2.5 text-right font-medium text-red-600">{formatUzs(d.salesExpensesUzs)}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-              </tr>
-              <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Xizmat kassasi tushum")}</td>
-                <td className="px-5 py-2.5 text-right font-medium text-slate-900">{formatUzs(d.serviceCashUzs)}</td>
-                <td className="px-5 py-2.5 text-right text-blue-600">{d.serviceCashUsd > 0 ? formatUsd(d.serviceCashUsd) : ""}</td>
-                <td className="px-5 py-2.5" />
-              </tr>
-              <tr className="border-b-2 border-slate-200 bg-slate-50/60 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-600">{t("Xizmat kassasi xarajat")}</td>
-                <td className="px-5 py-2.5 text-right font-medium text-red-600">{formatUzs(d.serviceExpensesUzs)}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-              </tr>
-              <tr className="border-t-2 border-slate-300 bg-slate-100">
-                <td className="px-5 py-2.5 pl-8 font-bold text-slate-800">{t("Jami tushum")}</td>
-                <td className="px-5 py-2.5 text-right font-bold text-green-700">{formatUzs(d.totalIncomeUzs)}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-              </tr>
+      {/* Row 1: Kassalar + Sotuvlar */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Kassa tafsiloti */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <Wallet size={16} className="text-indigo-500" />
+              {t("Kassa tushumi")}
+            </h3>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {/* Savdo */}
+            <div className="px-5 py-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-slate-700">{t("Savdo kassasi")}</span>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-indigo-700">{formatUzs(d.salesCashUzs)}</p>
+                  {d.salesCashUsd > 0 && <p className="text-xs text-blue-500">{formatUsd(d.salesCashUsd)}</p>}
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>{t("Xarajat")}: <span className="text-red-500 font-medium">{formatUzs(d.salesExpensesUzs)}</span></span>
+                <span>{t("Sof")}: <span className="text-green-600 font-medium">{formatUzs(d.salesCashUzs - d.salesExpensesUzs)}</span></span>
+              </div>
+            </div>
+            {/* Xizmat */}
+            <div className="px-5 py-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-slate-700">{t("Xizmat kassasi")}</span>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-cyan-700">{formatUzs(d.serviceCashUzs)}</p>
+                  {d.serviceCashUsd > 0 && <p className="text-xs text-blue-500">{formatUsd(d.serviceCashUsd)}</p>}
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>{t("Xarajat")}: <span className="text-red-500 font-medium">{formatUzs(d.serviceExpensesUzs)}</span></span>
+                <span>{t("Sof")}: <span className="text-green-600 font-medium">{formatUzs(d.serviceCashUzs - d.serviceExpensesUzs)}</span></span>
+              </div>
+            </div>
+            {/* Jami */}
+            <div className="px-5 py-3 bg-slate-50 flex items-center justify-between">
+              <span className="text-sm font-semibold text-slate-700">{t("Jami tushum")}</span>
+              <span className="text-base font-bold text-green-700">{formatUzs(d.totalIncomeUzs)}</span>
+            </div>
+          </div>
+        </div>
 
-              <tr><td colSpan={4} className="h-3 bg-slate-50 p-0" /></tr>
-              {/* ── SOTUVLAR STATISTIKASI ── */}
-              <tr className="bg-indigo-600">
-                <td colSpan={4} className="px-5 py-2 text-white font-bold text-xs uppercase tracking-widest">{t("SOTUVLAR STATISTIKASI")}</td>
-              </tr>
-              <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Jami sotuvlar soni")}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-                <td className="px-5 py-2.5 text-right font-semibold text-slate-800">{d.totalSalesCount} ta</td>
-              </tr>
-              <tr className="border-b-2 border-slate-200 bg-slate-50/60 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-600">{t("Mahsulot savdo")}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-                <td className="px-5 py-2.5 text-right font-medium text-indigo-700">{d.salesCount} ta</td>
-              </tr>
-              <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-600">{t("Xizmat savdo")}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-                <td className="px-5 py-2.5 text-right font-medium text-cyan-700">{d.serviceCount} ta</td>
-              </tr>
-              <tr className="border-b-2 border-slate-200 bg-slate-50/60 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Yangi mijozlar (davr)")}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-                <td className="px-5 py-2.5 text-right font-medium text-amber-700">{d.newCustomers} ta</td>
-              </tr>
-              <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Umumiy mijoz qarzi")}</td>
-                <td className="px-5 py-2.5 text-right font-medium text-red-600">{formatUzs(d.customerTotalDebtUzs)}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-              </tr>
+        {/* Sotuvlar statistikasi */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <ShoppingBag size={16} className="text-indigo-500" />
+              {t("Sotuvlar statistikasi")}
+            </h3>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="flex items-center justify-between py-2 border-b border-slate-100">
+              <span className="text-sm text-slate-500">{t("Jami sotuvlar soni")}</span>
+              <span className="text-xl font-bold text-slate-900">{d.totalSalesCount}</span>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="h-2 bg-indigo-500 rounded-full transition-all"
+                    style={{ width: d.totalSalesCount > 0 ? `${(d.salesCount / d.totalSalesCount) * 100}%` : "0%" }}
+                  />
+                </div>
+                <div className="w-36 flex items-center justify-between text-xs">
+                  <span className="text-slate-500">{t("Mahsulot savdo")}</span>
+                  <span className="font-semibold text-indigo-700">{d.salesCount}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="h-2 bg-cyan-500 rounded-full transition-all"
+                    style={{ width: d.totalSalesCount > 0 ? `${(d.serviceCount / d.totalSalesCount) * 100}%` : "0%" }}
+                  />
+                </div>
+                <div className="w-36 flex items-center justify-between text-xs">
+                  <span className="text-slate-500">{t("Xizmat savdo")}</span>
+                  <span className="font-semibold text-cyan-700">{d.serviceCount}</span>
+                </div>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-3">
+              <div className="bg-amber-50 rounded-lg p-3 text-center">
+                <p className="text-xs text-slate-400">{t("Yangi mijozlar")}</p>
+                <p className="text-lg font-bold text-amber-700 mt-0.5">{d.newCustomers}</p>
+              </div>
+              <div className="bg-red-50 rounded-lg p-3 text-center">
+                <p className="text-xs text-slate-400">{t("Umumiy qarz")}</p>
+                <p className="text-sm font-bold text-red-600 mt-0.5">{formatUzs(d.customerTotalDebtUzs)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-              <tr><td colSpan={4} className="h-3 bg-slate-50 p-0" /></tr>
-              {/* ── TO'LOV USULLARI ── */}
-              <tr className="bg-indigo-600">
-                <td colSpan={4} className="px-5 py-2 text-white font-bold text-xs uppercase tracking-widest">{t("TO'LOV USULLARI")}</td>
-              </tr>
-              {Object.entries(d.paymentMethods).length === 0 ? (
-                <tr className="border-b-2 border-slate-200">
-                  <td colSpan={4} className="px-5 py-3 pl-8 text-slate-400 text-xs">{t("Bu davrda to'lov yo'q")}</td>
-                </tr>
-              ) : (
-                Object.entries(d.paymentMethods)
-                  .sort((a, b) => b[1].uzs - a[1].uzs)
-                  .map(([method, val], i) => {
-                    const totalUzs = Object.values(d.paymentMethods).reduce((s, v) => s + v.uzs, 0);
-                    const pct = totalUzs > 0 ? Math.round((val.uzs / totalUzs) * 100) : 0;
-                    return (
-                      <tr key={method} className={`border-b-2 border-slate-200 ${i % 2 === 1 ? "bg-slate-50/60" : ""} hover:bg-indigo-50/30 transition-colors`}>
-                        <td className="px-5 py-2.5 pl-8">
-                          <div className="flex items-center gap-2">
-                            <span className={`font-medium ${PAYMENT_METHOD_COLORS[method] ?? "text-slate-700"}`}>
-                              {PAYMENT_METHOD_LABELS[method] ?? method}
-                            </span>
-                            <div className="flex-1 max-w-24 bg-slate-100 rounded-full h-1.5 overflow-hidden hidden sm:block">
-                              <div className="h-1.5 bg-indigo-400 rounded-full" style={{ width: `${pct}%` }} />
-                            </div>
-                            <span className="text-xs text-slate-400">{pct}%</span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-2.5 text-right font-medium text-slate-900">{formatUzs(val.uzs)}</td>
-                        <td className="px-5 py-2.5 text-right text-blue-600">{val.usd > 0 ? formatUsd(val.usd) : ""}</td>
-                        <td className="px-5 py-2.5 text-right text-xs text-slate-500">{val.count} ta</td>
-                      </tr>
-                    );
-                  })
-              )}
+      {/* Row 2: To'lov usullari + Ustaxona */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* To'lov usullari */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <DollarSign size={16} className="text-green-500" />
+              {t("To'lov usullari")}
+            </h3>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {Object.entries(d.paymentMethods).length === 0 ? (
+              <p className="px-5 py-4 text-sm text-slate-400">{t("Bu davrda to'lov yo'q")}</p>
+            ) : (
+              Object.entries(d.paymentMethods)
+                .sort((a, b) => b[1].uzs - a[1].uzs)
+                .map(([method, val]) => {
+                  const totalUzs = Object.values(d.paymentMethods).reduce((s, v) => s + v.uzs, 0);
+                  const pct = totalUzs > 0 ? Math.round((val.uzs / totalUzs) * 100) : 0;
+                  return (
+                    <div key={method} className="px-5 py-3 flex items-center gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className={`text-sm font-medium ${PAYMENT_METHOD_COLORS[method] ?? "text-slate-600"}`}>
+                            {PAYMENT_METHOD_LABELS[method] ?? method}
+                          </span>
+                          <span className="text-xs text-slate-400">{val.count} {t("ta")} · {pct}%</span>
+                        </div>
+                        <div className="bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="h-1.5 bg-indigo-400 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                      <div className="text-right min-w-[100px]">
+                        <p className="text-sm font-semibold text-slate-800">{formatUzs(val.uzs)}</p>
+                        {val.usd > 0 && <p className="text-xs text-blue-500">{formatUsd(val.usd)}</p>}
+                      </div>
+                    </div>
+                  );
+                })
+            )}
+          </div>
+        </div>
 
-              <tr><td colSpan={4} className="h-3 bg-slate-50 p-0" /></tr>
-              {/* ── USTAXONA HOLATI ── */}
-              <tr className="bg-indigo-600">
-                <td colSpan={4} className="px-5 py-2 text-white font-bold text-xs uppercase tracking-widest">{t("USTAXONA HOLATI")}</td>
-              </tr>
-              <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Kutmoqda")}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-                <td className="px-5 py-2.5 text-right font-medium text-slate-500">{d.workshopPending} ta</td>
-              </tr>
-              <tr className="border-b-2 border-slate-200 bg-slate-50/60 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Jarayonda")}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-                <td className="px-5 py-2.5 text-right font-medium text-blue-700">{d.workshopInProgress} ta</td>
-              </tr>
-              <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Yakunlangan")}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-                <td className="px-5 py-2.5 text-right font-medium text-green-700">{d.workshopCompleted} ta</td>
-              </tr>
+        {/* Ustaxona holati */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <Wrench size={16} className="text-orange-500" />
+              {t("Ustaxona holati")}
+            </h3>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-xl border border-slate-200 p-3 text-center">
+                <p className="text-xs text-slate-400 mb-1">{t("Kutmoqda")}</p>
+                <p className="text-2xl font-bold text-slate-500">{d.workshopPending}</p>
+              </div>
+              <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-center">
+                <p className="text-xs text-blue-400 mb-1">{t("Jarayonda")}</p>
+                <p className="text-2xl font-bold text-blue-700">{d.workshopInProgress}</p>
+              </div>
+              <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-center">
+                <p className="text-xs text-green-500 mb-1">{t("Yakunlangan")}</p>
+                <p className="text-2xl font-bold text-green-700">{d.workshopCompleted}</p>
+              </div>
+            </div>
+            {d.workshopInProgress > 0 && (
+              <div className="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2 text-xs text-blue-700 text-center">
+                {d.workshopInProgress} {t("ta buyurtma hozir ustaxonada bajarilmoqda")}
+              </div>
+            )}
+          </div>
 
-              {/* ── TOP KASSIRLAR ── */}
-              {d.topCashiers.length > 0 && (
-                <>
-                  <tr><td colSpan={4} className="h-3 bg-slate-50 p-0" /></tr>
-                  <tr className="bg-indigo-600">
-                    <td colSpan={4} className="px-5 py-2 text-white font-bold text-xs uppercase tracking-widest">{t("TOP KASSIRLAR (tushum bo'yicha)")}</td>
-                  </tr>
-                  {d.topCashiers.map((c, i) => (
-                    <tr key={i} className={`border-b-2 border-slate-200 ${i % 2 === 1 ? "bg-slate-50/60" : ""} hover:bg-indigo-50/30 transition-colors`}>
-                      <td className="px-5 py-2.5 pl-8 text-slate-700 flex items-center gap-2">
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold flex-shrink-0">{i + 1}</span>
-                        {c.fullName}
-                      </td>
-                      <td className="px-5 py-2.5 text-right font-medium text-indigo-700">{formatUzs(c.totalUzs)}</td>
-                      <td className="px-5 py-2.5" />
-                      <td className="px-5 py-2.5 text-right text-xs text-slate-500">{c.count} ta</td>
-                    </tr>
-                  ))}
-                </>
-              )}
+          {/* Top kassirlar */}
+          {d.topCashiers.length > 0 && (
+            <>
+              <div className="px-5 pb-1 pt-3 border-t border-slate-100">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t("Top kassirlar (tushum)")}</p>
+              </div>
+              <div className="divide-y divide-slate-50">
+                {d.topCashiers.map((c, i) => (
+                  <div key={i} className="px-5 py-2 flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-indigo-600">{i + 1}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-xs font-medium text-slate-700 truncate">{c.fullName}</span>
+                        <span className="text-xs font-semibold text-indigo-700">{formatUzs(c.totalUzs)}</span>
+                      </div>
+                      <div className="bg-slate-100 rounded-full h-1 overflow-hidden">
+                        <div className="h-1 bg-indigo-400 rounded-full" style={{ width: `${Math.round((c.totalUzs / maxCashier) * 100)}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
-              <tr><td colSpan={4} className="h-3 bg-slate-50 p-0" /></tr>
-              {/* ── CHIQIMLAR TAFSILOTI ── */}
-              <tr className="bg-indigo-600">
-                <td colSpan={4} className="px-5 py-2 text-white font-bold text-xs uppercase tracking-widest">{t("CHIQIMLAR TAFSILOTI")}</td>
-              </tr>
-              <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Savdo kassasi xarajat")}</td>
-                <td className="px-5 py-2.5 text-right font-medium text-red-600">{formatUzs(d.salesExpensesUzs)}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-              </tr>
-              <tr className="border-b-2 border-slate-200 bg-slate-50/60 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Xizmat kassasi xarajat")}</td>
-                <td className="px-5 py-2.5 text-right font-medium text-red-600">{formatUzs(d.serviceExpensesUzs)}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-              </tr>
-              <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Maosh to'lovlar")}</td>
-                <td className="px-5 py-2.5 text-right font-medium text-amber-600">{formatUzs(d.salaryPaidUzs)}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-              </tr>
-              <tr className="border-b-2 border-slate-200 bg-slate-50/60 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Berilgan avanslar")}</td>
-                <td className="px-5 py-2.5 text-right font-medium text-orange-600">{formatUzs(d.totalAdvancesUzs)}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-              </tr>
-              <tr className="border-t-2 border-slate-300 bg-slate-100">
-                <td className="px-5 py-2.5 pl-8 font-bold text-slate-800">{t("Jami chiqim")}</td>
-                <td className="px-5 py-2.5 text-right font-bold text-red-700">{formatUzs(totalChiqim)}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-              </tr>
-
-              <tr><td colSpan={4} className="h-3 bg-slate-50 p-0" /></tr>
-              {/* ── YAKUNIY HISOB ── */}
-              <tr className="bg-indigo-600">
-                <td colSpan={4} className="px-5 py-2 text-white font-bold text-xs uppercase tracking-widest">{t("YAKUNIY HISOB")}</td>
-              </tr>
-              <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Jami tushum")}</td>
-                <td className="px-5 py-2.5 text-right font-medium text-green-700">{formatUzs(d.totalIncomeUzs)}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-              </tr>
-
-              <tr className="border-b-2 border-slate-200 hover:bg-indigo-50/30 transition-colors">
-                <td className="px-5 py-2.5 pl-8 text-slate-700">{t("Jami chiqim")}</td>
-                <td className="px-5 py-2.5 text-right font-medium text-red-600">{formatUzs(totalChiqim)}</td>
-                <td className="px-5 py-2.5" /><td className="px-5 py-2.5" />
-              </tr>
-              {/* SOF FOYDA — special final row */}
-              <tr className={`border-t-2 ${d.netProfitUzs >= 0 ? "border-green-400 bg-green-50" : "border-red-400 bg-red-50"}`}>
-                <td className="px-5 py-4 pl-8 text-base font-bold text-slate-900">
-                  {d.netProfitUzs >= 0 ? t("SOF FOYDA") : t("ZARAR")}
-                </td>
-                <td className={`px-5 py-4 text-right text-xl font-bold ${d.netProfitUzs >= 0 ? "text-green-700" : "text-red-700"}`}>
-                  {formatUzs(d.netProfitUzs)}
-                </td>
-                <td className="px-5 py-4" /><td className="px-5 py-4" />
-              </tr>
-            </tbody>
-          </table>
+      {/* Row 3: Xarajatlar breakdown */}
+      <div className="card">
+        <div className="card-header">
+          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+            <TrendingDown size={16} className="text-red-500" />
+            {t("Chiqimlar tafsiloti")}
+          </h3>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-slate-100">
+          {[
+            { label: t("Savdo xarajat"), value: d.salesExpensesUzs, color: "text-red-600" },
+            { label: t("Xizmat xarajat"), value: d.serviceExpensesUzs, color: "text-red-600" },
+            { label: t("Maosh to'lovlar"), value: d.salaryPaidUzs, color: "text-amber-600" },
+            { label: t("Berilgan avanslar"), value: d.totalAdvancesUzs, color: "text-orange-500" },
+          ].map((item, i) => (
+            <div key={i} className="px-5 py-4 text-center">
+              <p className="text-xs text-slate-400 mb-1">{item.label}</p>
+              <p className={`text-sm font-bold ${item.color}`}>{formatUzs(item.value)}</p>
+            </div>
+          ))}
+        </div>
+        <div className="px-5 py-3 bg-red-50 border-t border-red-100 flex items-center justify-between">
+          <span className="text-sm font-semibold text-red-700">{t("Jami chiqim")}</span>
+          <span className="text-sm font-bold text-red-700">
+            {formatUzs(d.totalExpensesUzs + d.salaryPaidUzs + d.totalAdvancesUzs)}
+          </span>
         </div>
       </div>
     </div>
@@ -1533,16 +1238,16 @@ function ProductSalesTab({
           onClick={() => {
             const titleText = `${t("Mahsulotlar hisoboti")} (${dateFrom} — ${dateTo})`;
             if (groupBy === "category") {
-              const excelRows: Array<Record<string, unknown>> = [];
+              const excelRows: Array<Record<string, string | number>> = [];
               let num = 0;
               for (const section of categoryGroups) {
-                excelRows.push({ _section: true, idx: section.category, product: "", category: "", unit: "", count: "", qty: "", uzs: "", usd: "" });
+                excelRows.push({ idx: "", product: `>>> ${section.category}`, category: section.category, unit: "", count: section.count, qty: Math.round(section.totalQty), uzs: section.totalUzs, usd: section.totalUsd });
                 for (const p of section.products) {
                   num++;
                   excelRows.push({ idx: num, product: p.label, category: p.category, unit: p.unit, count: p.count, qty: Math.round(p.quantity), uzs: p.totalUzs, usd: p.totalUsd });
                 }
               }
-              excelRows.push({ _total: true, idx: "", product: t("JAMI"), category: "", unit: "", count: filtered.length, qty: Math.round(totals.qty), uzs: totals.uzs, usd: totals.usd });
+              excelRows.push({ idx: "", product: t("JAMI"), category: "", unit: "", count: filtered.length, qty: Math.round(totals.qty), uzs: totals.uzs, usd: totals.usd });
               exportToExcel({
                 filename: `mahsulot-hisobot_${dateFrom}_${dateTo}`,
                 sheetName: t("Mahsulotlar hisoboti"),

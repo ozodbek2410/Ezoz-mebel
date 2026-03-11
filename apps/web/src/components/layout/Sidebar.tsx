@@ -52,7 +52,7 @@ const navSections: NavSection[] = [
     title: "Asosiy",
     icon: LayoutDashboard,
     items: [
-      { label: "Bosh sahifa", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Bosh sahifa", href: "/dashboard", icon: LayoutDashboard, permission: "dashboard:view" },
       { label: "Mijozlar", href: "/customers", icon: Users, permission: "customer:read" },
       { label: "Ta'minotchilar", href: "/suppliers", icon: Truck, permission: "supplier:read" },
     ],
@@ -118,6 +118,22 @@ function CollapsibleSection({
 
   const contentRef = useRef<HTMLDivElement>(null);
 
+  const renderItems = () =>
+    visibleItems.map((item) => {
+      const isActive = isItemActive(item);
+      return (
+        <Link
+          key={item.href}
+          to={item.href}
+          activeOptions={{ exact: true }}
+          className={`sidebar-link ${isActive ? "active" : ""}`}
+        >
+          <item.icon size={18} strokeWidth={1.8} />
+          <span>{t(item.label)}</span>
+        </Link>
+      );
+    });
+
   // Collapsed mode: show only icons with tooltip
   if (collapsed) {
     return (
@@ -145,6 +161,16 @@ function CollapsibleSection({
     );
   }
 
+  // If section has 1-2 items — skip the collapsible header, show items directly
+  if (visibleItems.length <= 2) {
+    return (
+      <div>
+        {sectionIndex > 0 && <div className="sidebar-divider" />}
+        {renderItems()}
+      </div>
+    );
+  }
+
   return (
     <div>
       {sectionIndex > 0 && <div className="sidebar-divider" />}
@@ -168,20 +194,7 @@ function CollapsibleSection({
         }`}
       >
         <div ref={contentRef}>
-          {visibleItems.map((item) => {
-            const isActive = isItemActive(item);
-            return (
-              <Link
-                key={item.href}
-                to={item.href}
-                activeOptions={{ exact: true }}
-                className={`sidebar-link ${isActive ? "active" : ""}`}
-              >
-                <item.icon size={18} strokeWidth={1.8} />
-                <span>{t(item.label)}</span>
-              </Link>
-            );
-          })}
+          {renderItems()}
         </div>
       </div>
     </div>

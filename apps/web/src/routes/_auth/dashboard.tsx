@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -16,8 +15,6 @@ import {
   Wallet,
   Clock,
   AlertTriangle,
-  Save,
-  StickyNote,
   Wrench,
   ChevronRight,
   DollarSign,
@@ -72,6 +69,7 @@ export function DashboardPage() {
             icon={ShoppingCart}
             iconBg="bg-indigo-50"
             iconColor="text-indigo-500"
+            accent="border-l-indigo-500"
           />
           <StatCard
             to="/reports"
@@ -82,6 +80,7 @@ export function DashboardPage() {
             icon={TrendingUp}
             iconBg="bg-emerald-50"
             iconColor="text-emerald-500"
+            accent="border-l-emerald-500"
           />
           <StatCard
             to="/expenses"
@@ -91,6 +90,7 @@ export function DashboardPage() {
             icon={Wallet}
             iconBg="bg-cyan-50"
             iconColor="text-cyan-500"
+            accent="border-l-cyan-500"
           />
           <StatCard
             to="/customers"
@@ -100,6 +100,7 @@ export function DashboardPage() {
             icon={Users}
             iconBg="bg-amber-50"
             iconColor="text-amber-500"
+            accent="border-l-amber-500"
           />
         </div>
 
@@ -127,7 +128,6 @@ export function DashboardPage() {
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <RecentSalesCard sales={stats?.recentSales ?? []} />
-          {isBoss() && <NotesCard />}
           {isMaster() && <WorkshopTasksCard />}
           <LowStockCard items={stats?.lowStockItems ?? []} />
         </div>
@@ -146,19 +146,20 @@ interface StatCardProps {
   icon: React.ElementType;
   iconBg: string;
   iconColor: string;
+  accent: string;
 }
 
-function StatCard({ to, search, label, value, sub, icon: Icon, iconBg, iconColor }: StatCardProps) {
+function StatCard({ to, search, label, value, sub, icon: Icon, iconBg, iconColor, accent }: StatCardProps) {
   return (
     <Link
       to={to}
       search={search}
-      className="stat-card group cursor-pointer hover:shadow-md transition-all duration-200"
+      className={`stat-card group cursor-pointer hover:shadow-md transition-all duration-200 border-l-4 ${accent}`}
     >
       <div className="flex items-center justify-between">
         <p className="stat-card-label">{label}</p>
-        <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center`}>
-          <Icon className={`w-6 h-6 ${iconColor}`} />
+        <div className={`w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
+          <Icon className={`w-5 h-5 ${iconColor}`} />
         </div>
       </div>
       <p className="stat-card-value truncate">{value}</p>
@@ -249,72 +250,6 @@ function RecentSalesCard({ sales }: { sales: RecentSale[] }) {
             ))}
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-// ===== Notes =====
-function NotesCard() {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const [content, setContent] = useState("");
-
-  const notesQuery = useQuery({
-    queryKey: ["settings", "notes"],
-    queryFn: () => trpc.settings.getNotes.query(),
-  });
-
-  useEffect(() => {
-    if (notesQuery.data) {
-      setContent(notesQuery.data.content);
-    }
-  }, [notesQuery.data]);
-
-  const saveMutation = useMutation({
-    mutationFn: () => trpc.settings.saveNote.mutate({ content }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings", "notes"] });
-    },
-  });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (content && content !== notesQuery.data?.content) {
-        saveMutation.mutate();
-      }
-    }, 60000);
-    return () => clearInterval(timer);
-  }, [content, notesQuery.data?.content]);
-
-  return (
-    <div className="card">
-      <div className="card-header">
-        <div className="flex items-center gap-2">
-          <StickyNote size={16} className="text-amber-500" />
-          <h3 className="text-base font-semibold text-slate-900">{t("Eslatmalar")}</h3>
-        </div>
-        <span className="text-xs text-slate-400">{content.length}/800</span>
-      </div>
-      <div className="card-body">
-        <textarea
-          className="input-field resize-none h-32"
-          placeholder={t("Eslatmalarni shu yerga yozing...")}
-          maxLength={800}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-        />
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-xs text-slate-400">{t("Avtomatik saqlanadi")}</span>
-          <button
-            onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending}
-            className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
-          >
-            <Save size={12} />
-            {saveMutation.isPending ? t("Saqlanmoqda...") : t("Saqlash")}
-          </button>
-        </div>
       </div>
     </div>
   );
